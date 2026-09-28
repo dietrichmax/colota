@@ -426,9 +426,13 @@ export function validateConfig(raw: unknown): ValidationResult {
       const condType = condRaw.type as ProfileConditionType
       const needsSpeed = condType === "speed_above" || condType === "speed_below"
       if (needsSpeed && (typeof condRaw.speedThreshold !== "number" || condRaw.speedThreshold <= 0)) continue
+      const needsSsid = condType === "wifi_ssid"
+      if (needsSsid && (typeof condRaw.ssid !== "string" || condRaw.ssid.trim() === "")) continue
       const condition: TrackingProfile["condition"] = needsSpeed
         ? { type: condType, speedThreshold: condRaw.speedThreshold as number }
-        : { type: condType }
+        : needsSsid
+          ? { type: condType, ssid: (condRaw.ssid as string).trim() }
+          : { type: condType }
 
       const delays = defaultProfileDelays(condType)
       profiles.push({

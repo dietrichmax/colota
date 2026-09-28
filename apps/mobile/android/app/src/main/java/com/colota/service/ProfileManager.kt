@@ -57,6 +57,8 @@ class ProfileManager(
     // Written outside the lock, read by evaluate() under it.
     @Volatile private var isCharging = false
     @Volatile private var isCarMode = false
+    @Volatile private var isWifiConnected = false
+    @Volatile private var currentSsid: String = ""
     @Volatile var isStationary = false
         private set
     // The current still run, timed by location.time and written without the lock.
@@ -75,6 +77,13 @@ class ProfileManager(
 
     fun onCarModeStateChanged(connected: Boolean) {
         isCarMode = connected
+        evaluate()
+    }
+
+    /** Called on the main thread when the default network's transport or SSID changes. */
+    fun onWifiStateChanged(connected: Boolean, ssid: String) {
+        isWifiConnected = connected
+        currentSsid = ssid
         evaluate()
     }
 
@@ -223,6 +232,17 @@ class ProfileManager(
                 avgSpeed != null && threshold != null && avgSpeed < threshold
             }
             ProfileConstants.CONDITION_STATIONARY -> isStationary
+            ProfileConstants.CONDITION_WIFI_ANY -> isWifiConnected
+            ProfileConstants.CONDITION_WIFI_SSID -> {
+                // Both sides matter: the SSID may not have arrived yet, and a profile may carry none.
+                val target = profile.wifiSsid
+                isWifiConnected && !target.isNullOrBlank() &&
+                    (target.equals(currentSsid, ignoreCase = true) ||
+                        // SSID reads blank for the moment after SSID tracking turns on. Keeping the
+                        // profile it already holds avoids a deactivate/activate flap until the
+                        // callback delivers; a different network then flips it off as usual.
+                        (currentSsid.isBlank() && activeProfile?.id == profile.id))
+            }
             else -> false
         }
 
@@ -230,6 +250,7 @@ class ProfileManager(
             val detail = when (profile.conditionType) {
                 ProfileConstants.CONDITION_SPEED_ABOVE,
                 ProfileConstants.CONDITION_SPEED_BELOW -> " (avg=${String.format("%.1f", getAverageSpeed())}m/s, threshold=${profile.speedThreshold})"
+                ProfileConstants.CONDITION_WIFI_SSID -> " (ssid=$currentSsid)"
                 else -> ""
             }
             AppLogger.d(TAG, "Profile '${profile.name}' matched: ${profile.conditionType}$detail")

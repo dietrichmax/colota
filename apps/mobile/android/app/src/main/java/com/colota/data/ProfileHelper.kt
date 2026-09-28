@@ -28,6 +28,8 @@ class ProfileHelper(private val context: Context) {
         val priority: Int,
         val conditionType: String,
         val speedThreshold: Float?,
+        /** The network the profile matches by name; null for every other condition. */
+        val wifiSsid: String? = null,
         val deactivationDelaySeconds: Int,
         val activationDelaySeconds: Int,
     )
@@ -51,7 +53,7 @@ class ProfileHelper(private val context: Context) {
                 arrayOf(
                     "id", "name", "interval_ms", "min_update_distance",
                     "sync_interval_seconds", "priority", "condition_type",
-                    "speed_threshold", "deactivation_delay_seconds",
+                    "speed_threshold", "wifi_ssid", "deactivation_delay_seconds",
                     "activation_delay_seconds",
                 ),
                 "enabled = 1",
@@ -66,6 +68,7 @@ class ProfileHelper(private val context: Context) {
                 val priorityIdx = cursor.getColumnIndexOrThrow("priority")
                 val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
                 val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
+                val wifiSsidIdx = cursor.getColumnIndexOrThrow("wifi_ssid")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
                 val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
 
@@ -79,6 +82,7 @@ class ProfileHelper(private val context: Context) {
                         priority = cursor.getInt(priorityIdx),
                         conditionType = cursor.getString(conditionIdx),
                         speedThreshold = if (cursor.isNull(speedIdx)) null else cursor.getFloat(speedIdx),
+                        wifiSsid = if (cursor.isNull(wifiSsidIdx)) null else cursor.getString(wifiSsidIdx),
                         deactivationDelaySeconds = cursor.getInt(delayIdx),
                         activationDelaySeconds = cursor.getInt(activationDelayIdx),
                     ))
@@ -108,6 +112,7 @@ class ProfileHelper(private val context: Context) {
                 val priorityIdx = cursor.getColumnIndexOrThrow("priority")
                 val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
                 val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
+                val wifiSsidIdx = cursor.getColumnIndexOrThrow("wifi_ssid")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
                 val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
                 val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
@@ -126,6 +131,11 @@ class ProfileHelper(private val context: Context) {
                             putNull("speedThreshold")
                         } else {
                             putDouble("speedThreshold", cursor.getFloat(speedIdx).toDouble())
+                        }
+                        if (cursor.isNull(wifiSsidIdx)) {
+                            putNull("wifiSsid")
+                        } else {
+                            putString("wifiSsid", cursor.getString(wifiSsidIdx))
                         }
                         putInt("deactivationDelaySeconds", cursor.getInt(delayIdx))
                         putInt("activationDelaySeconds", cursor.getInt(activationDelayIdx))
@@ -149,6 +159,7 @@ class ProfileHelper(private val context: Context) {
         priority: Int,
         conditionType: String,
         speedThreshold: Float?,
+        wifiSsid: String?,
         deactivationDelaySeconds: Int,
         activationDelaySeconds: Int,
     ): Int {
@@ -160,6 +171,7 @@ class ProfileHelper(private val context: Context) {
             put("priority", priority)
             put("condition_type", conditionType)
             if (speedThreshold != null) put("speed_threshold", speedThreshold) else putNull("speed_threshold")
+            if (wifiSsid != null) put("wifi_ssid", wifiSsid) else putNull("wifi_ssid")
             put("deactivation_delay_seconds", deactivationDelaySeconds)
             put("activation_delay_seconds", activationDelaySeconds)
             put("enabled", 1)
@@ -186,6 +198,8 @@ class ProfileHelper(private val context: Context) {
         conditionType: String? = null,
         speedThreshold: Float? = null,
         hasSpeedThreshold: Boolean = false,
+        wifiSsid: String? = null,
+        hasWifiSsid: Boolean = false,
         deactivationDelaySeconds: Int? = null,
         activationDelaySeconds: Int? = null,
         enabled: Boolean? = null,
@@ -199,6 +213,9 @@ class ProfileHelper(private val context: Context) {
             conditionType?.let { put("condition_type", it) }
             if (hasSpeedThreshold) {
                 if (speedThreshold != null) put("speed_threshold", speedThreshold) else putNull("speed_threshold")
+            }
+            if (hasWifiSsid) {
+                if (wifiSsid != null) put("wifi_ssid", wifiSsid) else putNull("wifi_ssid")
             }
             deactivationDelaySeconds?.let { put("deactivation_delay_seconds", it) }
             activationDelaySeconds?.let { put("activation_delay_seconds", it) }

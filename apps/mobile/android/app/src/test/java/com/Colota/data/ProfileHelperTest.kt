@@ -61,7 +61,7 @@ class ProfileHelperTest {
         val columns = listOf(
             "id", "name", "interval_ms", "min_update_distance",
             "sync_interval_seconds", "priority", "condition_type",
-            "speed_threshold", "deactivation_delay_seconds", "activation_delay_seconds",
+            "speed_threshold", "wifi_ssid", "deactivation_delay_seconds", "activation_delay_seconds",
             "enabled", "created_at"
         )
 
@@ -141,6 +141,7 @@ class ProfileHelperTest {
         assertEquals(10000L, profiles[0].intervalMs)
         assertEquals("charging", profiles[0].conditionType)
         assertNull(profiles[0].speedThreshold)
+        assertNull(profiles[0].wifiSsid)
     }
 
     @Test
@@ -228,6 +229,28 @@ class ProfileHelperTest {
         assertEquals(1, profiles.size)
         assertEquals(13.89f, profiles[0].speedThreshold!!, 0.01f)
         assertEquals("speed_above", profiles[0].conditionType)
+    }
+
+    @Test
+    fun `getEnabledProfiles reads the wifi SSID`() {
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Home", "interval_ms" to 60000L,
+                "min_update_distance" to 10f, "sync_interval_seconds" to 300,
+                "priority" to 15, "condition_type" to "wifi_ssid",
+                "speed_threshold" to null, "wifi_ssid" to "HomeNet",
+                "deactivation_delay_seconds" to 60
+            )
+        ))
+
+        every { mockDb.query(any(), any(), eq("enabled = 1"), any(), any(), any(), any()) } returns cursor
+
+        val helper = ProfileHelper(mockk(relaxed = true))
+        val profiles = helper.getEnabledProfiles()
+
+        assertEquals(1, profiles.size)
+        assertEquals("wifi_ssid", profiles[0].conditionType)
+        assertEquals("HomeNet", profiles[0].wifiSsid)
     }
 
     @Test

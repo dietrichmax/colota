@@ -482,7 +482,8 @@ class NativeLocationService {
       priority: p.priority,
       condition: {
         type: p.conditionType,
-        ...(p.speedThreshold != null ? { speedThreshold: p.speedThreshold } : {})
+        ...(p.speedThreshold != null ? { speedThreshold: p.speedThreshold } : {}),
+        ...(p.wifiSsid != null ? { ssid: p.wifiSsid } : {})
       },
       activationDelay: p.activationDelaySeconds,
       deactivationDelay: p.deactivationDelaySeconds,
@@ -506,6 +507,7 @@ class NativeLocationService {
       priority: profile.priority,
       conditionType: profile.condition.type,
       speedThreshold: profile.condition.speedThreshold ?? null,
+      wifiSsid: profile.condition.ssid ?? null,
       deactivationDelaySeconds: profile.deactivationDelay,
       activationDelaySeconds: profile.activationDelay
     })
@@ -527,6 +529,7 @@ class NativeLocationService {
     if (update.condition !== undefined) {
       config.conditionType = update.condition.type
       config.speedThreshold = update.condition.speedThreshold ?? null
+      config.wifiSsid = update.condition.ssid ?? null
     }
     if (update.deactivationDelay !== undefined) config.deactivationDelaySeconds = update.deactivationDelay
     if (update.activationDelay !== undefined) config.activationDelaySeconds = update.activationDelay

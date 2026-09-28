@@ -700,6 +700,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             conditionType = config.getString("conditionType") ?: ProfileConstants.CONDITION_CHARGING,
             speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
                 config.getDouble("speedThreshold").toFloat() else null,
+            wifiSsid = config.getStringOrNull("wifiSsid")?.takeIf { it.isNotBlank() },
             deactivationDelaySeconds = config.getInt("deactivationDelaySeconds"),
             activationDelaySeconds = config.getInt("activationDelaySeconds"),
         )
@@ -720,6 +721,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
                 config.getDouble("speedThreshold").toFloat() else null,
             hasSpeedThreshold = config.hasKey("speedThreshold"),
+            wifiSsid = config.getStringOrNull("wifiSsid")?.takeIf { it.isNotBlank() },
+            hasWifiSsid = config.hasKey("wifiSsid"),
             deactivationDelaySeconds = config.getIntOrNull("deactivationDelaySeconds"),
             activationDelaySeconds = config.getIntOrNull("activationDelaySeconds"),
             enabled = config.getBooleanOrNull("enabled"),

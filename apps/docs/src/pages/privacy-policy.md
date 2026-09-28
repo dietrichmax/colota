@@ -34,7 +34,7 @@ If you create pause zones (geofences), the App stores zone names, coordinates, r
 
 ### Condition Monitoring
 
-When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto) and GPS speed derived from location updates to automatically switch tracking configurations. These condition states are transient and are not stored in the database. The name of the currently active pause zone is persisted across service restarts to maintain continuity but is cleared when the zone is exited.
+When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto), GPS speed derived from location updates, and Wi-Fi connectivity to automatically switch tracking configurations. To match a named-network profile, the App reads the connected network's name; the name you configure for the profile is stored in the local profile database, while the detected state itself is transient and is not stored. The name of the currently active pause zone is persisted across service restarts to maintain continuity but is cleared when the zone is exited.
 
 ### Sensor Data
 
@@ -42,7 +42,7 @@ When motionless pause is enabled for a geofence zone or a stationary tracking pr
 
 ### Network State
 
-When WiFi pause is enabled for a geofence zone, the App monitors whether the device is connected to an unmetered network (WiFi or Ethernet). Only the connection type is checked - no network names, SSIDs or IP addresses are collected or stored.
+When WiFi pause is enabled for a geofence zone, the App monitors whether the device is connected to an unmetered network (WiFi or Ethernet). That check looks only at the connection type - no network names or IP addresses are collected or stored by it. If you configure a tracking profile for a named Wi-Fi network, the network name you enter is stored in the local profile database and used to match the current connection; it is shared only if you share that profile.
 
 All data is stored **locally on your device** and is never sent anywhere unless you configure a server. The App does not collect personal identifiers, advertising IDs, device identifiers (IMEI, serial number), usage analytics, telemetry, or crash reports.
 
@@ -130,21 +130,21 @@ Since all data is stored locally on your device, you have full control:
 
 ## Permissions
 
-| Permission                        | Purpose                                                |
-| --------------------------------- | ------------------------------------------------------ |
-| Location (Precise)                | GPS tracking                                           |
-| Location (Approximate)            | Required alongside precise location on Android         |
-| Background Location (Android 10+) | Tracking while the app is not in the foreground        |
-| Foreground Service                | Background tracking with notification                  |
-| Foreground Service (Location)     | Location access while tracking in the background       |
-| Foreground Service (Data Sync)    | Auto-export background processing                      |
-| Notification (Android 13+)        | Foreground service notification                        |
-| Boot Completed                    | Auto-start tracking after device reboot                |
-| Internet                          | Server sync and map tile loading                       |
-| Network State                     | Sync condition checks and WiFi pause in geofence zones |
-| Wi-Fi State                       | SSID detection for sync condition filtering            |
-| Local Network (Android 17+)       | Required for sync to servers on the local network      |
-| Battery Optimization Exemption    | Optional, prevents system from restricting the app     |
+| Permission                        | Purpose                                                 |
+| --------------------------------- | ------------------------------------------------------- |
+| Location (Precise)                | GPS tracking                                            |
+| Location (Approximate)            | Required alongside precise location on Android          |
+| Background Location (Android 10+) | Tracking while the app is not in the foreground         |
+| Foreground Service                | Background tracking with notification                   |
+| Foreground Service (Location)     | Location access while tracking in the background        |
+| Foreground Service (Data Sync)    | Auto-export background processing                       |
+| Notification (Android 13+)        | Foreground service notification                         |
+| Boot Completed                    | Auto-start tracking after device reboot                 |
+| Internet                          | Server sync and map tile loading                        |
+| Network State                     | Sync condition checks and WiFi pause in geofence zones  |
+| Wi-Fi State                       | SSID detection for sync and tracking-profile conditions |
+| Local Network (Android 17+)       | Required for sync to servers on the local network       |
+| Battery Optimization Exemption    | Optional, prevents system from restricting the app      |
 
 ## Children's Privacy
 

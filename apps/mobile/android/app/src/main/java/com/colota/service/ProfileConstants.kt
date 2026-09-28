@@ -11,6 +11,8 @@ object ProfileConstants {
     const val CONDITION_SPEED_ABOVE = "speed_above"
     const val CONDITION_SPEED_BELOW = "speed_below"
     const val CONDITION_STATIONARY = "stationary"
+    const val CONDITION_WIFI_ANY = "wifi_any"
+    const val CONDITION_WIFI_SSID = "wifi_ssid"
 
     /**
      * Conditions whose re-evaluation depends on a fresh stream of location fixes.

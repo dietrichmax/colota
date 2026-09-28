@@ -89,10 +89,12 @@ class NetworkManagerTest {
 
         slot.captured.onCapabilitiesChanged(mockk(relaxed = true), mockk(relaxed = true))
         assertFalse(manager.isConnectedToSsid("HomeNet"))
+        assertEquals("", manager.currentSsid)
 
         manager.setSsidTracking(true)
         slot.captured.onCapabilitiesChanged(mockk(relaxed = true), mockk(relaxed = true))
         assertTrue(manager.isConnectedToSsid("HomeNet"))
+        assertEquals("HomeNet", manager.currentSsid)
     }
 
     @Test
@@ -107,6 +109,64 @@ class NetworkManagerTest {
         slot.captured.onCapabilitiesChanged(mockk(relaxed = true), caps)
 
         assertTrue(manager.isVpnConnected())
+    }
+
+    @Test
+    fun `the plain callback tracks the wifi transport and notifies the listener on change and loss`() {
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val slot = slot<ConnectivityManager.NetworkCallback>()
+        every { cm.registerDefaultNetworkCallback(capture(slot)) } just Runs
+        val manager = newManagerWith(cm)
+        var changes = 0
+        manager.setWifiStateListener { changes++ }
+
+        val caps = mockk<NetworkCapabilities>(relaxed = true)
+        every { caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) } returns true
+        slot.captured.onCapabilitiesChanged(mockk(relaxed = true), caps)
+
+        assertTrue(manager.isWifiConnected())
+        assertEquals(1, changes)
+
+        slot.captured.onLost(mockk(relaxed = true))
+
+        assertFalse(manager.isWifiConnected())
+        assertEquals(2, changes)
+    }
+
+    @Test
+    fun `a VPN network does not count as Wi-Fi even when it reports the Wi-Fi transport`() {
+        // Android 14+ lists the underlying transports on a VPN network; the profile conditions
+        // must still read a tunneled connection as no Wi-Fi default network.
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val slot = slot<ConnectivityManager.NetworkCallback>()
+        every { cm.registerDefaultNetworkCallback(capture(slot)) } just Runs
+        val manager = newManagerWith(cm)
+        var changes = 0
+        manager.setWifiStateListener { changes++ }
+
+        val caps = mockk<NetworkCapabilities>(relaxed = true)
+        every { caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) } returns true
+        every { caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) } returns true
+        slot.captured.onCapabilitiesChanged(mockk(relaxed = true), caps)
+
+        assertTrue(manager.isVpnConnected())
+        assertFalse(manager.isWifiConnected())
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun `clearing the listener stops notifications`() {
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val slot = slot<ConnectivityManager.NetworkCallback>()
+        every { cm.registerDefaultNetworkCallback(capture(slot)) } just Runs
+        val manager = newManagerWith(cm)
+        var changes = 0
+        manager.setWifiStateListener { changes++ }
+        manager.setWifiStateListener(null)
+
+        slot.captured.onCapabilitiesChanged(mockk(relaxed = true), mockk(relaxed = true))
+
+        assertEquals(0, changes)
     }
 
     // --- buildQueryString ---

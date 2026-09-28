@@ -5,7 +5,7 @@
 
 import type { ProfileConditionType } from "../types/global"
 import type { TranslationKey } from "../i18n/options"
-import { Zap, Car, ArrowUp, ArrowDown, Pause } from "lucide-react-native"
+import { Zap, Car, ArrowUp, ArrowDown, Pause, Wifi } from "lucide-react-native"
 
 // Timing
 export const AUTOSAVE_DEBOUNCE_MS = 1500
@@ -98,6 +98,8 @@ export const PROFILE_CONDITIONS: {
   [
     ["charging", Zap],
     ["android_auto", Car],
+    ["wifi_any", Wifi],
+    ["wifi_ssid", Wifi],
     ["speed_above", ArrowUp],
     ["speed_below", ArrowDown],
     ["stationary", Pause]

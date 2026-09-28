@@ -553,6 +553,63 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
+    // Tracking profiles — Wi-Fi SSID plumbing
+    // ========================================================================
+
+    @Test
+    fun `createProfile forwards the wifi SSID to the helper`() {
+        val module = LocationServiceModule(mockContext)
+        val helper = mockk<ProfileHelper>(relaxed = true)
+        setField(module, "profileHelper", helper)
+        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 7
+
+        awaitPromise { promise ->
+            module.createProfile(
+                JavaOnlyMap().apply {
+                    putString("name", "Home")
+                    putDouble("intervalMs", 60000.0)
+                    putDouble("minUpdateDistance", 10.0)
+                    putInt("syncIntervalSeconds", 300)
+                    putInt("priority", 15)
+                    putString("conditionType", "wifi_ssid")
+                    putNull("speedThreshold")
+                    putString("wifiSsid", "HomeNet")
+                    putInt("deactivationDelaySeconds", 60)
+                    putInt("activationDelaySeconds", 0)
+                },
+                promise
+            )
+        }
+
+        verify { helper.insertProfile("Home", 60000L, 10f, 300, 15, "wifi_ssid", null, "HomeNet", 60, 0) }
+    }
+
+    @Test
+    fun `updateProfile carries the hasWifiSsid tri-state so the column can be cleared`() {
+        val module = LocationServiceModule(mockContext)
+        val helper = mockk<ProfileHelper>(relaxed = true)
+        setField(module, "profileHelper", helper)
+
+        awaitPromise { promise ->
+            module.updateProfile(
+                JavaOnlyMap().apply {
+                    putInt("id", 3)
+                    putString("conditionType", "charging")
+                    putNull("wifiSsid")
+                },
+                promise
+            )
+        }
+
+        verify {
+            helper.updateProfile(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                isNull(), eq(true), any(), any(), any()
+            )
+        }
+    }
+
+    // ========================================================================
     // stopService — intent is cleared before the service goes away
     // ========================================================================
 

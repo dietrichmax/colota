@@ -102,6 +102,69 @@ class DatabaseHelperSQLiteTest {
         assertTrue(columns.contains("activation_delay_seconds"))
     }
 
+    @Test
+    fun `tracking_profiles table includes wifi_ssid column`() {
+        val columns = queryColumnNames("tracking_profiles")
+        assertTrue(columns.contains("wifi_ssid"))
+    }
+
+    // ========================================================================
+    // Migration v7 -> v8: wifi_ssid
+    // ========================================================================
+
+    @Test
+    fun `migration from v7 adds wifi_ssid and leaves existing profiles untouched`() {
+        val candidate = File.createTempFile("candidate-v7", ".db").also { it.delete() }
+        SQLiteDatabase.openOrCreateDatabase(candidate, null).use { old ->
+            old.execSQL(
+                """
+                CREATE TABLE tracking_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    interval_ms INTEGER NOT NULL,
+                    min_update_distance REAL NOT NULL,
+                    sync_interval_seconds INTEGER NOT NULL,
+                    priority INTEGER NOT NULL DEFAULT 0,
+                    condition_type TEXT NOT NULL,
+                    speed_threshold REAL,
+                    deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
+                    activation_delay_seconds INTEGER NOT NULL DEFAULT 0,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    created_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            old.execSQL(
+                """
+                INSERT INTO tracking_profiles
+                    (name, interval_ms, min_update_distance, sync_interval_seconds,
+                     priority, condition_type, deactivation_delay_seconds, created_at)
+                VALUES ('Charging', 10000, 0, 0, 10, 'charging', 60, 0)
+                """.trimIndent()
+            )
+            old.version = 7
+        }
+
+        DatabaseHelper.migrateCandidate(candidate)
+
+        SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
+            // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
+            // passes for any value and stops forcing a migration arm when the version moves.
+            assertEquals(8, migrated.version)
+            migrated.rawQuery("PRAGMA table_info(tracking_profiles)", null).use { cursor ->
+                val columns = mutableSetOf<String>()
+                while (cursor.moveToNext()) columns.add(cursor.getString(1))
+                assertTrue(columns.contains("wifi_ssid"))
+            }
+            migrated.rawQuery("SELECT wifi_ssid FROM tracking_profiles WHERE name = 'Charging'", null).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.isNull(0))
+            }
+        }
+
+        candidate.delete()
+    }
+
     // ========================================================================
     // Migration v5 -> v6: activation_delay_seconds
     // ========================================================================
@@ -147,7 +210,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(7, migrated.version)
+            assertEquals(8, migrated.version)
             // migrateCandidate stamps the version unconditionally, so the version alone proves
             // nothing about the v7 step. This is the restore-an-older-backup path.
             assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
@@ -188,7 +251,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(7, migrated.version)
+            assertEquals(8, migrated.version)
             assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
             migrated.rawQuery("PRAGMA table_info(locations)", null).use { locCursor ->
                 val locCols = mutableSetOf<String>()

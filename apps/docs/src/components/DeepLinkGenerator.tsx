@@ -20,12 +20,14 @@ interface GeofenceRow {
   heartbeatIntervalMinutes: string
 }
 
-type ProfileConditionType = "charging" | "android_auto" | "speed_above" | "speed_below" | "stationary"
+type ProfileConditionType =
+  "charging" | "android_auto" | "wifi_any" | "wifi_ssid" | "speed_above" | "speed_below" | "stationary"
 
 interface ProfileRow {
   name: string
   conditionType: ProfileConditionType
   speedKmh: string
+  ssid: string
   interval: string
   distance: string
   syncInterval: string
@@ -41,6 +43,8 @@ const QR_MAX_SCANNABLE_LENGTH = 1200
 const PROFILE_CONDITION_OPTIONS: { value: ProfileConditionType; label: string }[] = [
   { value: "charging", label: "Charging" },
   { value: "android_auto", label: "Android Auto / Car mode" },
+  { value: "wifi_any", label: "Wi-Fi" },
+  { value: "wifi_ssid", label: "Wi-Fi network" },
   { value: "speed_above", label: "Speed above threshold" },
   { value: "speed_below", label: "Speed below threshold" },
   { value: "stationary", label: "Stationary" }
@@ -188,6 +192,11 @@ export default function DeepLinkGenerator() {
       if (isSpeed) {
         if (!p.speedKmh || Number(p.speedKmh) <= 0) continue
         condition.speedThreshold = Number(p.speedKmh) / 3.6
+      }
+      if (p.conditionType === "wifi_ssid") {
+        const ssid = p.ssid.trim()
+        if (!ssid) continue
+        condition.ssid = ssid
       }
 
       const entry: Record<string, unknown> = {
@@ -338,6 +347,7 @@ export default function DeepLinkGenerator() {
         name: "",
         conditionType: "charging",
         speedKmh: "",
+        ssid: "",
         interval: "5",
         distance: "0",
         syncInterval: "0",
@@ -786,6 +796,7 @@ export default function DeepLinkGenerator() {
         <div className={styles.keyValueList}>
           {profiles.map((p, i) => {
             const isSpeed = p.conditionType === "speed_above" || p.conditionType === "speed_below"
+            const isWifiSsid = p.conditionType === "wifi_ssid"
             const isStationary = p.conditionType === "stationary"
             return (
               <div key={i} className={styles.geofenceCard}>
@@ -836,6 +847,17 @@ export default function DeepLinkGenerator() {
                         placeholder="30"
                         value={p.speedKmh}
                         onChange={(e) => updateProfile(i, "speedKmh", e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {isWifiSsid && (
+                    <div className={styles.field}>
+                      <label className={styles.label}>Wi-Fi SSID</label>
+                      <input
+                        className={styles.input}
+                        placeholder="MyNetwork"
+                        value={p.ssid}
+                        onChange={(e) => updateProfile(i, "ssid", e.target.value)}
                       />
                     </div>
                   )}

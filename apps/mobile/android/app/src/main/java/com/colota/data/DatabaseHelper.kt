@@ -32,7 +32,7 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         const val DATABASE_NAME = "Colota.db"
-        const val DATABASE_VERSION = 7
+        const val DATABASE_VERSION = 8
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
@@ -63,6 +63,7 @@ class DatabaseHelper private constructor(context: Context) :
                 priority INTEGER NOT NULL DEFAULT 0,
                 condition_type TEXT NOT NULL,
                 speed_threshold REAL,
+                wifi_ssid TEXT,
                 deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
                 activation_delay_seconds INTEGER NOT NULL DEFAULT 0,
                 enabled INTEGER NOT NULL DEFAULT 1,
@@ -255,6 +256,9 @@ class DatabaseHelper private constructor(context: Context) :
             }
             if (oldVersion < 7) {
                 db.execSQL(CREATE_BOUNDARY_OVERRIDES_TABLE)
+            }
+            if (oldVersion < 8) {
+                db.execSQL("ALTER TABLE $TABLE_PROFILES ADD COLUMN wifi_ssid TEXT")
             }
         }
 

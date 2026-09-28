@@ -15,6 +15,18 @@ const mockProfiles: TrackingProfile[] = [
     activationDelay: 12,
     deactivationDelay: 30,
     enabled: true
+  },
+  {
+    id: 2,
+    name: "Home",
+    interval: 60,
+    distance: 10,
+    syncInterval: 300,
+    priority: 15,
+    condition: { type: "wifi_ssid", ssid: "HomeNet" },
+    activationDelay: 0,
+    deactivationDelay: 60,
+    enabled: true
   }
 ]
 
@@ -30,6 +42,12 @@ jest.mock("../../services/ProfileService", () => ({
     updateProfile: (p: any) => mockUpdateProfile(p),
     deleteProfile: (id: number) => mockDeleteProfile(id)
   }
+}))
+
+const mockGetCurrentSsid = jest.fn().mockResolvedValue("HomeNet")
+jest.mock("../../services/NativeLocationService", () => ({
+  __esModule: true,
+  default: { getCurrentSsid: () => mockGetCurrentSsid() }
 }))
 
 const mockShowAlert = jest.fn()
@@ -185,8 +203,11 @@ describe("ProfileEditorScreen", () => {
 
       expect(getByText("Android Auto")).toBeTruthy()
       expect(getByText("Speed above")).toBeTruthy()
+      expect(getByText("Wi-Fi")).toBeTruthy()
+      expect(getByText("Wi-Fi network")).toBeTruthy()
       expect(getByText("Phone is plugged in")).toBeTruthy()
       expect(getByText("Average speed is above the speed you set")).toBeTruthy()
+      expect(getByText("Phone is on a Wi-Fi network")).toBeTruthy()
       expect(getByTestId("condition-charging").props.accessibilityState.checked).toBe(true)
     })
 
@@ -210,6 +231,65 @@ describe("ProfileEditorScreen", () => {
       fireEvent.changeText(getByTestId("activation-delay-input"), "90")
       fireEvent.press(getByTestId("condition-charging"))
       expect(getByTestId("activation-delay-input").props.value).toBe("90")
+    })
+  })
+
+  describe("wi-fi network", () => {
+    it("reveals the network field under a named-network condition and blocks Save until it is filled", async () => {
+      const { getByTestId, queryByTestId } = renderNew()
+      expect(queryByTestId("wifi-ssid-input")).toBeNull()
+
+      fireEvent.press(getByTestId("condition-wifi_ssid"))
+      // Let the current-SSID offer settle inside act before asserting.
+      await waitFor(() => expect(mockGetCurrentSsid).toHaveBeenCalled())
+
+      expect(getByTestId("wifi-ssid-input").props.value).toBe("")
+      expect(getByTestId("profile-sentence").props.children).toBe(
+        "On Wi-Fi, track every 5 s, any movement and sync each fix."
+      )
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(true)
+
+      fireEvent.changeText(getByTestId("wifi-ssid-input"), "HomeNet")
+      expect(getByTestId("profile-sentence").props.children).toBe(
+        'On Wi-Fi "HomeNet", track every 5 s, any movement and sync each fix.'
+      )
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
+    })
+
+    it("offers the network the phone is on and saves the trimmed name", async () => {
+      const { getByTestId } = renderNew()
+      fireEvent.press(getByTestId("condition-wifi_ssid"))
+
+      const use = await waitFor(() => getByTestId("wifi-ssid-use"))
+      fireEvent.press(use)
+      expect(getByTestId("wifi-ssid-input").props.value).toBe("HomeNet")
+
+      fireEvent.changeText(getByTestId("wifi-ssid-input"), " HomeNet ")
+      fireEvent.press(getByTestId("save-profile-btn"))
+
+      await waitFor(() =>
+        expect(mockCreateProfile).toHaveBeenCalledWith(
+          expect.objectContaining({ condition: { type: "wifi_ssid", ssid: "HomeNet" } })
+        )
+      )
+    })
+
+    it("loads a saved network and drops it when the condition switches away", async () => {
+      const { findByTestId, getByTestId } = renderEdit(2)
+      expect((await findByTestId("wifi-ssid-input")).props.value).toBe("HomeNet")
+      await waitFor(() => expect(mockGetCurrentSsid).toHaveBeenCalled())
+
+      fireEvent.press(getByTestId("condition-wifi_any"))
+      expect(getByTestId("profile-sentence").props.children).toBe(
+        "On Wi-Fi, track every 1 min after 10 m and sync every 5 min."
+      )
+
+      fireEvent.press(getByTestId("save-profile-btn"))
+      await waitFor(() =>
+        expect(mockUpdateProfile).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 2, condition: { type: "wifi_any" } })
+        )
+      )
     })
   })
 

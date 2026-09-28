@@ -45,9 +45,13 @@ class NetworkManager(private val context: Context) {
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-    @Volatile private var currentSsid: String = ""
+    @Volatile var currentSsid: String = ""
+        private set
     @Volatile private var isVpn: Boolean = false
+    @Volatile private var isWifi: Boolean = false
     @Volatile private var ssidTracking: Boolean = false
+    /** Notified on the callback thread whenever the default network's transport or SSID changes. */
+    @Volatile private var wifiStateListener: (() -> Unit)? = null
     private val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager
 
     // Lazy so existing unit tests that mock Context don't trigger EncryptedSharedPreferences init.
@@ -132,10 +136,17 @@ class NetworkManager(private val context: Context) {
         fun update(caps: NetworkCapabilities) {
             if (withSsid) currentSsid = readSsid(caps)
             isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+            // Android 14+ reports a VPN's underlying transports, so "has Wi-Fi" alone would count a
+            // tunneled connection as a Wi-Fi default network. Profile conditions treat a VPN as
+            // hiding Wi-Fi (documented), which also keeps the behavior consistent on older releases.
+            isWifi = !isVpn && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            notifyWifiStateChanged()
         }
         fun clear() {
             currentSsid = ""
             isVpn = false
+            isWifi = false
+            notifyWifiStateChanged()
         }
 
         return if (withSsid && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -534,6 +545,22 @@ class NetworkManager(private val context: Context) {
         return currentSsid.equals(ssid, ignoreCase = true)
     }
 
+    /** True while the default network is Wi-Fi. Needs no location-flagged callback. */
+    fun isWifiConnected(): Boolean = isWifi
+
+    /**
+     * Registers a callback for default-network transport / SSID changes. The listener runs on the
+     * ConnectivityManager callback thread; callers that touch app state must marshal it themselves.
+     * Used by the profile Wi-Fi conditions, which care about more than sync's one boolean.
+     */
+    fun setWifiStateListener(listener: (() -> Unit)?) {
+        wifiStateListener = listener
+    }
+
+    private fun notifyWifiStateChanged() {
+        wifiStateListener?.invoke()
+    }
+
     /**
      * Returns true when the active network uses a VPN transport.
      * Updated via NetworkCallback.
@@ -541,6 +568,7 @@ class NetworkManager(private val context: Context) {
     fun isVpnConnected(): Boolean = isVpn
 
     fun destroy() {
+        wifiStateListener = null
         try {
             connectivityManager.unregisterNetworkCallback(networkCallback)
         } catch (_: Exception) {}

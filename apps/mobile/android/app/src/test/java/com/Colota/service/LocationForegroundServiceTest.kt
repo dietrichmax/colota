@@ -798,8 +798,8 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `only the wifi_ssid condition turns SSID tracking on`() {
-        // Reading the SSID is attributed as location access, so it must follow the condition needing it.
+    fun `SSID tracking follows the sync condition and the enabled wifi_ssid profiles`() {
+        // Reading the SSID is attributed as location access, so it must follow whoever needs it.
         setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "wifi_ssid"))
         invokePushConfigToSyncManager()
         verify { networkManager.setSsidTracking(true) }
@@ -807,6 +807,12 @@ class LocationForegroundServiceTest {
         setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "any"))
         invokePushConfigToSyncManager()
         verify { networkManager.setSsidTracking(false) }
+
+        // A profile watching a named network needs it even though sync does not. This path runs on
+        // every profile switch, so a push must not turn the callback off under an active profile.
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_SSID)
+        invokePushConfigToSyncManager()
+        verify { networkManager.setSsidTracking(true) }
     }
 
     @Test

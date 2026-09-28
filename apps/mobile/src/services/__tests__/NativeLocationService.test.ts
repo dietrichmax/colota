@@ -84,7 +84,11 @@ jest.mock("react-native", () => ({
       isNetworkAvailable: jest.fn().mockResolvedValue(true),
       isValidEndpointProtocol: jest.fn().mockResolvedValue(true),
       isPrivateEndpoint: jest.fn().mockResolvedValue(false),
-      getActiveProfile: jest.fn().mockResolvedValue(null)
+      getActiveProfile: jest.fn().mockResolvedValue(null),
+      getProfiles: jest.fn().mockResolvedValue([]),
+      createProfile: jest.fn().mockResolvedValue(3),
+      updateProfile: jest.fn().mockResolvedValue(true),
+      deleteProfile: jest.fn().mockResolvedValue(true)
     },
     BuildConfigModule: {
       VERSION_NAME: "1.0.0",
@@ -443,6 +447,82 @@ describe("NativeLocationService", () => {
       nativeMock.getActiveProfile.mockRejectedValueOnce(new Error("Native error"))
       const profile = await NativeLocationService.getActiveProfile()
       expect(profile).toBeNull()
+    })
+  })
+
+  describe("tracking profiles", () => {
+    it("maps rows to the condition shape the editor uses, Wi-Fi SSID included", async () => {
+      nativeMock.getProfiles.mockResolvedValueOnce([
+        {
+          id: 1,
+          name: "Home",
+          intervalMs: 60000,
+          minUpdateDistance: 10,
+          syncIntervalSeconds: 300,
+          priority: 15,
+          conditionType: "wifi_ssid",
+          speedThreshold: null,
+          wifiSsid: "HomeNet",
+          deactivationDelaySeconds: 60,
+          activationDelaySeconds: 0,
+          enabled: true,
+          createdAt: 1700000000
+        },
+        {
+          id: 2,
+          name: "Speed",
+          intervalMs: 2000,
+          minUpdateDistance: 5,
+          syncIntervalSeconds: 0,
+          priority: 10,
+          conditionType: "speed_above",
+          speedThreshold: 13.89,
+          wifiSsid: null,
+          deactivationDelaySeconds: 60,
+          activationDelaySeconds: 0,
+          enabled: true,
+          createdAt: 1700000000
+        }
+      ])
+
+      const profiles = await NativeLocationService.getProfiles()
+
+      expect(profiles[0].condition).toEqual({ type: "wifi_ssid", ssid: "HomeNet" })
+      expect(profiles[0].interval).toBe(60)
+      expect(profiles[1].condition).toEqual({ type: "speed_above", speedThreshold: 13.89 })
+      expect(profiles[1].condition).not.toHaveProperty("ssid")
+    })
+
+    it("sends the SSID on create", async () => {
+      await NativeLocationService.createProfile({
+        name: "Home",
+        interval: 60,
+        distance: 10,
+        syncInterval: 300,
+        priority: 15,
+        condition: { type: "wifi_ssid", ssid: "HomeNet" },
+        activationDelay: 0,
+        deactivationDelay: 60,
+        enabled: true
+      })
+
+      expect(nativeMock.createProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ conditionType: "wifi_ssid", wifiSsid: "HomeNet" })
+      )
+    })
+
+    it("clears the stored SSID when the condition no longer names one", async () => {
+      await NativeLocationService.updateProfile({ id: 1, condition: { type: "charging" } })
+
+      expect(nativeMock.updateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ conditionType: "charging", wifiSsid: null })
+      )
+    })
+
+    it("leaves the SSID alone when the update does not carry a condition", async () => {
+      await NativeLocationService.updateProfile({ id: 1, enabled: false })
+
+      expect(nativeMock.updateProfile.mock.calls[0][0]).not.toHaveProperty("wifiSsid")
     })
   })
 

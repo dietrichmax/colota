@@ -67,6 +67,19 @@ const profiles: TrackingProfile[] = [
     deactivationDelay: 60,
     enabled: true,
     createdAt: 456
+  },
+  {
+    id: 3,
+    name: "Home",
+    interval: 300,
+    distance: 10,
+    syncInterval: 300,
+    priority: 15,
+    condition: { type: "wifi_ssid", ssid: "HomeNet" },
+    activationDelay: 0,
+    deactivationDelay: 60,
+    enabled: true,
+    createdAt: 789
   }
 ]
 
@@ -101,8 +114,11 @@ describe("setupLink", () => {
     // collections, with DB-only fields stripped
     expect(result.config.geofences).toHaveLength(1)
     expect(result.config.geofences[0].name).toBe("Home")
-    expect(result.config.profiles).toHaveLength(1)
+    expect(result.config.profiles).toHaveLength(2)
     expect(result.config.profiles[0].condition).toEqual({ type: "speed_above", speedThreshold: 8.33 })
+    // The network name has to survive the share; the import screen rejects the profile without it.
+    expect(result.config.profiles[1].condition).toEqual({ type: "wifi_ssid", ssid: "HomeNet" })
+    expect(result.config.profiles[1]).not.toHaveProperty("id")
   })
 
   it("omits credentials entirely when that category is unchecked", () => {

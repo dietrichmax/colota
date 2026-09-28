@@ -15,20 +15,24 @@ import android.os.Handler
 import android.os.Looper
 import androidx.car.app.connection.CarConnection
 import androidx.lifecycle.Observer
+import com.Colota.sync.NetworkManager
 import com.Colota.util.AppLogger
 
 /**
- * Monitors device conditions (charging state, Android Auto connection)
+ * Monitors device conditions (charging state, Android Auto connection, Wi-Fi)
  * and notifies ProfileManager when conditions change.
  *
  * Android Auto is detected via the [CarConnection] API, which reliably
- * reports projection and native car connections.
+ * reports projection and native car connections. Wi-Fi state comes from the
+ * service's [NetworkManager], whose callback already tracks the default
+ * network's transport (and, while an SSID condition needs it, its SSID).
  *
  * All observers are registered programmatically so they only run while
  * the foreground service is active.
  */
 class ConditionMonitor(
     private val context: Context,
+    private val networkManager: NetworkManager,
     private val profileManager: ProfileManager
 ) {
     companion object {
@@ -56,12 +60,17 @@ class ConditionMonitor(
             startCarConnectionMonitor()
         }
 
+        if (ProfileConstants.CONDITION_WIFI_ANY in needed || ProfileConstants.CONDITION_WIFI_SSID in needed) {
+            startWifiMonitor()
+        }
+
         AppLogger.d(TAG, "Condition monitors started for: ${needed.ifEmpty { setOf("none") }}")
     }
 
     fun stop() {
         chargingReceiver = unregisterSafely(chargingReceiver)
         stopCarConnectionMonitor()
+        networkManager.setWifiStateListener(null)
 
         AppLogger.d(TAG, "Condition monitors stopped")
     }
@@ -130,6 +139,19 @@ class ConditionMonitor(
 
         carConnectionObserver = null
         carConnection = null
+    }
+
+    /**
+     * Forwards Wi-Fi state changes to the profile manager. The listener is registered before the
+     * first read, so a change landing in that window still arrives instead of being missed.
+     */
+    private fun startWifiMonitor() {
+        networkManager.setWifiStateListener {
+            mainHandler.post {
+                profileManager.onWifiStateChanged(networkManager.isWifiConnected(), networkManager.currentSsid)
+            }
+        }
+        profileManager.onWifiStateChanged(networkManager.isWifiConnected(), networkManager.currentSsid)
     }
 
     private fun readCurrentChargingState(): Boolean {

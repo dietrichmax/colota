@@ -670,6 +670,32 @@ describe("SetupImportScreen", () => {
       expect(getByText("Invalid configuration")).toBeTruthy()
     })
 
+    it("rejects a named-network profile without a network name", () => {
+      const config = { profiles: [{ ...validProfile, condition: { type: "wifi_ssid" } }] }
+      const { getByText } = renderScreen(encode(config))
+      expect(getByText("Invalid configuration")).toBeTruthy()
+    })
+
+    it("imports a named-network profile with its SSID, trimmed", async () => {
+      const config = {
+        profiles: [{ ...validProfile, condition: { type: "wifi_ssid", ssid: "  HomeNet  " } }]
+      }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply configuration"))
+
+      await waitFor(() => expect(mockCreateProfile).toHaveBeenCalledTimes(1))
+      expect(mockCreateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ condition: { type: "wifi_ssid", ssid: "HomeNet" } })
+      )
+    })
+
+    it("accepts the any-network condition without extra fields", () => {
+      const config = { profiles: [{ ...validProfile, condition: { type: "wifi_any" } }] }
+      const { getByText } = renderScreen(encode(config))
+      expect(getByText("Driving")).toBeTruthy()
+    })
+
     it("accepts a non-speed condition without speedThreshold", () => {
       const config = {
         profiles: [{ ...validProfile, condition: { type: "charging" } }]

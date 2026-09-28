@@ -24,9 +24,15 @@ export function conditionOf(profile: Pick<TrackingProfile, "condition">) {
 const speedOf = (profile: Pick<TrackingProfile, "condition">) =>
   `${speedToInput(profile.condition.speedThreshold ?? 0)} ${getSpeedUnit().unit}`
 
+const networkOf = (profile: Pick<TrackingProfile, "condition">) => profile.condition.ssid?.trim() ?? ""
+
 /** "When charging", "Speed above 50 km/h": the clause a row and the editor's sentence open with. */
 export function conditionText(profile: Pick<TrackingProfile, "condition">): string {
-  return t(conditionOf(profile).listKey, { speed: speedOf(profile) })
+  const entry = conditionOf(profile)
+  const network = networkOf(profile)
+  // The editor's live sentence before a network is named; saved profiles always carry one.
+  const key = entry.type === "wifi_ssid" && network === "" ? "condition.wifi_any.list" : entry.listKey
+  return t(key, { speed: speedOf(profile), network })
 }
 
 /** The recording half; a stationary profile forces the distance to 0, so "any movement" would mislead. */
@@ -48,7 +54,9 @@ export function recordingPhrase(profile: ProfileLike): string {
 /** The one line under a profile's name: [Active · ]condition · recording · sync. */
 export function profileRowSub(profile: ProfileLike, inForce: boolean, isOfflineMode: boolean): string {
   const condition = inForce
-    ? t("profile.row.active", { condition: t(conditionOf(profile).clauseKey, { speed: speedOf(profile) }) })
+    ? t("profile.row.active", {
+        condition: t(conditionOf(profile).clauseKey, { speed: speedOf(profile), network: networkOf(profile) })
+      })
     : conditionText(profile)
   const parts = [condition, recordingClause(profile)]
   if (!isOfflineMode) parts.push(syncSummary(profile.syncInterval))

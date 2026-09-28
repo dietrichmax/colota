@@ -61,6 +61,21 @@ const car = profile({
   syncInterval: 300,
   condition: { type: "android_auto" }
 })
+const home = profile({
+  id: 5,
+  name: "Home",
+  interval: 60,
+  distance: 10,
+  syncInterval: 300,
+  condition: { type: "wifi_ssid", ssid: "HomeNet" }
+})
+const wifi = profile({
+  id: 6,
+  name: "Wi-Fi",
+  interval: 30,
+  distance: 5,
+  condition: { type: "wifi_any" }
+})
 const settings = { interval: 30, distance: 2, syncInterval: 300, isOfflineMode: false }
 
 describe("profileRowSub", () => {
@@ -68,6 +83,8 @@ describe("profileRowSub", () => {
     expect(profileRowSub(commute, false, false)).toBe("When charging · Every 5 s, any movement · syncs each fix")
     expect(profileRowSub(driving, false, false)).toBe("Speed above 50 km/h · Every 2 s after 10 m · syncs every 1 min")
     expect(profileRowSub(car, false, false)).toBe("On Android Auto · Every 10 s after 5 m · syncs every 5 min")
+    expect(profileRowSub(home, false, false)).toBe('On Wi-Fi "HomeNet" · Every 1 min after 10 m · syncs every 5 min')
+    expect(profileRowSub(wifi, false, false)).toBe("On Wi-Fi · Every 30 s after 5 m · syncs each fix")
   })
 
   it("opens with Active and lower-cases the condition for the row in force", () => {
@@ -76,6 +93,9 @@ describe("profileRowSub", () => {
     )
     expect(profileRowSub(driving, true, false)).toBe(
       "Active · speed above 50 km/h · Every 2 s after 10 m · syncs every 1 min"
+    )
+    expect(profileRowSub(home, true, false)).toBe(
+      'Active · on Wi-Fi "HomeNet" · Every 1 min after 10 m · syncs every 5 min'
     )
   })
 
@@ -110,6 +130,12 @@ describe("profileRowSub", () => {
     expect(profileRowSub(driving, false, false)).toBe("Speed above 31 mph · Every 2 s after 33 ft · syncs every 1 min")
     await units("metric")
   })
+
+  it("reads the network name, and falls back to plain Wi-Fi while the field is still empty", () => {
+    expect(conditionText(home)).toBe('On Wi-Fi "HomeNet"')
+    expect(conditionText({ ...home, condition: { type: "wifi_ssid" } })).toBe("On Wi-Fi")
+    expect(conditionText(wifi)).toBe("On Wi-Fi")
+  })
 })
 
 describe("profileSentence", () => {
@@ -122,6 +148,7 @@ describe("profileSentence", () => {
     expect(profileSentence({ ...driving, condition: { type: "speed_below", speedThreshold: 2.78 } }, false)).toBe(
       "When slower than 10 km/h, track every 2 s after 10 m and sync every 1 min."
     )
+    expect(profileSentence(home, false)).toBe('On Wi-Fi "HomeNet", track every 1 min after 10 m and sync every 5 min.')
   })
 
   it("stops after the recording clause in offline mode", () => {

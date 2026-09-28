@@ -210,7 +210,7 @@ Orchestrates batch location uploads with:
 
 ### NetworkManager
 
-HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections and VPN status for sync condition filtering. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the `wifi_ssid` condition is active or the SSID picker asks. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
+HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections and VPN status for sync condition filtering. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered while the sync condition is `wifi_ssid`, any enabled profile watches a named network, or the SSID picker asks. The `wifi_any` profile trigger only needs the default network's transport. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
 
 For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSLSocketFactory` supplied by `ClientCertSslContextProvider` (per-instance, never `setDefaultSSLSocketFactory()` - the override is scoped to outbound location sync, not the whole process).
 
@@ -248,7 +248,7 @@ When both WiFi and motionless pause are enabled, GPS only resumes when both cond
 
 ### ProfileManager
 
-Evaluates tracking profile conditions and switches GPS settings automatically. Supports five condition types: charging, Android Auto / car mode, speed above threshold, speed below threshold, and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
+Evaluates tracking profile conditions and switches GPS settings automatically. Supports seven condition types: charging, Android Auto / car mode, Wi-Fi (any network), Wi-Fi network (named SSID), speed above threshold, speed below threshold, and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
 
 The stationary condition is decided by the fixes and never by a timer. `evaluateStationaryState` tracks a run of consecutive fixes below 0.3 m/s and the verdict is reached by the fix that completes the window, so a stream that stops delivering cannot produce one. A gap restarts the run unless it is within three times the previous gap, or 60 seconds if that is larger, and no gap over 15 minutes is ever tolerated. Calibrating on the previous gap keeps a sparse Doze cadence usable while a fast stream that goes quiet is treated as unobserved time rather than stillness; the window length deliberately plays no part, or a long window would license a long blackout. The motion sensor discards a run in progress as well as an active verdict.
 
@@ -258,11 +258,11 @@ Database access layer for tracking profiles and trip events. Maintains a `TimedC
 
 ### ConditionMonitor
 
-Monitors charging state via `BroadcastReceiver` and Android Auto connection via the `CarConnection` API. Forwards state changes to `ProfileManager` for condition evaluation.
+Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, and Wi-Fi network state from `NetworkManager`. Forwards state changes to `ProfileManager` for condition evaluation.
 
 ### ProfileConstants
 
-Centralized constants for condition type strings (`charging`, `android_auto`, `speed_above`, `speed_below`, `stationary`), event types (`activated`, `deactivated`), cache TTL, speed buffer size, and minimum interval.
+Centralized constants for condition type strings (`charging`, `android_auto`, `speed_above`, `speed_below`, `stationary`, `wifi_any`, `wifi_ssid`), event types (`activated`, `deactivated`), cache TTL, speed buffer size, and minimum interval.
 
 ### SecureStorageHelper
 

@@ -30,8 +30,8 @@ export function resolveLanguage(tag: string | undefined): SupportedLanguage {
 /** Side-effect free so `jest.setup.js` can share it. Inline resources keep `init()` synchronous. */
 export const I18N_OPTIONS = {
   fallbackLng: FALLBACK_LANGUAGE,
-  resources: { 
-    en: { translation: en }, 
+  resources: {
+    en: { translation: en },
     es: { translation: es },
     zh: { translation: zh }
   },

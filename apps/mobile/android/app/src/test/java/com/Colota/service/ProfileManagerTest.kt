@@ -125,6 +125,44 @@ class ProfileManagerTest {
         activationDelaySeconds = activationDelay
     )
 
+    private fun wifiAnyProfile(
+        id: Int = 5,
+        priority: Int = 10,
+        deactivationDelay: Int = 60,
+        activationDelay: Int = 0
+    ) = ProfileHelper.CachedProfile(
+        id = id,
+        name = "Wi-Fi",
+        intervalMs = 30000,
+        minUpdateDistance = 5f,
+        syncIntervalSeconds = 0,
+        priority = priority,
+        conditionType = ProfileConstants.CONDITION_WIFI_ANY,
+        speedThreshold = null,
+        deactivationDelaySeconds = deactivationDelay,
+        activationDelaySeconds = activationDelay
+    )
+
+    private fun wifiSsidProfile(
+        id: Int = 6,
+        ssid: String = "HomeNet",
+        priority: Int = 15,
+        deactivationDelay: Int = 60,
+        activationDelay: Int = 0
+    ) = ProfileHelper.CachedProfile(
+        id = id,
+        name = "Home",
+        intervalMs = 60000,
+        minUpdateDistance = 10f,
+        syncIntervalSeconds = 300,
+        priority = priority,
+        conditionType = ProfileConstants.CONDITION_WIFI_SSID,
+        speedThreshold = null,
+        wifiSsid = ssid,
+        deactivationDelaySeconds = deactivationDelay,
+        activationDelaySeconds = activationDelay
+    )
+
     private fun mockLocation(speed: Float, hasSpeed: Boolean = true, timeMs: Long = t0): Location {
         return mockk {
             every { this@mockk.speed } returns speed
@@ -218,6 +256,116 @@ class ProfileManagerTest {
 
         assertEquals("Car Mode", switchedProfileName)
         assertEquals(3000L, switchedInterval)
+    }
+
+    // --- Wi-Fi conditions ---
+
+    @Test
+    fun `activates wifi any profile while the default network is wifi`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiAnyProfile())
+
+        val manager = createManager()
+        manager.onWifiStateChanged(connected = true, ssid = "")
+
+        assertEquals("Wi-Fi", switchedProfileName)
+        assertEquals(30000L, switchedInterval)
+    }
+
+    @Test
+    fun `does not activate wifi any profile without wifi`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiAnyProfile())
+
+        val manager = createManager()
+        manager.onWifiStateChanged(connected = false, ssid = "")
+
+        assertNull(switchedProfileName)
+    }
+
+    @Test
+    fun `activates wifi ssid profile on a case-insensitive match`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiSsidProfile(ssid = "HomeNet"))
+
+        val manager = createManager()
+        manager.onWifiStateChanged(connected = true, ssid = "homenet")
+
+        assertEquals("Home", switchedProfileName)
+        assertEquals(60000L, switchedInterval)
+    }
+
+    @Test
+    fun `does not activate wifi ssid profile on another network or before the SSID arrives`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiSsidProfile(ssid = "HomeNet"))
+
+        val manager = createManager()
+        manager.onWifiStateChanged(connected = true, ssid = "WorkNet")
+        assertNull(switchedProfileName)
+
+        manager.onWifiStateChanged(connected = true, ssid = "")
+        assertNull(switchedProfileName)
+
+        manager.onWifiStateChanged(connected = false, ssid = "HomeNet")
+        assertNull(switchedProfileName)
+    }
+
+    @Test
+    fun `a profile without an SSID never matches`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiSsidProfile(ssid = ""))
+
+        val manager = createManager()
+        manager.onWifiStateChanged(connected = true, ssid = "")
+
+        assertNull(switchedProfileName)
+    }
+
+    @Test
+    fun `deactivates the wifi profile after its deactivation delay when the network drops`() = testScope.runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiSsidProfile(deactivationDelay = 30))
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.defaultDistance = 0f
+        manager.defaultSyncInterval = 0
+
+        manager.onWifiStateChanged(connected = true, ssid = "HomeNet")
+        assertEquals("Home", switchedProfileName)
+
+        manager.onWifiStateChanged(connected = false, ssid = "")
+        assertEquals("Home", switchedProfileName)
+
+        advanceTimeBy(31_000)
+
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+    }
+
+    @Test
+    fun `an active named-network profile is kept while the SSID is still unknown`() = testScope.runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiSsidProfile(deactivationDelay = 0))
+
+        val manager = createManager()
+        manager.onWifiStateChanged(connected = true, ssid = "HomeNet")
+        assertEquals("Home", switchedProfileName)
+
+        // SSID tracking just turned on and the callback has not delivered yet.
+        manager.onWifiStateChanged(connected = true, ssid = "")
+        advanceTimeBy(1_000)
+
+        assertEquals("Home", switchedProfileName)
+    }
+
+    @Test
+    fun `an active named-network profile drops when another network is reported`() = testScope.runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(wifiSsidProfile(deactivationDelay = 0))
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.onWifiStateChanged(connected = true, ssid = "HomeNet")
+        assertEquals("Home", switchedProfileName)
+
+        manager.onWifiStateChanged(connected = true, ssid = "WorkNet")
+        advanceTimeBy(1_000)
+
+        assertNull(switchedProfileName)
     }
 
     // --- Speed conditions ---

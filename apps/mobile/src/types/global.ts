@@ -384,12 +384,15 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
 // TRACKING PROFILES
 // ============================================================================
 
-export type ProfileConditionType = "charging" | "android_auto" | "speed_above" | "speed_below" | "stationary"
+export type ProfileConditionType =
+  "charging" | "android_auto" | "speed_above" | "speed_below" | "stationary" | "wifi_any" | "wifi_ssid"
 
 export interface ProfileCondition {
   type: ProfileConditionType
   /** Speed threshold in m/s (only for speed_above / speed_below conditions) */
   speedThreshold?: number
+  /** Wi-Fi network name in the user's own casing (only for wifi_ssid conditions) */
+  ssid?: string
 }
 
 export interface TrackingProfile {
