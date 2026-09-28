@@ -25,4 +25,13 @@ class SyncStateTest {
         assertEquals(1_700_000_000_000L, SyncState.lastSuccessTime)
         assertEquals("Sync failed", SyncState.lastSyncError)
     }
+
+    /** Two senders can meet a 429 at once. */
+    @Test
+    fun `a shorter rate-limit wait never replaces a longer one`() {
+        SyncState.holdUntil(600_000L)
+        SyncState.holdUntil(60_000L)
+
+        assertEquals(600_000L, SyncState.rateLimitedUntil)
+    }
 }

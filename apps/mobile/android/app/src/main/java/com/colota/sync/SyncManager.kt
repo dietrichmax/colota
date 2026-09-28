@@ -30,6 +30,8 @@ class SyncManager(
     companion object {
         private const val TAG = "SyncManager"
         private const val MAX_BATCHES_PER_SYNC = 10
+        private const val DEFAULT_RATE_LIMIT_WAIT_SECONDS = 60L
+        private const val MAX_RATE_LIMIT_WAIT_SECONDS = 900L
     }
 
     @Volatile private var endpoint: String = ""
@@ -113,6 +115,11 @@ class SyncManager(
                 if (!allowed) {
                     continue
                 }
+                val rateLimitWait = rateLimitWaitSeconds()
+                if (rateLimitWait > 0) {
+                    AppLogger.d(TAG, "Sync skipped: rate limited for ${rateLimitWait}s")
+                    continue
+                }
 
                 if (endpoint.isNotBlank() && queued > 0) {
                     if (syncMutex.isLocked) AppLogger.d(TAG, "Sync tick waiting for the running sync")
@@ -167,15 +174,22 @@ class SyncManager(
             syncMutex.withLock {
                 waitingFlushTotal = null
                 total = dbHelper.getQueuedCount()
-                AppLogger.d(TAG, "Manual flush started: $total items in queue")
-                pass = syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
+                val rateLimitWait = rateLimitWaitSeconds()
+                if (rateLimitWait > 0) {
+                    AppLogger.d(TAG, "Manual flush skipped: rate limited for ${rateLimitWait}s")
+                } else {
+                    AppLogger.d(TAG, "Manual flush started: $total items in queue")
+                    pass = syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
+                }
             }
         } finally {
             waitingFlushTotal = null
             // Only this event ends the pass for the screen, so it goes out even after a throw or a cancel while waiting
             invalidateQueueCache()
             val remaining = runCatching { dbHelper.getQueuedCount() }.getOrDefault(total - pass.sent)
-            LocationServiceModule.sendSyncProgressEvent(pass.sent, pass.failed, pass.sent + pass.failed, remaining)
+            LocationServiceModule.sendSyncProgressEvent(
+                pass.sent, pass.failed, pass.sent + pass.failed, remaining, rateLimitWaitSeconds().takeIf { it > 0 }
+            )
         }
     }
 
@@ -202,6 +216,10 @@ class SyncManager(
                     AppLogger.d(TAG, "Instant send deferred: a sync is running")
                     return
                 }
+                if (rateLimitWaitSeconds() > 0) {
+                    AppLogger.d(TAG, "Instant send deferred: rate limited")
+                    return
+                }
                 AppLogger.d(TAG, "Instant send")
                 val result = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
 
@@ -211,6 +229,7 @@ class SyncManager(
                     invalidateQueueCache()
                     markSuccess()
                 } else {
+                    if (result is BatchResult.RateLimited) noteRateLimit(result.retryAfterSeconds)
                     retryReason(result)?.let { dbHelper.incrementRetryCount(queueId, it) }
                 }
             } finally {
@@ -251,6 +270,19 @@ class SyncManager(
         }
 
         return success
+    }
+
+    /** Clamped to the cap, because the wall clock can be set back. */
+    fun rateLimitWaitSeconds(): Long {
+        val left = (SyncState.rateLimitedUntil - clock()).coerceAtMost(MAX_RATE_LIMIT_WAIT_SECONDS * 1000)
+        return if (left > 0) (left + 999) / 1000 else 0
+    }
+
+    /** Capped so a bad `Retry-After` cannot hold the queue for a day. */
+    private fun noteRateLimit(retryAfterSeconds: Long?) {
+        val wait = (retryAfterSeconds ?: DEFAULT_RATE_LIMIT_WAIT_SECONDS).coerceIn(1, MAX_RATE_LIMIT_WAIT_SECONDS)
+        SyncState.holdUntil(clock() + wait * 1000)
+        AppLogger.w(TAG, "Rate limited: holding uploads for ${wait}s")
     }
 
     private suspend fun applyBackoffDelay() {
@@ -367,6 +399,10 @@ class SyncManager(
                     }
                     reportProgress()
 
+                    val limited = results.mapNotNull { it.second as? BatchResult.RateLimited }
+                    if (limited.isNotEmpty()) {
+                        noteRateLimit(limited.maxOf { it.retryAfterSeconds ?: DEFAULT_RATE_LIMIT_WAIT_SECONDS })
+                    }
                     stopped = stopReason(results.map { it.second }, anySent = successfulIds.isNotEmpty())
                     if (stopped != null) break
                     yield()
@@ -484,7 +520,11 @@ class SyncManager(
                 }
                 BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
             }
-            is BatchResult.RateLimited, BatchResult.NetworkError ->
+            is BatchResult.RateLimited -> {
+                noteRateLimit(result.retryAfterSeconds)
+                BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
+            }
+            BatchResult.NetworkError ->
                 BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
         }
     }

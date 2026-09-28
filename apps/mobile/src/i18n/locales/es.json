@@ -377,6 +377,7 @@
   "data.sync.nothingAuto": "Nada en cola. Las ubicaciones nuevas se suben por sí solas.",
   "data.sync.nothingLast": "Nada en cola. Último envío {{when}}.",
   "data.sync.progress": "Enviadas {{sent}} de {{total}}.",
+  "data.sync.rateLimited": "Tu servidor pidió esperar. Los envíos se reanudan en {{duration}}.",
   "data.sync.someFailed": "Algunos envíos fallaron.",
   "data.sync.stillQueued": "Aún hay {{n}} en cola; presiona de nuevo.",
   "data.syncIdle_one": "{{n}} en cola. La envía ahora, sin importar la opción Sincronizar solo en.",

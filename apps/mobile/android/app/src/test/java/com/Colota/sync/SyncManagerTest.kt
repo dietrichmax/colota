@@ -28,6 +28,7 @@ class SyncManagerTest {
         dbHelper = mockk(relaxed = true)
         networkManager = mockk(relaxed = true)
         scope = TestScope(UnconfinedTestDispatcher())
+        SyncState.reset()
         syncManager = SyncManager(dbHelper, networkManager, scope)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
 
@@ -41,6 +42,7 @@ class SyncManagerTest {
     @After
     fun tearDown() {
         unmockkObject(AppLogger)
+        SyncState.reset()
         scope.cancel()
     }
 
@@ -1822,6 +1824,187 @@ class SyncManagerTest {
         syncManager.manualFlush()
 
         coVerify(exactly = 2) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
+    }
+
+    // --- The wait a 429 asks for ---
+
+    private var now = 0L
+
+    private fun rateLimitedManager(apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED): SyncManager {
+        val manager = SyncManager(dbHelper, networkManager, scope, clock = { now })
+        manager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = apiFormat
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        return manager
+    }
+
+    @Test
+    fun `a flush inside the Retry-After wait sends nothing, and the next one after it does`() = scope.runTest {
+        val manager = rateLimitedManager()
+        fakeQueue(5)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(30)
+        manager.manualFlush()
+        clearMocks(networkManager, answers = false)
+
+        now += 29_000
+        manager.manualFlush()
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+
+        now += 2_000
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
+        manager.manualFlush()
+        coVerify(exactly = 5) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a 429 without Retry-After waits 60 s`() = scope.runTest {
+        val manager = rateLimitedManager()
+        fakeQueue(1)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(null)
+
+        manager.manualFlush()
+
+        assertEquals(60L, manager.rateLimitWaitSeconds())
+    }
+
+    @Test
+    fun `a Retry-After longer than 15 min is capped`() = scope.runTest {
+        val manager = rateLimitedManager()
+        fakeQueue(1)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(86_400)
+
+        manager.manualFlush()
+
+        assertEquals(900L, manager.rateLimitWaitSeconds())
+    }
+
+    @Test
+    fun `a flush that ends rate limited tells the screen how long to wait`() = scope.runTest {
+        mockkObject(LocationServiceModule)
+        every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any(), any()) } returns true
+        val manager = rateLimitedManager()
+        fakeQueue(1)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(45)
+
+        try {
+            manager.manualFlush()
+
+            verify { LocationServiceModule.sendSyncProgressEvent(0, 1, 1, 1, 45L) }
+        } finally {
+            unmockkObject(LocationServiceModule)
+        }
+    }
+
+    @Test
+    fun `a flush skipped inside the wait still ends the screen's pass and says how long is left`() = scope.runTest {
+        mockkObject(LocationServiceModule)
+        every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any(), any()) } returns true
+        val manager = rateLimitedManager()
+        fakeQueue(3)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(60)
+        try {
+            manager.manualFlush()
+            now += 15_000
+            manager.manualFlush()
+
+            verify { LocationServiceModule.sendSyncProgressEvent(0, 0, 0, 3, 45L) }
+        } finally {
+            unmockkObject(LocationServiceModule)
+        }
+    }
+
+    /** With tracking off every Sync now runs on a service that stops after it. */
+    @Test
+    fun `the wait outlives the SyncManager that met the 429`() = scope.runTest {
+        fakeQueue(3)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(300)
+        rateLimitedManager().manualFlush()
+        clearMocks(networkManager, answers = false)
+
+        rateLimitedManager().manualFlush()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a clock set back cannot hold uploads longer than the cap`() = scope.runTest {
+        val manager = rateLimitedManager()
+        fakeQueue(1)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(60)
+        manager.manualFlush()
+
+        now -= 2 * 60 * 60 * 1000L
+
+        assertEquals(900L, manager.rateLimitWaitSeconds())
+    }
+
+    @Test
+    fun `the longest Retry-After in a chunk sets the wait`() = scope.runTest {
+        val manager = rateLimitedManager()
+        fakeQueue(10)
+        var calls = 0
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers {
+            when (++calls) {
+                1 -> BatchResult.RateLimited(null)
+                4 -> BatchResult.RateLimited(600)
+                else -> BatchResult.Success
+            }
+        }
+
+        manager.manualFlush()
+
+        assertEquals(600L, manager.rateLimitWaitSeconds())
+    }
+
+    @Test
+    fun `an instant send inside the wait stays queued without a request`() = scope.runTest {
+        val manager = rateLimitedManager()
+        fakeQueue(1)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(30)
+        manager.queueAndSend(1L, JSONObject().put("lat", 52.0))
+        clearMocks(networkManager, answers = false)
+
+        manager.queueAndSend(2L, JSONObject().put("lat", 52.1))
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { dbHelper.removeFromQueueByLocationId(any()) }
+    }
+
+    @Test
+    fun `a batch 429 starts the wait too`() = scope.runTest {
+        val manager = rateLimitedManager(ApiFormat.OVERLAND_BATCH)
+        val items = (1L..3L).map { QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0) }
+        every { dbHelper.getQueuedLocations(50) } returns items
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.RateLimited(120)
+
+        manager.manualFlush()
+        manager.manualFlush()
+
+        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
+        assertEquals(120L, manager.rateLimitWaitSeconds())
+    }
+
+    @Test
+    fun `a periodic tick inside the wait sends nothing`() = scope.runTest {
+        val manager = startPeriodicSyncOnVirtualClock(60, queuedCount = 5)
+        fakeQueue(5)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(300)
+        manager.manualFlush()
+        clearMocks(networkManager, answers = false)
+
+        advanceTimeBy(61_000)
+
+        assertEquals("the tick itself still runs and logs", 1, ticks)
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        manager.stopPeriodicSync()
     }
 
     /** Rows leave only when a pass or an instant send removes them, so two senders running together see the same rows. */

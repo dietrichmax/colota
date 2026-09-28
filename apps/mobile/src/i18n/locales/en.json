@@ -377,6 +377,7 @@
   "data.sync.nothingAuto": "Nothing queued. New locations upload on their own.",
   "data.sync.nothingLast": "Nothing queued. Last upload {{when}}.",
   "data.sync.progress": "Sent {{sent}} of {{total}}.",
+  "data.sync.rateLimited": "Your server asked Colota to wait. Uploads resume in {{duration}}.",
   "data.sync.someFailed": "Some uploads failed.",
   "data.sync.stillQueued": "{{n}} still queued; press again.",
   "data.syncIdle_one": "{{n}} queued. Uploads it now, whatever Sync only on says.",

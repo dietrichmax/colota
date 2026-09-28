@@ -206,12 +206,13 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
         /** `remaining` is present only on the event that ends a pass, and is what says the pass ended. */
         @JvmStatic
-        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int, remaining: Int? = null): Boolean =
+        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int, remaining: Int? = null, retryAfterSeconds: Long? = null): Boolean =
             emit("onSyncProgress") {
                 putInt("sent", sent)
                 putInt("failed", failed)
                 putInt("total", total)
                 if (remaining != null) putInt("remaining", remaining)
+                if (retryAfterSeconds != null) putInt("retryAfterSeconds", retryAfterSeconds.toInt())
             }
 
         @JvmStatic

@@ -377,6 +377,7 @@
   "data.sync.nothingAuto": "没有队列内容，新位置会自行上传。",
   "data.sync.nothingLast": "没有队列内容，上次上传于 {{when}}。",
   "data.sync.progress": "已发送 {{sent}}/{{total}}。",
+  "data.sync.rateLimited": "服务器要求 Colota 稍后再试。{{duration}}后恢复上传。",
   "data.sync.someFailed": "部分上传失败。",
   "data.sync.stillQueued": "仍有 {{n}} 个正在等待队列；请重试。",
   "data.syncIdle_one": "{{n}} 个队列内容。现在上传，不受“仅同步”设置影响。",

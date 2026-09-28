@@ -588,6 +588,65 @@ describe("DataManagementScreen", () => {
       expect(line.props.accessibilityValue.text).toBe("error")
     })
 
+    it("says the server asked to wait, as a warning, instead of asking for another press", async () => {
+      const api = renderScreen()
+      await api.findByText("12,480")
+
+      fireEvent.press(api.getByTestId("sync-now-row"))
+      await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
+      act(() => {
+        DeviceEventEmitter.emit("onSyncProgress", {
+          sent: 9,
+          failed: 1,
+          total: 10,
+          remaining: 403,
+          retryAfterSeconds: 120
+        })
+      })
+
+      const line = await api.findByText("Sent 9 of 412. Your server asked Colota to wait. Uploads resume in 2 min.")
+      expect(line.props.accessibilityValue.text).toBe("warning")
+      expect(api.queryByText(/press again/)).toBeNull()
+    })
+
+    it("says only the wait when a press lands inside it and nothing was sent", async () => {
+      const api = renderScreen()
+      await api.findByText("12,480")
+
+      fireEvent.press(api.getByTestId("sync-now-row"))
+      await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
+      act(() => {
+        DeviceEventEmitter.emit("onSyncProgress", {
+          sent: 0,
+          failed: 0,
+          total: 0,
+          remaining: 412,
+          retryAfterSeconds: 45
+        })
+      })
+
+      expect(await api.findByText("Your server asked Colota to wait. Uploads resume in 45 s.")).toBeTruthy()
+    })
+
+    it("rounds a wait of a minute or more up to whole minutes", async () => {
+      const api = renderScreen()
+      await api.findByText("12,480")
+
+      fireEvent.press(api.getByTestId("sync-now-row"))
+      await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
+      act(() => {
+        DeviceEventEmitter.emit("onSyncProgress", {
+          sent: 0,
+          failed: 0,
+          total: 0,
+          remaining: 412,
+          retryAfterSeconds: 847
+        })
+      })
+
+      expect(await api.findByText("Your server asked Colota to wait. Uploads resume in 15 min.")).toBeTruthy()
+    })
+
     it("says how many are left when a pass hits the batch cap", async () => {
       mockGetStats.mockResolvedValue(stats({ queued: 620 }))
       const api = renderScreen()

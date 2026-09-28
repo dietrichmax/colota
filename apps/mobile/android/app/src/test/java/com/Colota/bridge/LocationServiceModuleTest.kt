@@ -247,6 +247,18 @@ class LocationServiceModuleTest {
     }
 
     @Test
+    fun `only a rate-limited pass end carries retryAfterSeconds`() {
+        val payloads = mutableListOf<WritableMap>()
+        every { mockEmitter.emit("onSyncProgress", capture(payloads)) } just Runs
+
+        LocationServiceModule.sendSyncProgressEvent(10, 0, 10, 0)
+        LocationServiceModule.sendSyncProgressEvent(9, 1, 10, 403, 120)
+
+        assertFalse(payloads[0].hasKey("retryAfterSeconds"))
+        assertEquals(120, payloads[1].getInt("retryAfterSeconds"))
+    }
+
+    @Test
     fun `sendSyncProgressEvent returns false when no context`() {
         setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
         assertFalse(LocationServiceModule.sendSyncProgressEvent(0, 0, 0))

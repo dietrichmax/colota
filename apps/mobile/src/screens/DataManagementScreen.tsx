@@ -40,6 +40,7 @@ import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import { formatWhen } from "../utils/geo"
 import { logger } from "../utils/logger"
 import { formatBytes } from "../utils/format"
+import { formatDuration } from "../utils/dashboardState"
 import { useTranslation } from "../i18n/useTranslation"
 
 /** Only a placeholder in the custom field. Nothing is selected until the user selects it. */
@@ -48,7 +49,7 @@ const PLACEHOLDER_DAYS = 90
 /** A hundred years. Past this the value stops being an age and starts being a typo. */
 const MAX_RETENTION_DAYS = 36500
 
-type Message = { text: string; failed?: boolean }
+type Message = { text: string; failed?: boolean; warning?: boolean }
 type Preview = { days: number; total: number; cutoffSeconds: number } | null
 
 const EMPTY_STATS: DatabaseStats = {
@@ -273,7 +274,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
 
     const sub = DeviceEventEmitter.addListener(
       "onSyncProgress",
-      (event: { sent: number; failed: number; total: number; remaining?: number }) => {
+      (event: { sent: number; failed: number; total: number; remaining?: number; retryAfterSeconds?: number }) => {
         // Only the event that ends a pass carries `remaining`. A pass caps at a fixed number of
         // batches, so the running count reaching the queue it started with is not the signal.
         if (event.remaining === undefined) {
@@ -289,6 +290,12 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
           sent: event.sent.toLocaleString(),
           total: queuedBefore.toLocaleString()
         })
+        if (event.retryAfterSeconds) {
+          const s = event.retryAfterSeconds
+          const wait = t("data.sync.rateLimited", { duration: formatDuration(s >= 60 ? Math.ceil(s / 60) * 60 : s) })
+          finish({ text: event.sent > 0 ? `${sent} ${wait}` : wait, warning: true })
+          return
+        }
         const left =
           event.remaining > 0 ? ` ${t("data.sync.stillQueued", { n: event.remaining.toLocaleString() })}` : ""
         if (event.failed > 0) {
@@ -425,7 +432,9 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
             />
           </Card>
           {syncResult ? (
-            <FieldMessage variant={syncResult.failed ? "error" : "info"}>{syncResult.text}</FieldMessage>
+            <FieldMessage variant={syncResult.failed ? "error" : syncResult.warning ? "warning" : "info"}>
+              {syncResult.text}
+            </FieldMessage>
           ) : null}
           {compactMessage ? <FieldMessage>{compactMessage.text}</FieldMessage> : null}
         </View>

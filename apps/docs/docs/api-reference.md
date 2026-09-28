@@ -93,7 +93,7 @@ In the default field-mapped format Colota sends **one location per HTTP request*
 
 The Overland format, and Dawarich in batch mode, instead send **an array of locations in a single request**. Batch size is configurable (1 to 500, default 50) and up to 10 batches are sent per cycle, so one cycle can move considerably more than 500 points.
 
-Your server should handle multiple simultaneous POST requests. If it rate limits, a 429 stops the sync pass and the remaining points go out on the next sync.
+Your server should handle multiple simultaneous POST requests. If it rate limits, a 429 stops the sync pass and Colota waits as long as the `Retry-After` header asks (60 seconds without one, at most 15 minutes) before it sends again.
 
 ## Testing with curl
 
@@ -136,7 +136,7 @@ Your server only needs to return a 2xx status code. The response body is not rea
 
 | Outcome | Behavior |
 | --- | --- |
-| **429 Too Many Requests** | The sync pass stops. The points stay queued in their place for the next sync |
+| **429 Too Many Requests** | The sync pass stops and nothing is sent until the `Retry-After` wait is over (60 seconds without the header, at most 15 minutes). The points stay queued in their place |
 | **502, 503, 504 or a network error** | The point stays queued in its place. The pass stops when a group of 10 points got nothing through (10s connection, 10s read timeout) |
 | **Other 5xx** | The point stays queued and moves behind the others. The pass stops when a group of 10 points got nothing through |
 | **Other 4xx** | The point stays queued and moves behind the others |
