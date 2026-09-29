@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react"
-import { View, Text, StyleSheet, ScrollView } from "react-native"
+import { View, Text, StyleSheet, ScrollView, AppState } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { useTimeout } from "../hooks/useTimeout"
@@ -87,9 +87,18 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   // Only fetched while the SSID field is open; the fallback keeps the offer button hidden.
   useEffect(() => {
     if (profile.condition.type !== "wifi_ssid") return
-    NativeLocationService.getCurrentSsid()
-      .then(setCurrentSsid)
-      .catch(() => setCurrentSsid(""))
+
+    const fetchSsid = () =>
+      NativeLocationService.getCurrentSsid()
+        .then(setCurrentSsid)
+        .catch(() => setCurrentSsid(""))
+    fetchSsid()
+
+    // Connecting to a network in settings and coming back should reveal the offer.
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") fetchSsid()
+    })
+    return () => sub.remove()
   }, [profile.condition.type])
 
   useLayoutEffect(() => {
@@ -201,8 +210,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     const speedThreshold = isSpeedType(next)
       ? (profile.condition.speedThreshold ?? inputToSpeed(parseWholeNumber(text.speed) ?? DEFAULT_SPEED_INPUT))
       : undefined
-    // The SSID belongs to the network field only; switching away clears it like the speed threshold.
-    const ssid = next === "wifi_ssid" ? (profile.condition.ssid ?? "") : undefined
+    // Like the speed threshold, the typed network survives a switch away and re-seeds on the way
+    // back; the stored column is cleared on save because the condition object drops it.
+    const ssid = next === "wifi_ssid" ? (profile.condition.ssid ?? text.ssid) : undefined
     setProfile((prev) => ({
       ...prev,
       ...delays,
@@ -220,7 +230,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       activationDelay: String(delays.activationDelay),
       deactivationDelay: String(delays.deactivationDelay),
       speed: speedThreshold !== undefined ? String(speedToInput(speedThreshold)) : prev.speed,
-      ssid: ssid ?? ""
+      ssid: ssid ?? prev.ssid
     }))
   }
 

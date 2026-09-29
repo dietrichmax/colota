@@ -8,6 +8,8 @@ package com.Colota.data
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.Colota.util.AppLogger
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.WritableMap
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -251,6 +253,35 @@ class ProfileHelperTest {
         assertEquals(1, profiles.size)
         assertEquals("wifi_ssid", profiles[0].conditionType)
         assertEquals("HomeNet", profiles[0].wifiSsid)
+    }
+
+    @Test
+    fun `getProfilesAsArray reads the wifi SSID`() {
+        // The reader behind the profile list; a broken column read here only shows up on device.
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Home", "interval_ms" to 60000L,
+                "min_update_distance" to 10f, "sync_interval_seconds" to 300,
+                "priority" to 15, "condition_type" to "wifi_ssid",
+                "speed_threshold" to null, "wifi_ssid" to "HomeNet",
+                "deactivation_delay_seconds" to 60, "activation_delay_seconds" to 0,
+                "enabled" to 1, "created_at" to 0
+            )
+        ))
+        every { mockDb.query(any(), any(), any(), any(), any(), any(), any()) } returns cursor
+
+        mockkStatic(Arguments::class)
+        try {
+            val map = mockk<WritableMap>(relaxed = true)
+            every { Arguments.createArray() } returns mockk(relaxed = true)
+            every { Arguments.createMap() } returns map
+
+            ProfileHelper(mockk(relaxed = true)).getProfilesAsArray()
+
+            verify { map.putString("wifiSsid", "HomeNet") }
+        } finally {
+            unmockkStatic(Arguments::class)
+        }
     }
 
     @Test

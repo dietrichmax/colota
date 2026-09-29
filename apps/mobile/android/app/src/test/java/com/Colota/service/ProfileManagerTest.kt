@@ -339,18 +339,19 @@ class ProfileManagerTest {
     }
 
     @Test
-    fun `an active named-network profile is kept while the SSID is still unknown`() = testScope.runTest {
+    fun `an active named-network profile deactivates when the SSID goes blank`() = testScope.runTest {
         every { profileHelper.getEnabledProfiles() } returns listOf(wifiSsidProfile(deactivationDelay = 0))
 
         val manager = createManager()
+        manager.defaultInterval = 5000L
         manager.onWifiStateChanged(connected = true, ssid = "HomeNet")
         assertEquals("Home", switchedProfileName)
 
-        // SSID tracking just turned on and the callback has not delivered yet.
+        // A blank name means Location off or an unreadable network, so the condition cannot hold.
         manager.onWifiStateChanged(connected = true, ssid = "")
         advanceTimeBy(1_000)
 
-        assertEquals("Home", switchedProfileName)
+        assertNull(switchedProfileName)
     }
 
     @Test

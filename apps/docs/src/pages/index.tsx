@@ -73,7 +73,7 @@ const features = [
   {
     title: "Tracking profiles",
     description:
-      "Multiple GPS configs that auto-switch on charging, Android Auto, speed or stationary detection. One profile for hiking, another for the commute."
+      "Multiple GPS configs that auto-switch on charging, Android Auto, Wi-Fi, speed or stationary detection. One profile for hiking, another for the commute."
   },
   {
     title: "Sync, backup and export",

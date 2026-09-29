@@ -34,7 +34,7 @@ If you create pause zones (geofences), the App stores zone names, coordinates, r
 
 ### Condition Monitoring
 
-When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto), GPS speed derived from location updates, and Wi-Fi connectivity to automatically switch tracking configurations. To match a named-network profile, the App reads the connected network's name; the name you configure for the profile is stored in the local profile database, while the detected state itself is transient and is not stored. The name of the currently active pause zone is persisted across service restarts to maintain continuity but is cleared when the zone is exited.
+When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto), GPS speed derived from location updates, and Wi-Fi connectivity to automatically switch tracking configurations. For a named-network profile the App reads the connected network's name when the connection changes; the name you configure for the profile is stored in the local profile database, while the detected state itself is transient and is not stored. The name of the currently active pause zone is persisted across service restarts to maintain continuity but is cleared when the zone is exited.
 
 ### Sensor Data
 

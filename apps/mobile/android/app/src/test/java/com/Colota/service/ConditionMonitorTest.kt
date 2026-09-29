@@ -159,36 +159,53 @@ class ConditionMonitorTest {
     // ========================================================================
 
     @Test
-    fun `start forwards the current Wi-Fi state when a profile watches the network`() {
+    fun `start probes the SSID once when a profile watches the network`() {
         mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
         every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_SSID)
         every { mockNetworkManager.isWifiConnected() } returns true
-        every { mockNetworkManager.currentSsid } returns "HomeNet"
+        every { mockNetworkManager.readSsidOnce(any()) } answers {
+            firstArg<(String) -> Unit>().invoke("HomeNet")
+        }
 
         monitor.start()
 
         verify { mockNetworkManager.setWifiStateListener(any()) }
+        verify { mockNetworkManager.readSsidOnce(any()) }
         verify { mockProfileManager.onWifiStateChanged(true, "HomeNet") }
     }
 
     @Test
-    fun `wifi changes reach the profile manager through the main handler`() {
+    fun `wifi changes re-read the SSID and reach the profile manager`() {
         mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
-        every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_ANY)
+        every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_SSID)
         // start() stops first (clearing the listener with null), so keep the last registration.
         var listener: (() -> Unit)? = null
         every { mockNetworkManager.setWifiStateListener(any()) } answers { listener = firstArg() }
         every { mockNetworkManager.isWifiConnected() } returns false
 
         monitor.start()
-        verify { mockProfileManager.onWifiStateChanged(false, any()) }
+        verify { mockProfileManager.onWifiStateChanged(false, "") }
         assertNotNull(listener)
 
         every { mockNetworkManager.isWifiConnected() } returns true
-        every { mockNetworkManager.currentSsid } returns "HomeNet"
+        every { mockNetworkManager.readSsidOnce(any()) } answers {
+            firstArg<(String) -> Unit>().invoke("HomeNet")
+        }
         listener!!.invoke()
 
         verify { mockProfileManager.onWifiStateChanged(true, "HomeNet") }
+    }
+
+    @Test
+    fun `the any-wifi condition is pushed without touching the SSID`() {
+        mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
+        every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_ANY)
+        every { mockNetworkManager.isWifiConnected() } returns true
+
+        monitor.start()
+
+        verify { mockProfileManager.onWifiStateChanged(true, "") }
+        verify(exactly = 0) { mockNetworkManager.readSsidOnce(any()) }
     }
 
     @Test
@@ -199,7 +216,7 @@ class ConditionMonitorTest {
 
         // stop() clears the listener first, so one call total and it is a clear, not a registration.
         verify(exactly = 1) { mockNetworkManager.setWifiStateListener(isNull()) }
-        verify(exactly = 1) { mockNetworkManager.setWifiStateListener(any()) }
+        verify(exactly = 0) { mockNetworkManager.setWifiStateListener(isNull(inverse = true)) }
     }
 
     @Test
@@ -210,7 +227,8 @@ class ConditionMonitorTest {
         monitor.start()
         monitor.stop()
 
-        verify { mockNetworkManager.setWifiStateListener(null) }
+        // Once from start()'s stop-first and once from the explicit stop().
+        verify(exactly = 2) { mockNetworkManager.setWifiStateListener(isNull()) }
     }
 
     // ========================================================================

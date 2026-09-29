@@ -21,9 +21,8 @@ type ListItemProps = {
   trailingIcon?: IconComponent
   /** A control of its own beside the body, behind a hairline: the row opens, the control allows. Replaces the chevron. */
   trailing?: React.ReactNode
-  /** The sub wraps once when 2, for a row that must carry a full sentence beside a control;
-   *  a third line for one that also names its subject, such as a Wi-Fi network. */
-  subLines?: 1 | 2 | 3
+  /** The sub wraps once when 2, for a row that must carry a full sentence beside a control. */
+  subLines?: 1 | 2
   onPress: () => void
   testID?: string
   accessibilityRole?: "button" | "link"

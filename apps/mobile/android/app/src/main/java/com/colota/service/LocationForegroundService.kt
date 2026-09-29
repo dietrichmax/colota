@@ -411,9 +411,6 @@ class LocationForegroundService : Service() {
 
     private fun handleRecheckProfiles() {
         profileManager.invalidateProfiles()
-        // Before conditionMonitor.start(), so the initial Wi-Fi push reads a callback that the
-        // enabled profiles actually want.
-        refreshWifiTracking()
         conditionMonitor.start()
         profileManager.evaluate()
         // evaluate() may have triggered a profile switch, which already restarts the
@@ -1640,21 +1637,9 @@ class LocationForegroundService : Service() {
         }
     }
 
-    /**
-     * SSID reads are attributed as location access, so the location-flagged callback is held only
-     * while someone needs it: the sync condition, or any enabled profile watching a named network.
-     * Called on every config push, including profile switches, so a Wi-Fi profile cannot lose its
-     * callback to a sync-config push.
-     */
-    private fun refreshWifiTracking() {
-        networkManager.setSsidTracking(
-            config.syncCondition == "wifi_ssid" ||
-                ProfileConstants.CONDITION_WIFI_SSID in profileManager.getNeededConditionTypes()
-        )
-    }
-
     private fun pushConfigToSyncManager() {
-        refreshWifiTracking()
+        // Only wifi_ssid reads the SSID, and reading it is attributed as location access.
+        networkManager.setSsidTracking(config.syncCondition == "wifi_ssid")
 
         // Instant mode bypasses the queue and posts one flat payload, which 4xxs
         // forever against /api/v1/overland/batches. Defensive net under the UI guard.

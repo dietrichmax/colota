@@ -210,7 +210,7 @@ Orchestrates batch location uploads with:
 
 ### NetworkManager
 
-HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections and VPN status for sync condition filtering. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered while the sync condition is `wifi_ssid`, any enabled profile watches a named network, or the SSID picker asks. The `wifi_any` profile trigger only needs the default network's transport. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
+HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections and VPN status for sync condition filtering. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the sync `wifi_ssid` condition is active; profile conditions read the name through a one-shot probe when the network changes. Connected Wi-Fi is tracked separately with a plain (unflagged) Wi-Fi-transport callback, so the profile conditions also see the network under a VPN. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
 
 For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSLSocketFactory` supplied by `ClientCertSslContextProvider` (per-instance, never `setDefaultSSLSocketFactory()` - the override is scoped to outbound location sync, not the whole process).
 
@@ -258,7 +258,7 @@ Database access layer for tracking profiles and trip events. Maintains a `TimedC
 
 ### ConditionMonitor
 
-Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, and Wi-Fi network state from `NetworkManager`. Forwards state changes to `ProfileManager` for condition evaluation.
+Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it. Forwards state changes to `ProfileManager` for condition evaluation.
 
 ### ProfileConstants
 

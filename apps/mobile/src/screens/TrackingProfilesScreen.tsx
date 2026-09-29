@@ -122,7 +122,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                       iconColor={inForce ? colors.success : undefined}
                       label={profile.name}
                       sub={profileRowSub(profile, inForce, settings.isOfflineMode)}
-                      subLines={3}
+                      subLines={2}
                       onPress={() => openEditor(profile.id)}
                       trailing={
                         <Toggle

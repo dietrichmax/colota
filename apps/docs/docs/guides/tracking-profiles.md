@@ -41,7 +41,7 @@ The list opens with a line that says which profile is in force and its values, "
 | ----------------- | --------------------------------------------------------- |
 | **Charging**      | Phone is plugged in to a power source                     |
 | **Android Auto**  | Android Auto is connected                                 |
-| **Wi-Fi**         | Connected to Wi-Fi (default network)                      |
+| **Wi-Fi**         | Connected to a Wi-Fi network                              |
 | **Wi-Fi network** | Connected to the network you name (SSID)                  |
 | **Speed above**   | Average speed exceeds the speed you set (km/h or mph)     |
 | **Speed below**   | Average speed drops below the speed you set (km/h or mph) |
@@ -55,11 +55,11 @@ Speed conditions use a rolling average of the last 5 GPS readings to avoid trigg
 
 :::caution[Wi-Fi condition caveats]
 
-Reading a network name counts as location access, so a **Wi-Fi network** profile can keep the location indicator lit while tracking runs — even while GPS is stopped inside a geofence. Android attributes SSID access to location; it does not mean the app is taking fixes.
+Reading a network name counts as location access, so a **Wi-Fi network** profile makes the location indicator flash briefly when the app checks the network after a change. It is not continuous: the name is read once per network change, not held for the session.
 
-**Wi-Fi** means the phone's default network is Wi-Fi. Ethernet does not match, and an active VPN hides the underlying Wi-Fi network because the default network is the VPN tunnel, so neither Wi-Fi condition matches until the VPN goes away. A per-app VPN that excludes Colota leaves the Wi-Fi network visible.
+**Wi-Fi** means the phone is connected to a Wi-Fi network, whether or not a VPN owns the traffic; Ethernet does not match.
 
-SSID matching is case-insensitive. It needs location permission and location services to be available, which the app already has while tracking.
+SSID matching is case-insensitive. Without location permission or with Location turned off, Android hides the network name and the **Wi-Fi network** condition does not match.
 
 :::
 
@@ -113,7 +113,7 @@ If you use both a Speed Below and a Stationary profile, give Stationary the high
 | Stationary | Stationary | 1800s | 0m | 40 | 60s | n/a | Heartbeat while not moving |
 | Driving | Android Auto | 10s | 1m | 30 | 0s | 30s | Detailed route while driving |
 | Walking | Speed below 8 km/h | 60s | 2m | 20 | 20s | 45s | Battery-friendly on foot |
-| Home | Wi-Fi network | 300s | 10m | 15 | 0s | 60s | Relaxed updates on a trusted network |
+| Home | Wi-Fi network | 300s | 10m | 25 | 0s | 60s | Relaxed updates on a trusted network |
 | Charging | Charging | 15s | 0m | 10 | 0s | 30s | High accuracy while plugged in |
 
 Note that Stationary has the highest priority so it takes over from Walking when you stop. Charging has the lowest priority so a more specific profile (e.g. Driving) wins when both match.

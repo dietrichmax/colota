@@ -121,18 +121,4 @@ describe("ListItem", () => {
     expect(getByTestId("glyph").props.color).toBe("#123456")
     expect(getByText("Active · when charging").props.numberOfLines).toBe(2)
   })
-
-  it("lets the sub take a third line when the row has to name its subject", () => {
-    const { getByText } = render(
-      <ListItem
-        label="Home"
-        sub='Active · on Wi-Fi "AndroidWifi" · Every 7 s, any movement · syncs each fix'
-        subLines={3}
-        onPress={jest.fn()}
-        testID="row"
-      />
-    )
-
-    expect(getByText(/syncs each fix/).props.numberOfLines).toBe(3)
-  })
 })

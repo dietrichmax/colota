@@ -234,14 +234,10 @@ class ProfileManager(
             ProfileConstants.CONDITION_STATIONARY -> isStationary
             ProfileConstants.CONDITION_WIFI_ANY -> isWifiConnected
             ProfileConstants.CONDITION_WIFI_SSID -> {
-                // Both sides matter: the SSID may not have arrived yet, and a profile may carry none.
+                // Both sides matter: the SSID may not be readable (Location off, or not yet read),
+                // and a profile may carry no name. Either way the condition does not match.
                 val target = profile.wifiSsid
-                isWifiConnected && !target.isNullOrBlank() &&
-                    (target.equals(currentSsid, ignoreCase = true) ||
-                        // SSID reads blank for the moment after SSID tracking turns on. Keeping the
-                        // profile it already holds avoids a deactivate/activate flap until the
-                        // callback delivers; a different network then flips it off as usual.
-                        (currentSsid.isBlank() && activeProfile?.id == profile.id))
+                isWifiConnected && !target.isNullOrBlank() && target.equals(currentSsid, ignoreCase = true)
             }
             else -> false
         }
@@ -250,7 +246,6 @@ class ProfileManager(
             val detail = when (profile.conditionType) {
                 ProfileConstants.CONDITION_SPEED_ABOVE,
                 ProfileConstants.CONDITION_SPEED_BELOW -> " (avg=${String.format("%.1f", getAverageSpeed())}m/s, threshold=${profile.speedThreshold})"
-                ProfileConstants.CONDITION_WIFI_SSID -> " (ssid=$currentSsid)"
                 else -> ""
             }
             AppLogger.d(TAG, "Profile '${profile.name}' matched: ${profile.conditionType}$detail")

@@ -274,7 +274,7 @@ describe("ProfileEditorScreen", () => {
       )
     })
 
-    it("loads a saved network and drops it when the condition switches away", async () => {
+    it("keeps the typed network across a condition round trip", async () => {
       const { findByTestId, getByTestId } = renderEdit(2)
       expect((await findByTestId("wifi-ssid-input")).props.value).toBe("HomeNet")
       await waitFor(() => expect(mockGetCurrentSsid).toHaveBeenCalled())
@@ -284,7 +284,18 @@ describe("ProfileEditorScreen", () => {
         "On Wi-Fi, track every 1 min after 10 m and sync every 5 min."
       )
 
+      fireEvent.press(getByTestId("condition-wifi_ssid"))
+      expect(getByTestId("wifi-ssid-input").props.value).toBe("HomeNet")
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
+    })
+
+    it("clears the stored network when saved under another condition", async () => {
+      const { findByTestId, getByTestId } = renderEdit(2)
+      await findByTestId("wifi-ssid-input")
+
+      fireEvent.press(getByTestId("condition-wifi_any"))
       fireEvent.press(getByTestId("save-profile-btn"))
+
       await waitFor(() =>
         expect(mockUpdateProfile).toHaveBeenCalledWith(
           expect.objectContaining({ id: 2, condition: { type: "wifi_any" } })
