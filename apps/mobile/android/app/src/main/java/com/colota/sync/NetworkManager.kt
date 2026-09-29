@@ -125,7 +125,11 @@ class NetworkManager(private val context: Context) {
             connectivityManager.registerDefaultNetworkCallback(networkCallback)
             // Committed only once a callback is live, so a failed swap can be retried.
             ssidTracking = enabled
-            if (!enabled) currentSsid = ""
+            // A cleared cache must not notify later as if the name just changed.
+            if (!enabled) {
+                currentSsid = ""
+                notifiedSsid = ""
+            }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to register network callback", e)
         }
@@ -630,10 +634,6 @@ class NetworkManager(private val context: Context) {
      */
     fun setWifiStateListener(listener: (() -> Unit)?) {
         wifiStateListener = listener
-    }
-
-    private fun notifyWifiStateChanged() {
-        wifiStateListener?.invoke()
     }
 
     /**
