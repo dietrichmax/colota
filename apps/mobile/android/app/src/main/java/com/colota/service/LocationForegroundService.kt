@@ -92,6 +92,7 @@ class LocationForegroundService : Service() {
             AppLogger.d(TAG, "Location providers changed: enabled=$current")
             LocationServiceModule.sendLocationStateEvent(current)
             refreshNotificationForCurrentState()
+            if (current) conditionMonitor.onLocationEnabled()
         }
     }
 
@@ -147,6 +148,8 @@ class LocationForegroundService : Service() {
         private const val POSITION_JUMP_FILTER_MIN_IMPLIED_MPS = 20f
         /** Implied speed must exceed chip-Doppler by this factor to count as a jump. */
         private const val POSITION_JUMP_FILTER_RATIO = 5f
+        /** A reference coarser than this, like a cell-based probe fix after a Wi-Fi drop, cannot prove a jump. */
+        private const val POSITION_JUMP_FILTER_MAX_REFERENCE_ACCURACY_M = 200f
         /** Gaps above this bypass the filter so post-resume fixes aren't dropped. */
         private const val POSITION_JUMP_FILTER_WINDOW_MS = 300_000L
 
@@ -942,7 +945,7 @@ class LocationForegroundService : Service() {
         // Position-jump filter: chip-reported and implied speed are independent signals; large disagreement means the chip hallucinated position.
         // Kept active while paused too: a real departure passes it anyway (implied speed agrees with
         // chip, or is below the floor), but one hallucinated jump must not fake a departure.
-        if (prev != null && location.hasSpeed()) {
+        if (prev != null && location.hasSpeed() && prev.accuracy <= POSITION_JUMP_FILTER_MAX_REFERENCE_ACCURACY_M) {
             val dt = location.time - prev.time
             if (dt in 1000..POSITION_JUMP_FILTER_WINDOW_MS) {
                 val distance = prev.distanceTo(location)

@@ -46,6 +46,7 @@ class ConditionMonitor(
     private val mainHandler = Handler(Looper.getMainLooper())
     // Main thread only: invalidates in-flight SSID probes when a newer network change arrives.
     private var wifiPushGeneration = 0
+    private var wifiMonitorActive = false
 
     fun start() {
         // Unregister first to prevent duplicate observers on repeated start() calls
@@ -74,6 +75,7 @@ class ConditionMonitor(
         chargingReceiver = unregisterSafely(chargingReceiver)
         stopCarConnectionMonitor()
         networkManager.setWifiStateListener(null)
+        wifiMonitorActive = false
 
         AppLogger.d(TAG, "Condition monitors stopped")
     }
@@ -152,7 +154,13 @@ class ConditionMonitor(
         networkManager.setWifiStateListener {
             mainHandler.post { pushWifiState() }
         }
+        wifiMonitorActive = true
         pushWifiState()
+    }
+
+    /** A name read while Location was off is blank. */
+    fun onLocationEnabled() {
+        if (wifiMonitorActive && ProfileConstants.CONDITION_WIFI_SSID in profileManager.getNeededConditionTypes()) pushWifiState()
     }
 
     /**

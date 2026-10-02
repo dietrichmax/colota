@@ -82,14 +82,15 @@ class NetworkManager(private val context: Context) {
      * sees Wi-Fi even when a VPN owns the default network.
      */
     private val wifiTransportCallback = object : ConnectivityManager.NetworkCallback() {
+        // A switch between two networks keeps the count above zero, so notify even when isWifi stays true
         override fun onAvailable(network: Network) {
             availableWifiNetworks.incrementAndGet()
-            refreshWifiTransport()
+            refreshWifiTransport(force = true)
         }
 
         override fun onLost(network: Network) {
             availableWifiNetworks.updateAndGet { maxOf(0, it - 1) }
-            refreshWifiTransport()
+            refreshWifiTransport(force = true)
         }
     }
 
@@ -227,16 +228,16 @@ class NetworkManager(private val context: Context) {
         return if (ssid == UNKNOWN_SSID) "" else ssid
     }
 
-    private fun refreshWifiTransport() {
+    private fun refreshWifiTransport(force: Boolean) {
         isWifi = availableWifiNetworks.get() > 0
-        notifyWifiStateIfChanged()
+        notifyWifiStateIfChanged(force)
     }
 
-    /** Profile evaluation is not free, so only real state changes reach the listener. */
+    /** Profile evaluation is not free, so only real state changes reach the listener, unless forced. */
     @Synchronized
-    private fun notifyWifiStateIfChanged() {
+    private fun notifyWifiStateIfChanged(force: Boolean = false) {
         val ssid = if (ssidTracking) currentSsid else ""
-        if (isWifi == notifiedWifi && isVpn == notifiedVpn && ssid == notifiedSsid) return
+        if (!force && isWifi == notifiedWifi && isVpn == notifiedVpn && ssid == notifiedSsid) return
         notifiedWifi = isWifi
         notifiedVpn = isVpn
         notifiedSsid = ssid
@@ -624,12 +625,13 @@ class NetworkManager(private val context: Context) {
         return currentSsid.equals(ssid, ignoreCase = true)
     }
 
-    /** True while the default network is Wi-Fi. Needs no location-flagged callback. */
+    /** True while any Wi-Fi network is connected, also under a VPN. Needs no location-flagged callback. */
     fun isWifiConnected(): Boolean = isWifi
 
     /**
-     * Registers a callback for default-network transport / SSID changes. The listener runs on the
-     * ConnectivityManager callback thread; callers that touch app state must marshal it themselves.
+     * Registers a callback for Wi-Fi connection, VPN and SSID changes, and for every Wi-Fi network
+     * that comes or goes. The listener runs on the ConnectivityManager callback thread; callers that
+     * touch app state must marshal it themselves.
      * Used by the profile Wi-Fi conditions, which care about more than sync's one boolean.
      */
     fun setWifiStateListener(listener: (() -> Unit)?) {

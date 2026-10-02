@@ -380,6 +380,21 @@ class LocationForegroundServiceTest {
         assertEquals(prev, getField<Location?>("lastKnownLocation"))
     }
 
+    /** After a Wi-Fi drop the probe can land kilometres off; the good fixes after it are not jumps. */
+    @Test
+    fun `position-jump filter keeps a good fix after a coarse reference`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val coarse = mockLocation(accuracy = 18_673f, time = now - 10_000, distanceTo = 1_100f)
+        setField("lastKnownLocation", coarse)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val good = mockLocation(accuracy = 8f, hasSpeed = true, speed = 0f, time = now)
+        invokeHandleLocationUpdate(good)
+
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        assertEquals(good, getField<Location?>("lastKnownLocation"))
+    }
+
     @Test
     fun `position-jump filter keeps flight cruise where chip and implied agree`() = testScope.runTest {
         // ~250 m/s (900 km/h) cruise. Both measurements agree -> ratio check passes.
@@ -811,6 +826,17 @@ class LocationForegroundServiceTest {
         setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "wifi_ssid"))
         invokePushConfigToSyncManager()
         verify(exactly = 2) { networkManager.setSsidTracking(true) }
+    }
+
+    /** Holding the flagged callback would keep the location indicator lit. */
+    @Test
+    fun `a Wi-Fi network profile never turns on SSID tracking`() {
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_SSID)
+        setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "any"))
+
+        invokePushConfigToSyncManager()
+
+        verify(exactly = 0) { networkManager.setSsidTracking(true) }
     }
 
     @Test

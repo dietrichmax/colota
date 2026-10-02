@@ -258,7 +258,7 @@ Database access layer for tracking profiles and trip events. Maintains a `TimedC
 
 ### ConditionMonitor
 
-Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it. Forwards state changes to `ProfileManager` for condition evaluation.
+Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it: on every Wi-Fi network that comes or goes and when Location comes back on, because a name read while Location was off is blank. Forwards state changes to `ProfileManager` for condition evaluation.
 
 ### ProfileConstants
 

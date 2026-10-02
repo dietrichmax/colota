@@ -6,3 +6,4 @@
 - After a rate limit, sync waits as long as the server asks and Sync now says so
 - Tracking profiles can switch on Wi-Fi, either any network or one you name
 - The profile editor no longer warns about a Stationary interval above 60 seconds
+- No more lost points after a Wi-Fi drop at home

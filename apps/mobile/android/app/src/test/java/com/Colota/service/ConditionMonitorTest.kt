@@ -209,6 +209,54 @@ class ConditionMonitorTest {
     }
 
     @Test
+    fun `Location coming back re-reads the network name`() {
+        mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
+        every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_SSID)
+        every { mockNetworkManager.isWifiConnected() } returns true
+        var name = ""
+        every { mockNetworkManager.readSsidOnce(any()) } answers { firstArg<(String) -> Unit>().invoke(name) }
+
+        monitor.start()
+        verify { mockProfileManager.onWifiStateChanged(true, "") }
+
+        name = "HomeNet"
+        monitor.onLocationEnabled()
+
+        verify { mockProfileManager.onWifiStateChanged(true, "HomeNet") }
+    }
+
+    @Test
+    fun `Location coming back reads nothing without a Wi-Fi condition`() {
+        mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
+
+        monitor.start()
+        monitor.onLocationEnabled()
+
+        verify(exactly = 0) { mockNetworkManager.readSsidOnce(any()) }
+        verify(exactly = 0) { mockProfileManager.onWifiStateChanged(any(), any()) }
+    }
+
+    /** Probes can answer out of order. */
+    @Test
+    fun `a probe result superseded by a newer network change is dropped`() {
+        mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
+        every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_SSID)
+        every { mockNetworkManager.isWifiConnected() } returns true
+        var listener: (() -> Unit)? = null
+        every { mockNetworkManager.setWifiStateListener(any()) } answers { listener = firstArg() }
+        val pending = mutableListOf<(String) -> Unit>()
+        every { mockNetworkManager.readSsidOnce(any()) } answers { pending.add(firstArg()) }
+
+        monitor.start()
+        listener!!.invoke()
+        pending[1]("NewNet")
+        pending[0]("OldNet")
+
+        verify(exactly = 1) { mockProfileManager.onWifiStateChanged(true, "NewNet") }
+        verify(exactly = 0) { mockProfileManager.onWifiStateChanged(true, "OldNet") }
+    }
+
+    @Test
     fun `start does not register the wifi listener without a wifi condition`() {
         mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
 
