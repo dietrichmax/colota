@@ -5,3 +5,5 @@
 - A setup link applied while tracking now takes effect at once instead of after the next start
 - After a rate limit, sync waits as long as the server asks and Sync now says so
 - Tracking profiles can switch on Wi-Fi, either any network or one you name
+- A selected point shows its coordinates; tap them to copy
+- Maps zoom in further, so bunched points can be told apart

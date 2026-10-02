@@ -71,6 +71,13 @@ describe("ColotaMapView camera padding", () => {
     mockCameraProps.mockClear()
   })
 
+  // Points logged while standing still sit a few metres apart and only separate past street level.
+  it("lets the camera zoom past street level so bunched points can be told apart", () => {
+    render(<ColotaMapView initialCenter={center} />)
+
+    expect(mockCameraProps.mock.calls[0][0].maxZoom).toBeGreaterThanOrEqual(20)
+  })
+
   it("frames the first camera inside the padding so the dock never covers the position dot", () => {
     render(<ColotaMapView initialCenter={center} cameraPadding={padding} />)
 

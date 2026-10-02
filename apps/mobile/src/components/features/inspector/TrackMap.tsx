@@ -48,6 +48,9 @@ const trackPointStyle: any = {
 
 type Bounds = NonNullable<ReturnType<typeof computeTrackBounds>>
 
+// A degree of longitude is equally wide on screen at every latitude, so this span caps a fit near z18 on a phone.
+const FIT_MIN_LON_SPAN = 0.001
+
 interface Props {
   locations: TrackLocation[]
   colors: ThemeColors
@@ -114,7 +117,10 @@ export function TrackMap({
           duration: MAP_ANIMATION_DURATION_MS
         })
       } else {
-        camera.fitBounds([bounds.sw[0], bounds.sw[1], bounds.ne[0], bounds.ne[1]], {
+        let [west, east] = [bounds.sw[0], bounds.ne[0]]
+        const widen = (FIT_MIN_LON_SPAN - (east - west)) / 2
+        if (widen > 0) [west, east] = [west - widen, east + widen]
+        camera.fitBounds([west, bounds.sw[1], east, bounds.ne[1]], {
           padding: cameraPadding,
           duration: MAP_ANIMATION_DURATION_MS
         })

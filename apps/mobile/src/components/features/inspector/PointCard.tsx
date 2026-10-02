@@ -4,12 +4,25 @@
  */
 
 import React from "react"
-import { StyleSheet, Text, View } from "react-native"
-import { Clock, CloudUpload, Crosshair, Gauge, Mountain, NotebookPen, Split, Trash2, X } from "lucide-react-native"
+import { Pressable, StyleSheet, Text, View } from "react-native"
+import {
+  Clock,
+  CloudUpload,
+  Crosshair,
+  Gauge,
+  MapPin,
+  Mountain,
+  NotebookPen,
+  Split,
+  Trash2,
+  X
+} from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
+import NativeLocationService from "../../../services/NativeLocationService"
 import { showPrompt } from "../../../services/modalService"
+import { logger } from "../../../utils/logger"
 import { fontSizes, fonts } from "../../../styles/typography"
-import { size, space } from "../../../constants"
+import { HIT_SLOP_SM, size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { formatSpeed, formatTime, metersToInput, shortDistanceUnit } from "../../../utils/geo"
 import type { LocationCoords } from "../../../types/global"
 import { Divider } from "../../ui/Divider"
@@ -45,6 +58,13 @@ export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose
     if (next !== null) onSaveNote(next ? next : null)
   }
 
+  const coordinates = `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`
+  const copyCoordinates = () => {
+    NativeLocationService.copyToClipboard(coordinates, t("point.coordinates")).catch((err) =>
+      logger.warn("[PointCard] Copy failed:", err)
+    )
+  }
+
   return (
     <View testID="point-card">
       <View style={styles.header}>
@@ -68,6 +88,19 @@ export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose
         )}
         <IconButton icon={X} accessibilityLabel={t("common.close")} onPress={onClose} testID="point-close" />
       </View>
+      <Divider tight inset />
+      <Pressable
+        testID="point-coordinates"
+        accessibilityRole="button"
+        accessibilityLabel={`${t("point.coordinates")}, ${coordinates}`}
+        accessibilityHint={t("point.copyCoordinates")}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+        hitSlop={HIT_SLOP_SM}
+        onPress={copyCoordinates}
+        style={styles.pressable}
+      >
+        <StatRow icon={MapPin} label={t("point.coordinates")} value={coordinates} />
+      </Pressable>
       {point.speed !== undefined && (
         <>
           <Divider tight inset />
@@ -130,6 +163,10 @@ const styles = StyleSheet.create({
   glyph: {
     width: size.icon.md,
     alignItems: "center"
+  },
+  pressable: {
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
   },
   time: {
     flex: 1,

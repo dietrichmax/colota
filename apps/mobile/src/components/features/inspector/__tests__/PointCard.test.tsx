@@ -2,13 +2,19 @@ import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
 import { StyleSheet } from "react-native"
 import { lightColors } from "@colota/shared"
-import { size, space } from "../../../../constants"
+import { HIT_SLOP_SM, size, space } from "../../../../constants"
 import { Divider } from "../../../ui/Divider"
 import { PointCard } from "../PointCard"
 
 const mockShowPrompt = jest.fn()
 jest.mock("../../../../services/modalService", () => ({
   showPrompt: (...args: unknown[]) => mockShowPrompt(...args)
+}))
+
+const mockCopy = jest.fn()
+jest.mock("../../../../services/NativeLocationService", () => ({
+  __esModule: true,
+  default: { copyToClipboard: (...args: unknown[]) => mockCopy(...args) }
 }))
 
 jest.mock("../../../../hooks/useTheme", () => ({
@@ -87,16 +93,17 @@ describe("PointCard", () => {
     }
   })
 
-  it("lists speed, accuracy, altitude and sync with a seam before each, and the note row last", () => {
-    const { getByLabelText, UNSAFE_getAllByType } = renderCard()
+  it("lists coordinates, speed, accuracy, altitude and sync with a seam before each, and the note row last", () => {
+    const { getByLabelText, getByTestId, UNSAFE_getAllByType } = renderCard()
 
+    expect(getByTestId("point-coordinates").props.accessibilityLabel).toBe("Coordinates, 48.10000, 11.50000")
     expect(getByLabelText("Speed, 18.0 km/h")).toBeTruthy()
     expect(getByLabelText("Accuracy, ±8 m")).toBeTruthy()
     expect(getByLabelText("Altitude, 412 m")).toBeTruthy()
     expect(getByLabelText("Sync, Sent")).toBeTruthy()
     expect(getByLabelText("Note, Add a note").props.accessibilityRole).toBe("button")
     const dividers = UNSAFE_getAllByType(Divider)
-    expect(dividers).toHaveLength(5)
+    expect(dividers).toHaveLength(6)
     for (const divider of dividers) {
       expect(divider.props.tight).toBe(true)
       expect(divider.props.inset).toBe(true)
@@ -111,7 +118,23 @@ describe("PointCard", () => {
     expect(queryByLabelText(/^Speed/)).toBeNull()
     expect(queryByLabelText(/^Altitude/)).toBeNull()
     expect(getByLabelText("Accuracy, ±8 m")).toBeTruthy()
-    expect(UNSAFE_getAllByType(Divider)).toHaveLength(3)
+    expect(UNSAFE_getAllByType(Divider)).toHaveLength(4)
+  })
+
+  // Finding where you were at a given time ends in pasting the position somewhere else.
+  it("copies the coordinates as one lat, lon string a map app or search box accepts", () => {
+    mockCopy.mockResolvedValueOnce(undefined)
+    const { getByTestId } = renderCard({ point: { ...point, latitude: 48.137154, longitude: -11.575382 } })
+
+    fireEvent.press(getByTestId("point-coordinates"))
+
+    expect(mockCopy).toHaveBeenCalledWith("48.13715, -11.57538", "Coordinates")
+  })
+
+  it("keeps the copy row as short as the stat rows but widens its touch area past them", () => {
+    const { getByTestId } = renderCard()
+
+    expect(getByTestId("point-coordinates").props.hitSlop).toEqual(HIT_SLOP_SM)
   })
 
   it("hides the sync row without an endpoint, since nothing is queued anywhere", () => {

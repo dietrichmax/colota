@@ -706,6 +706,8 @@
   "point.accuracy": "Precisión",
   "point.addNote": "Agregar una nota",
   "point.altitude": "Altitud",
+  "point.coordinates": "Coordenadas",
+  "point.copyCoordinates": "Copia las coordenadas",
   "point.delete": "Eliminar punto",
   "point.note": "Nota",
   "point.queued": "En cola",

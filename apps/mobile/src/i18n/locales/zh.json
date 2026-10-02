@@ -698,6 +698,8 @@
   "point.accuracy": "精度",
   "point.addNote": "添加备注",
   "point.altitude": "海拔",
+  "point.coordinates": "坐标",
+  "point.copyCoordinates": "复制坐标",
   "point.delete": "删除点",
   "point.note": "备注",
   "point.queued": "已排队",

@@ -431,6 +431,16 @@ describe("TrackMap camera", () => {
     expect(mockFitBounds).toHaveBeenCalledTimes(2)
   })
 
+  // Points logged in one spot sit metres apart; fitting them exactly would open the day at building level with no streets.
+  it("widens a few-metre cluster to street level before fitting, around the same centre", () => {
+    renderMap({ locations: [loc(52.5, 13.4), loc(52.50003, 13.40004)], fitVersion: 1 })
+
+    const [[west, south, east, north]] = mockFitBounds.mock.calls[0]
+    expect(east - west).toBeCloseTo(0.001, 6)
+    expect((east + west) / 2).toBeCloseTo(13.40002, 6)
+    expect([south, north]).toEqual([52.5, 52.50003])
+  })
+
   it("centres a lone point at a fixed zoom instead of fitting a zero-extent box", () => {
     renderMap({ locations: [loc(52.5, 13.4)], fitVersion: 1 })
 
