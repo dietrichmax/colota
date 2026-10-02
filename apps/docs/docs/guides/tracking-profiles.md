@@ -59,7 +59,7 @@ Reading a network name counts as location access, so a **Wi-Fi network** profile
 
 **Wi-Fi** means the phone is connected to a Wi-Fi network, whether or not a VPN owns the traffic; Ethernet does not match.
 
-SSID matching is case-insensitive. Without location permission or with Location turned off, Android hides the network name and the **Wi-Fi network** condition does not match.
+SSID matching is case-insensitive. The name is read when the network changes and when Location comes back on. Without location permission, or with Location turned off at that moment, Android hides the name and the **Wi-Fi network** condition does not match.
 
 :::
 

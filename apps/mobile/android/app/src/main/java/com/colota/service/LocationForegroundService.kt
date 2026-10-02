@@ -92,6 +92,7 @@ class LocationForegroundService : Service() {
             AppLogger.d(TAG, "Location providers changed: enabled=$current")
             LocationServiceModule.sendLocationStateEvent(current)
             refreshNotificationForCurrentState()
+            if (current) conditionMonitor.onLocationEnabled()
         }
     }
 

@@ -139,6 +139,24 @@ class NetworkManagerTest {
         assertEquals(2, changes)
     }
 
+    /** An automatic switch connects the new network before the old one goes. */
+    @Test
+    fun `a switch between two Wi-Fi networks still notifies`() {
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val slot = slot<ConnectivityManager.NetworkCallback>()
+        every { cm.registerNetworkCallback(any<NetworkRequest>(), capture(slot)) } just Runs
+        val manager = newManagerWith(cm)
+        var changes = 0
+        manager.setWifiStateListener { changes++ }
+
+        slot.captured.onAvailable(mockk(relaxed = true))
+        slot.captured.onAvailable(mockk(relaxed = true))
+        slot.captured.onLost(mockk(relaxed = true))
+
+        assertTrue(manager.isWifiConnected())
+        assertEquals(3, changes)
+    }
+
     @Test
     fun `identical capability deliveries do not notify twice`() {
         // Bandwidth and validation updates arrive without any transport or SSID change; each one

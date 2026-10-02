@@ -261,7 +261,7 @@ class ProfileManagerTest {
     // --- Wi-Fi conditions ---
 
     @Test
-    fun `activates wifi any profile while the default network is wifi`() = runTest {
+    fun `activates wifi any profile while connected to wifi`() = runTest {
         every { profileHelper.getEnabledProfiles() } returns listOf(wifiAnyProfile())
 
         val manager = createManager()

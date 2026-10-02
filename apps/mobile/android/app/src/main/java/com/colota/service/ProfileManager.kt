@@ -80,7 +80,7 @@ class ProfileManager(
         evaluate()
     }
 
-    /** Called on the main thread when the default network's transport or SSID changes. */
+    /** Called on the main thread when the Wi-Fi state may have changed or the SSID was read again. */
     fun onWifiStateChanged(connected: Boolean, ssid: String) {
         isWifiConnected = connected
         currentSsid = ssid

@@ -813,6 +813,17 @@ class LocationForegroundServiceTest {
         verify(exactly = 2) { networkManager.setSsidTracking(true) }
     }
 
+    /** Holding the flagged callback would keep the location indicator lit. */
+    @Test
+    fun `a Wi-Fi network profile never turns on SSID tracking`() {
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_WIFI_SSID)
+        setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "any"))
+
+        invokePushConfigToSyncManager()
+
+        verify(exactly = 0) { networkManager.setSsidTracking(true) }
+    }
+
     @Test
     fun `ACTION_RECHECK_ZONE during a hold with no cached fix still applies a zone edit`() {
         setField("lastKnownLocation", null)
