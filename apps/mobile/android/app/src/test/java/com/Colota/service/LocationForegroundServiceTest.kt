@@ -380,6 +380,21 @@ class LocationForegroundServiceTest {
         assertEquals(prev, getField<Location?>("lastKnownLocation"))
     }
 
+    /** After a Wi-Fi drop the probe can land kilometres off; the good fixes after it are not jumps. */
+    @Test
+    fun `position-jump filter keeps a good fix after a coarse reference`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val coarse = mockLocation(accuracy = 18_673f, time = now - 10_000, distanceTo = 1_100f)
+        setField("lastKnownLocation", coarse)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val good = mockLocation(accuracy = 8f, hasSpeed = true, speed = 0f, time = now)
+        invokeHandleLocationUpdate(good)
+
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        assertEquals(good, getField<Location?>("lastKnownLocation"))
+    }
+
     @Test
     fun `position-jump filter keeps flight cruise where chip and implied agree`() = testScope.runTest {
         // ~250 m/s (900 km/h) cruise. Both measurements agree -> ratio check passes.

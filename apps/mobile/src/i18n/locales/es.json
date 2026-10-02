@@ -760,7 +760,6 @@
   "profileEditor.speed": "Velocidad",
   "profileEditor.speed.hintAbove": "Al menos 1 {{unit}}. Se aplica mientras tu velocidad promedio esté por encima.",
   "profileEditor.speed.hintBelow": "Al menos 1 {{unit}}. Se aplica mientras tu velocidad promedio esté por debajo.",
-  "profileEditor.stationaryLong": "Más de {{max}} s puede dejar sin registrar los primeros {{duration}} de un trayecto",
   "profileEditor.sync.hint": "Reemplaza el {{interval}} de Seguimiento y sincronización mientras este perfil esté activo · más corto significa más activaciones",
   "profileEditor.titleEdit": "Editar perfil",
   "profileEditor.titleNew": "Perfil nuevo",

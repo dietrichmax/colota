@@ -7,3 +7,5 @@
 - Tracking profiles can switch on Wi-Fi, either any network or one you name
 - A selected point shows its coordinates; tap them to copy
 - Maps zoom in further, so bunched points can be told apart
+- The profile editor no longer warns about a Stationary interval above 60 seconds
+- No more lost points after a Wi-Fi drop at home

@@ -752,7 +752,6 @@
   "profileEditor.speed": "速度",
   "profileEditor.speed.hintAbove": "至少 1 {{unit}}，平均速度高于此值时生效。",
   "profileEditor.speed.hintBelow": "至少 1 {{unit}}，平均速度低于此值时生效。",
-  "profileEditor.stationaryLong": "超过 {{max}} 秒可能导致行程开始的 {{duration}} 未被记录",
   "profileEditor.sync.hint": "此配置活动时替换“跟踪和同步”中的 {{interval}} · 越短表示唤醒次数越多",
   "profileEditor.titleEdit": "编辑配置",
   "profileEditor.titleNew": "新配置",
