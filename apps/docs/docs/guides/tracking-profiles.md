@@ -67,7 +67,7 @@ SSID matching is case-insensitive. Without location permission or with Location 
 
 Colota starts the motion detector when the device goes still. It watches accelerometer variance and the hardware significant motion sensor together, so moving again usually ends the profile within seconds rather than at the next fix. That is why the editor hides the deactivation delay here.
 
-The sensor is not a guarantee. It can miss a slow, gentle start, and not every device has the hardware sensor that can wake a sleeping phone. If it does not notice you starting to move, the profile ends only once GPS reports movement, which at a long interval means waiting for the next fix. That is what the editor warns about above 60 seconds.
+The sensor is not a guarantee. It can miss a slow, gentle start, and not every device has the hardware sensor that can wake a sleeping phone. If it does not notice you starting to move, the profile ends only once GPS reports movement, which at a long interval means waiting for the next fix.
 
 Stationary profiles always use a **0m** distance filter and ignore the setting. Fixes taken in one spot sit a few meters apart, so anything larger would drop the points the profile is there to record.
 

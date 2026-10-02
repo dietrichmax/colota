@@ -321,14 +321,13 @@ describe("ProfileEditorScreen", () => {
       ).toBeTruthy()
     })
 
-    it("warns above 60 s without blocking Save", () => {
-      const { getByTestId, getByText, queryByText } = renderNew()
+    it("accepts a long heartbeat interval without a warning, since that is what the profile is for", () => {
+      const { getByTestId, queryByText } = renderNew()
       fireEvent.press(getByTestId("condition-stationary"))
-      expect(queryByText(/may leave the first/)).toBeNull()
 
-      fireEvent.changeText(getByTestId("interval-input"), "300")
+      fireEvent.changeText(getByTestId("interval-input"), "1800")
 
-      expect(getByText("Longer than 60 s may leave the first 5 min of a trip unrecorded")).toBeTruthy()
+      expect(queryByText(/unrecorded/)).toBeNull()
       expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
     })
   })

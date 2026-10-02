@@ -82,9 +82,6 @@ export const GEOFENCE_ZOOM_PADDING = [80, 80, 80, 80] as const
 export const MAP_ANIMATION_DURATION_MS = 400
 export const LOADING_INDICATOR_DELAY_MS = 200
 
-// Doze batches motion sensors past this; longer Stationary intervals risk missed trip starts.
-export const STATIONARY_MAX_INTERVAL_SECONDS = 60
-
 export const PROFILE_CONDITIONS: {
   type: ProfileConditionType
   labelKey: TranslationKey

@@ -35,7 +35,6 @@ import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import {
   PROFILE_CONDITIONS,
   SAVE_SUCCESS_DISPLAY_MS,
-  STATIONARY_MAX_INTERVAL_SECONDS,
   defaultProfileDelays,
   size,
   space
@@ -401,14 +400,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             error={errorOf("interval")}
             message={noteOf("interval")}
           />
-          {isStationary && profile.interval > STATIONARY_MAX_INTERVAL_SECONDS && (
-            <FieldMessage variant="warning" style={styles.warning}>
-              {t("profileEditor.stationaryLong", {
-                max: STATIONARY_MAX_INTERVAL_SECONDS,
-                duration: formatDuration(profile.interval)
-              })}
-            </FieldMessage>
-          )}
           {isStationary ? (
             <SettingRow disabled label={t("trackingSync.distance")} hint={t("profileEditor.distance.stationary")}>
               <Text style={[styles.figure, { color: colors.textDisabled }]}>0 {distanceUnit}</Text>
@@ -514,7 +505,6 @@ const styles = StyleSheet.create({
   field: { paddingBottom: space.lg },
   numInput: { width: size.numericField },
   figure: { fontSize: fontSizes.input, ...fonts.medium, fontVariant: ["tabular-nums"] },
-  warning: { marginTop: -space.sm, marginBottom: space.lg },
   pickerTop: { paddingTop: space.lg },
   save: { marginTop: space.xl }
 })

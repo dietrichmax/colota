@@ -758,7 +758,6 @@
   "profileEditor.speed": "Speed",
   "profileEditor.speed.hintAbove": "At least 1 {{unit}}. Applies while your average speed is above it.",
   "profileEditor.speed.hintBelow": "At least 1 {{unit}}. Applies while your average speed is below it.",
-  "profileEditor.stationaryLong": "Longer than {{max}} s may leave the first {{duration}} of a trip unrecorded",
   "profileEditor.sync.hint": "Replaces the {{interval}} from Tracking & sync while this profile is active · shorter means more wake-ups",
   "profileEditor.titleEdit": "Edit profile",
   "profileEditor.titleNew": "New profile",
