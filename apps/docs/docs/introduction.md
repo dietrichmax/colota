@@ -26,6 +26,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
 - **Authentication** - Basic auth, bearer token or custom headers. Optional mutual TLS (mTLS) with a PKCS12 client certificate stored in Android Keystore.
 - **Dark Mode** - Full light and dark theme support, optionally coloured from the Android wallpaper.
+- **Languages** - English, Spanish and Simplified Chinese. [Help translate](/docs/development/translations).
 
 ## App Screens
 
