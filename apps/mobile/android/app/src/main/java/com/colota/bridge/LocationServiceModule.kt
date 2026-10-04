@@ -382,9 +382,18 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun getLocationsByDateRange(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
         executeAsync(promise) {
-            val rawData = dbHelper.getLocationsByDateRange(startTimestamp.toLong(), endTimestamp.toLong())
             Arguments.createArray().apply {
-                rawData.forEach { row -> pushMap(Arguments.makeNativeMap(row)) }
+                dbHelper.forEachLocationInRange(startTimestamp.toLong(), endTimestamp.toLong()) { row ->
+                    pushMap(Arguments.createMap().apply {
+                        for ((key, value) in row) {
+                            when (value) {
+                                is Number -> putDouble(key, value.toDouble())
+                                is String -> putString(key, value)
+                                else -> putNull(key)
+                            }
+                        }
+                    })
+                }
             }
         }
 

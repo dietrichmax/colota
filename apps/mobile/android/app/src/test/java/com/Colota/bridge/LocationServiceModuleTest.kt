@@ -845,6 +845,35 @@ class LocationServiceModuleTest {
         assertNoVacuum(db)
     }
 
+    // A dense day held as one list is tens of MB on the Java heap.
+    @Test
+    fun `a day of locations reaches JS row by row, never as a list of the whole day`() {
+        val db = stubDatabase()
+        every { Arguments.createArray() } answers { JavaOnlyArray() }
+        every { db.forEachLocationInRange(1000L, 2000L, any()) } answers {
+            val onRow = thirdArg<(Map<String, Any?>) -> Unit>()
+            onRow(mapOf("id" to 1L, "timestamp" to 1000L, "note" to null))
+            onRow(mapOf("id" to 2L, "timestamp" to 2000L, "note" to "Coffee stop"))
+        }
+        lateinit var settled: Promise
+
+        awaitPromise { promise ->
+            settled = promise
+            LocationServiceModule(mockContext).getLocationsByDateRange(1000.0, 2000.0, promise)
+        }
+
+        verify {
+            settled.resolve(match {
+                val rows = it as JavaOnlyArray
+                rows.size() == 2 &&
+                    rows.getMap(0)?.isNull("note") == true &&
+                    rows.getMap(1)?.getDouble("timestamp") == 2000.0 &&
+                    rows.getMap(1)?.getString("note") == "Coffee stop"
+            })
+        }
+        verify(exactly = 0) { db.getLocationsByDateRange(any(), any(), any(), any()) }
+    }
+
     @Test
     fun `a bulk delete on Data management still rewrites the database`() {
         val db = stubDatabase()

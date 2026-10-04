@@ -810,6 +810,47 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // forEachLocationInRange
+    // ========================================================================
+
+    private fun screenRows(start: Long, end: Long) =
+        buildList { db.forEachLocationInRange(start, end) { add(it) } }
+
+    @Test
+    fun `forEachLocationInRange hands over the range in ascending order, boundaries included`() {
+        db.saveLocation(latitude = 55.0, longitude = 16.0, timestamp = 3000L)
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 500L)
+        db.saveLocation(latitude = 54.0, longitude = 15.0, timestamp = 2000L)
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 1000L)
+
+        assertEquals(listOf(1000L, 2000L), screenRows(1000L, 2000L).map { it["timestamp"] })
+    }
+
+    // The server URL is stored on every row and no screen reads it.
+    @Test
+    fun `forEachLocationInRange carries what a screen shows and leaves the endpoint behind`() {
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L, endpoint = "https://example.com/api")
+
+        val row = screenRows(0L, 9999L).single()
+
+        assertEquals(
+            setOf(
+                "id", "latitude", "longitude", "accuracy", "altitude", "speed", "bearing",
+                "battery", "battery_status", "timestamp", "sent", "note"
+            ),
+            row.keys
+        )
+        assertEquals(52.0, row["latitude"])
+    }
+
+    @Test
+    fun `forEachLocationInRange throws when the read fails`() {
+        db.writableDatabase.execSQL("DROP TABLE locations")
+
+        assertThrows(SQLiteException::class.java) { db.forEachLocationInRange(0L, 9999L) {} }
+    }
+
+    // ========================================================================
     // Export readers throw, so a failed page never ends an export as complete
     // ========================================================================
 

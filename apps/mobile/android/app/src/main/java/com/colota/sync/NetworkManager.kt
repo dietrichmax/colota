@@ -304,6 +304,7 @@ class NetworkManager(private val context: Context) {
             doOutput = true
         }
         extraHeaders.forEach { (key, value) -> setRequestProperty(key, value) }
+        setRequestProperty("Connection", "close")
         connectTimeout = CONNECTION_TIMEOUT
         readTimeout = READ_TIMEOUT
         useCaches = false
@@ -459,18 +460,7 @@ class NetworkManager(private val context: Context) {
             connection = buildConnection(targetUrl, isGet, extraHeaders)
             logRequest(connection, isGet, resolvedEndpoint, targetUrl, transformedPayload)
             if (!isGet) writeBody(connection, transformedPayload)
-            val responseCode = connection.responseCode
-            if (responseCode in 200..299) {
-                TestEndpointResult(true, httpStatus = responseCode)
-            } else {
-                val errorBody = readErrorBody(connection)
-                TestEndpointResult(
-                    false,
-                    httpStatus = responseCode,
-                    errorMessage = "Server returned $responseCode: $errorBody",
-                    retryAfterSeconds = if (responseCode == 429) retryAfterOf(connection) else null
-                )
-            }
+            readResponse(connection)
         } catch (e: SSLHandshakeException) {
             TestEndpointResult(false, errorMessage = mtlsErrorMessage(e))
         } catch (e: UnrecoverableKeyException) {
@@ -514,9 +504,33 @@ class NetworkManager(private val context: Context) {
         }
     }
 
+    private fun readResponse(connection: HttpURLConnection): TestEndpointResult {
+        val responseCode = connection.responseCode
+        try {
+            if (responseCode in 200..299) return TestEndpointResult(true, httpStatus = responseCode)
+            val errorBody = readErrorBody(connection)
+            return TestEndpointResult(
+                false,
+                httpStatus = responseCode,
+                errorMessage = "Server returned $responseCode: $errorBody",
+                retryAfterSeconds = if (responseCode == 429) retryAfterOf(connection) else null
+            )
+        } finally {
+            discardBody(connection)
+        }
+    }
+
     private fun readBatchResponse(connection: HttpURLConnection, batchSize: Int): BatchResult {
         val responseCode = connection.responseCode
-        return when (responseCode) {
+        try {
+            return batchVerdict(connection, responseCode, batchSize)
+        } finally {
+            discardBody(connection)
+        }
+    }
+
+    private fun batchVerdict(connection: HttpURLConnection, responseCode: Int, batchSize: Int): BatchResult =
+        when (responseCode) {
             in 200..299 -> {
                 AppLogger.d(TAG, "Batch of $batchSize sent successfully")
                 BatchResult.Success
@@ -540,6 +554,13 @@ class NetworkManager(private val context: Context) {
                 AppLogger.e(TAG, "Batch failed with unexpected code: $responseCode")
                 BatchResult.ServerError(responseCode)
             }
+        }
+
+    // disconnect() alone leaves a connection whose reply was never closed in the platform's pool for minutes.
+    private fun discardBody(connection: HttpURLConnection) {
+        try {
+            (connection.errorStream ?: connection.inputStream)?.close()
+        } catch (_: Exception) {
         }
     }
 

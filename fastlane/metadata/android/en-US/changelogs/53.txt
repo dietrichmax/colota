@@ -1,0 +1,1 @@
+- Less memory used when opening a day with many points and when sending a large upload backlog

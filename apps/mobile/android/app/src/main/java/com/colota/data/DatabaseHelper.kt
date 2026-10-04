@@ -557,10 +557,10 @@ class DatabaseHelper private constructor(context: Context) :
 
     private val ALLOWED_TABLES = setOf(TABLE_LOCATIONS, TABLE_QUEUE, TABLE_SETTINGS, TABLE_GEOFENCES, TABLE_PROFILES)
 
-    private fun Cursor.toMapList(): List<Map<String, Any?>> = buildList {
+    private inline fun Cursor.forEachRow(onRow: (Map<String, Any?>) -> Unit) {
         val columns = columnNames
         while (moveToNext()) {
-            add(buildMap {
+            onRow(buildMap {
                 for (col in columns) {
                     val idx = getColumnIndex(col)
                     if (idx != -1) {
@@ -575,6 +575,8 @@ class DatabaseHelper private constructor(context: Context) :
             })
         }
     }
+
+    private fun Cursor.toMapList(): List<Map<String, Any?>> = buildList { forEachRow(::add) }
 
     fun getTableData(tableName: String, limit: Int, offset: Int): List<Map<String, Any?>> {
         require(tableName in ALLOWED_TABLES) { "Invalid table name: $tableName" }
@@ -610,12 +612,11 @@ class DatabaseHelper private constructor(context: Context) :
 
     /**
      * Retrieves locations within a date range, ordered chronologically.
-     * Used for the map polyline, the trip export and the incremental auto-export.
-     * Throws on a read failure; the map's JS wrapper falls back to an empty list.
+     * Used for the trip export and the incremental auto-export. Throws on a read failure.
      *
      * @param startTimestamp Start of range (Unix seconds, inclusive)
      * @param endTimestamp End of range (Unix seconds, inclusive)
-     * @return Locations ordered by timestamp ASC for polyline drawing
+     * @return Locations ordered by timestamp ASC
      */
     fun getLocationsByDateRange(
         startTimestamp: Long,
@@ -631,6 +632,21 @@ class DatabaseHelper private constructor(context: Context) :
             "timestamp ASC, id ASC",
             if (limit > 0) "$limit OFFSET $offset" else null
         ).use { it.toMapList() }
+
+    private val SCREEN_LOCATION_COLUMNS = arrayOf(
+        "id", "latitude", "longitude", "accuracy", "altitude", "speed", "bearing",
+        "battery", "battery_status", "timestamp", "sent", "note"
+    )
+
+    /** One row at a time: a dense day held as a list is tens of MB on the Java heap. */
+    fun forEachLocationInRange(startTimestamp: Long, endTimestamp: Long, onRow: (Map<String, Any?>) -> Unit) =
+        readableDatabase.query(
+            TABLE_LOCATIONS, SCREEN_LOCATION_COLUMNS,
+            "timestamp >= ? AND timestamp <= ?",
+            arrayOf(startTimestamp.toString(), endTimestamp.toString()),
+            null, null,
+            "timestamp ASC, id ASC"
+        ).use { it.forEachRow(onRow) }
 
 
     /**

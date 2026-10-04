@@ -212,6 +212,8 @@ Orchestrates batch location uploads with:
 
 HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections and VPN status for sync condition filtering. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the sync `wifi_ssid` condition is active; profile conditions read the name through a one-shot probe when the network changes. Connected Wi-Fi is tracked separately with a plain (unflagged) Wi-Fi-transport callback, so the profile conditions also see the network under a VPN. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
 
+Every request uses its own connection: it sends `Connection: close` and closes the response before disconnecting, so Android releases the connection at once instead of keeping it in its pool.
+
 For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSLSocketFactory` supplied by `ClientCertSslContextProvider` (per-instance, never `setDefaultSSLSocketFactory()` - the override is scoped to outbound location sync, not the whole process).
 
 ### UrlSafety

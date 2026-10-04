@@ -19,6 +19,7 @@ Configure the HTTP method in **Settings → Connection → Request format → HT
 ```
 Content-Type: application/json; charset=UTF-8
 Accept: application/json
+Connection: close
 ```
 
 Additional headers may be included based on your [authentication](/docs/configuration/authentication) configuration.

@@ -421,6 +421,144 @@ class NetworkManagerTest {
         assertEquals(BatchResult.RateLimited(30), method.invoke(createNetworkManagerViaReflection(), connection, 50))
     }
 
+    // --- releasing the connection ---
+
+    private fun readBatchResponse(connection: java.net.HttpURLConnection): Any? {
+        val method = NetworkManager::class.java.getDeclaredMethod(
+            "readBatchResponse", java.net.HttpURLConnection::class.java, Int::class.javaPrimitiveType
+        )
+        method.isAccessible = true
+        return method.invoke(createNetworkManagerViaReflection(), connection, 50)
+    }
+
+    // Android keeps a connection whose reply was never closed pooled for minutes, TLS buffers included.
+    @Test
+    fun `an accepted batch closes the reply it does not read`() {
+        val reply = mockk<java.io.InputStream>(relaxed = true)
+        val connection = mockk<java.net.HttpURLConnection>(relaxed = true)
+        every { connection.responseCode } returns 200
+        every { connection.errorStream } returns null
+        every { connection.inputStream } returns reply
+
+        assertEquals(BatchResult.Success, readBatchResponse(connection))
+
+        verify(exactly = 1) { reply.close() }
+    }
+
+    @Test
+    fun `a rate-limited batch closes the error page it does not read`() {
+        val page = mockk<java.io.InputStream>(relaxed = true)
+        val connection = mockk<java.net.HttpURLConnection>(relaxed = true)
+        every { connection.responseCode } returns 429
+        every { connection.errorStream } returns page
+
+        readBatchResponse(connection)
+
+        verify(exactly = 1) { page.close() }
+    }
+
+    @Test
+    fun `a reply that fails to open does not turn an accepted batch into a failure`() {
+        val connection = mockk<java.net.HttpURLConnection>(relaxed = true)
+        every { connection.responseCode } returns 204
+        every { connection.errorStream } returns null
+        every { connection.inputStream } throws java.io.IOException("stream closed")
+
+        assertEquals(BatchResult.Success, readBatchResponse(connection))
+    }
+
+    private fun readResponse(connection: java.net.HttpURLConnection): TestEndpointResult {
+        val method = NetworkManager::class.java.getDeclaredMethod("readResponse", java.net.HttpURLConnection::class.java)
+        method.isAccessible = true
+        return method.invoke(createNetworkManagerViaReflection(), connection) as TestEndpointResult
+    }
+
+    @Test
+    fun `an accepted upload closes the reply it does not read`() {
+        val reply = mockk<java.io.InputStream>(relaxed = true)
+        val connection = mockk<java.net.HttpURLConnection>(relaxed = true)
+        every { connection.responseCode } returns 200
+        every { connection.errorStream } returns null
+        every { connection.inputStream } returns reply
+
+        assertTrue(readResponse(connection).ok)
+
+        verify(exactly = 1) { reply.close() }
+    }
+
+    // Android offers no error stream below 400, so a redirect it does not follow has only the plain one.
+    @Test
+    fun `a redirect that is not followed is a failure whose reply is still closed`() {
+        val reply = mockk<java.io.InputStream>(relaxed = true)
+        val connection = mockk<java.net.HttpURLConnection>(relaxed = true)
+        every { connection.responseCode } returns 307
+        every { connection.errorStream } returns null
+        every { connection.inputStream } returns reply
+
+        val result = readResponse(connection)
+
+        assertFalse(result.ok)
+        assertEquals(307, result.httpStatus)
+        verify(exactly = 1) { reply.close() }
+    }
+
+    @Test
+    fun `a custom Connection header cannot switch connection reuse back on`() {
+        val method = NetworkManager::class.java.getDeclaredMethod(
+            "buildConnection", java.net.URL::class.java, Boolean::class.javaPrimitiveType, Map::class.java
+        )
+        method.isAccessible = true
+
+        for (isGet in listOf(false, true)) {
+            val connection = method.invoke(
+                createNetworkManagerViaReflection(), java.net.URL("http://127.0.0.1:9/"), isGet, mapOf("Connection" to "keep-alive")
+            ) as java.net.HttpURLConnection
+
+            assertEquals("close", connection.getRequestProperty("Connection"))
+        }
+    }
+
+    // Without the header a closed reply is pooled for reuse, and a stale pooled connection fails a streamed POST.
+    @Test
+    fun `an upload asks the server to close the connection and still counts as sent`() {
+        val server = java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))
+        val headers = java.util.concurrent.CompletableFuture<List<String>>()
+        val serving = Thread {
+            try {
+                server.accept().use { socket ->
+                    val input = socket.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+                    val lines = generateSequence { input.readLine() }.takeWhile { it.isNotEmpty() }.toList()
+                    val length = lines.first { it.startsWith("Content-Length", ignoreCase = true) }.substringAfter(":").trim().toInt()
+                    repeat(length) { input.read() }
+                    headers.complete(lines)
+                    val body = """{"ok":true}"""
+                    socket.getOutputStream().write(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${body.length}\r\n\r\n$body".toByteArray()
+                    )
+                }
+            } catch (e: Exception) {
+                headers.completeExceptionally(e)
+            }
+        }.apply { start() }
+        try {
+            val caps = mockk<NetworkCapabilities>(relaxed = true)
+            every { caps.hasCapability(any()) } returns true
+            val cm = mockk<ConnectivityManager>(relaxed = true)
+            every { cm.getNetworkCapabilities(any()) } returns caps
+
+            val result = kotlinx.coroutines.runBlocking {
+                newManagerWith(cm).sendToEndpoint(JSONObject().put("lat", 1.0), "http://127.0.0.1:${server.localPort}/")
+            }
+
+            assertEquals(BatchResult.Success, result)
+            val sent = headers.get(5, java.util.concurrent.TimeUnit.SECONDS)
+            assertTrue("request headers were $sent", sent.any { it.equals("Connection: close", ignoreCase = true) })
+        } finally {
+            serving.join(5000)
+            server.close()
+        }
+    }
+
     private fun invokeReadErrorBody(body: String?): String {
         val connection = io.mockk.mockk<java.net.HttpURLConnection>(relaxed = true)
         io.mockk.every { connection.errorStream } returns body?.byteInputStream()
