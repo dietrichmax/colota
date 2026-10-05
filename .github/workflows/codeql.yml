@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'apps/mobile/**'
+      - 'packages/shared/**'
   pull_request:
     branches: [main]
     paths:
       - 'apps/mobile/**'
+      - 'packages/shared/**'
   schedule:
     - cron: '0 4 * * 1'
   workflow_dispatch:
