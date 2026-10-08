@@ -278,17 +278,8 @@ function smoothAltitudes(altitudes: number[], timestamps: number[]): number[] {
 }
 
 export function computeTripStats(locations: LocationCoords[]): TripStats {
-  let speedSum = 0
-  let speedCount = 0
   let elevationGain = 0
   let elevationLoss = 0
-
-  for (const loc of locations) {
-    if (loc.speed != null && loc.speed > 0) {
-      speedSum += loc.speed
-      speedCount++
-    }
-  }
 
   for (const run of altitudeRuns(locations)) {
     const series = run.timestamps ? smoothAltitudes(run.altitudes, run.timestamps) : run.altitudes
@@ -307,14 +298,9 @@ export function computeTripStats(locations: LocationCoords[]): TripStats {
     }
   }
 
+  // Elapsed time, so stopped time counts
   let avgSpeed = 0
-  if (speedCount > 0) {
-    avgSpeed = speedSum / speedCount
-  } else if (locations.length > 1) {
-    // Points reach here with no usable speed three ways: a chip reporting 0 on every fix, an
-    // update interval past applySpeedFallback's 60s window, or an import whose source file
-    // carried none. Without this the trip reads 0 next to a correct distance. Note this counts
-    // stopped time, unlike the reported-speed branch above, which averages moving fixes only.
+  if (locations.length > 1) {
     const seconds = (locations[locations.length - 1].timestamp ?? 0) - (locations[0].timestamp ?? 0)
     if (seconds > 0) avgSpeed = computeTotalDistance(locations) / seconds
   }
@@ -324,4 +310,73 @@ export function computeTripStats(locations: LocationCoords[]): TripStats {
     elevationGain,
     elevationLoss
   }
+}
+
+const MIN_PROFILE_SAMPLES = 3
+
+/** Bucket means along an axis. An empty bucket sits on the line between its filled neighbours. */
+function bucketProfile(
+  positions: number[],
+  values: number[],
+  start: number,
+  span: number,
+  maxBuckets: number
+): number[] {
+  const samples = values.length
+  if (samples < MIN_PROFILE_SAMPLES) return []
+
+  const buckets = Math.min(maxBuckets, samples)
+  const sums = new Array<number>(buckets).fill(0)
+  const counts = new Array<number>(buckets).fill(0)
+  for (let i = 0; i < samples; i++) {
+    const fraction = span > 0 ? (positions[i] - start) / span : i / (samples - 1)
+    const bucket = Math.max(0, Math.min(buckets - 1, Math.round(fraction * (buckets - 1))))
+    sums[bucket] += values[i]
+    counts[bucket]++
+  }
+
+  const filled: number[] = []
+  for (let i = 0; i < buckets; i++) if (counts[i] > 0) filled.push(i)
+  const profile = new Array<number>(buckets)
+  for (const i of filled) profile[i] = sums[i] / counts[i]
+  profile.fill(profile[filled[0]], 0, filled[0])
+  profile.fill(profile[filled[filled.length - 1]], filled[filled.length - 1] + 1)
+  for (let k = 1; k < filled.length; k++) {
+    const from = filled[k - 1]
+    const to = filled[k]
+    for (let i = from + 1; i < to; i++) {
+      profile[i] = profile[from] + ((profile[to] - profile[from]) * (i - from)) / (to - from)
+    }
+  }
+  return profile
+}
+
+export function buildSpeedProfile(locations: LocationCoords[], maxBuckets: number): number[] {
+  if (locations.length === 0) return []
+  const start = locations[0].timestamp ?? 0
+  const span = (locations[locations.length - 1].timestamp ?? 0) - start
+  const positions: number[] = []
+  const values: number[] = []
+  for (const loc of locations) {
+    if (loc.speed == null) continue
+    positions.push(loc.timestamp ?? start)
+    values.push(loc.speed)
+  }
+  return bucketProfile(positions, values, start, span, maxBuckets)
+}
+
+export function buildElevationProfile(locations: LocationCoords[], maxBuckets: number): number[] {
+  const positions: number[] = []
+  const values: number[] = []
+  let travelled = 0
+  locations.forEach((loc, i) => {
+    if (i > 0) {
+      const prev = locations[i - 1]
+      travelled += haversine(prev.latitude, prev.longitude, loc.latitude, loc.longitude)
+    }
+    if (loc.altitude == null) return
+    positions.push(travelled)
+    values.push(loc.altitude)
+  })
+  return bucketProfile(positions, values, 0, travelled, maxBuckets)
 }

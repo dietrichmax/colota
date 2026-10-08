@@ -1,1 +1,3 @@
 - Less memory used when opening a day with many points and when sending a large upload backlog
+- Fixed a trip's average speed following whichever stretch recorded the most points; it is now distance divided by duration
+- Fixed the trip speed and elevation charts giving a densely recorded stretch more width than the time or distance it covers

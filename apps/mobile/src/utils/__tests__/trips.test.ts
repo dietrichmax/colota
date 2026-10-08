@@ -3,6 +3,8 @@ import {
   getTripColor,
   TRIP_COLORS,
   computeTripStats,
+  buildSpeedProfile,
+  buildElevationProfile,
   buildBoundaryOverrideMap,
   gapsBetweenTrips,
   boundarySplits,
@@ -484,43 +486,39 @@ describe("computeTripStats", () => {
     expect(stats.elevationLoss).toBe(0)
   })
 
-  it("computes average speed from non-zero values", () => {
-    const locations = [
-      { latitude: 0, longitude: 0, speed: 2 },
-      { latitude: 0, longitude: 0, speed: 4 },
-      { latitude: 0, longitude: 0, speed: 6 }
-    ]
-    const stats = computeTripStats(locations)
-    expect(stats.avgSpeed).toBe(4) // (2+4+6)/3
+  it("does not let a densely recorded slow stretch outweigh a sparse fast one", () => {
+    // 50 fixes a second apart cover ~270m, then 3 fixes ten minutes apart cover ~400km
+    const slow = Array.from({ length: 50 }, (_, i) => ({
+      latitude: i * 0.00005,
+      longitude: 0,
+      timestamp: 1000 + i,
+      speed: 5
+    }))
+    const fast = Array.from({ length: 3 }, (_, i) => ({
+      latitude: 0.00245 + (i + 1) * 1.2,
+      longitude: 0,
+      timestamp: 1049 + (i + 1) * 600,
+      speed: 250
+    }))
+    // ~400.6km in 1849s
+    expect(computeTripStats([...slow, ...fast]).avgSpeed).toBeCloseTo(216.6, 0)
   })
 
-  it("excludes zero and null speeds from average", () => {
-    const locations = [
-      { latitude: 0, longitude: 0, speed: 0 },
-      { latitude: 0, longitude: 0, speed: undefined },
-      { latitude: 0, longitude: 0, speed: 10 }
-    ]
-    const stats = computeTripStats(locations)
-    expect(stats.avgSpeed).toBe(10) // only the 10 counts
-  })
-
-  it("derives average speed from position when no point has a usable speed", () => {
-    const locations = [
-      { latitude: 52.52, longitude: 13.405, timestamp: 1000, speed: 0 },
-      { latitude: 52.521, longitude: 13.405, timestamp: 1050, speed: 0 }
-    ]
-    // 0.001 degrees of latitude is ~111.2m, covered in 50s
-    const stats = computeTripStats(locations)
-    expect(stats.avgSpeed).toBeCloseTo(2.224, 3)
-  })
-
-  it("prefers reported speeds over the position-derived fallback", () => {
+  it("divides distance by elapsed time, whatever speeds the fixes report", () => {
     const locations = [
       { latitude: 52.52, longitude: 13.405, timestamp: 1000, speed: 3 },
       { latitude: 52.53, longitude: 13.405, timestamp: 1050, speed: 3 }
     ]
-    // Position implies ~22 m/s over these 50s, so a flipped precedence would be visible
-    expect(computeTripStats(locations).avgSpeed).toBe(3)
+    // ~1112m in 50s
+    expect(computeTripStats(locations).avgSpeed).toBeCloseTo(22.24, 2)
+  })
+
+  it("reports no average speed when the trip spans no time", () => {
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, speed: 3 },
+      { latitude: 52.53, longitude: 13.405, speed: 3 }
+    ]
+    expect(computeTripStats(locations).avgSpeed).toBe(0)
   })
 
   it("rejects alternating altitude noise instead of counting it as climb", () => {
@@ -678,5 +676,103 @@ describe("split refusal wording", () => {
     )
     expect(t(SPLIT_BLOCKED_ALREADY_BOUNDARY)).toBe("This point already starts a trip.")
     expect(t(SPLIT_BLOCKED_TOO_SHORT)).toMatch(/^A split needs at least two points on each side/)
+  })
+})
+
+describe("buildSpeedProfile", () => {
+  it("gives a stretch its share of the time, not its share of the points", () => {
+    // 91 fixes in the first 90s, 9 over the next 810s
+    const dense = Array.from({ length: 91 }, (_, i) => ({ latitude: 0, longitude: 0, timestamp: 1000 + i, speed: 1 }))
+    const sparse = Array.from({ length: 9 }, (_, i) => ({
+      latitude: 0,
+      longitude: 0,
+      timestamp: 1090 + (i + 1) * 90,
+      speed: 100
+    }))
+
+    expect(buildSpeedProfile([...dense, ...sparse], 11)).toEqual([1, 1, 100, 100, 100, 100, 100, 100, 100, 100, 100])
+  })
+
+  it("draws a straight line across time no fix was recorded in", () => {
+    const locations = [
+      { latitude: 0, longitude: 0, timestamp: 1000, speed: 10 },
+      { latitude: 0, longitude: 0, timestamp: 1001, speed: 10 },
+      { latitude: 0, longitude: 0, timestamp: 1002, speed: 10 },
+      { latitude: 0, longitude: 0, timestamp: 4000, speed: 40 }
+    ]
+    const profile = buildSpeedProfile(locations, 120)
+
+    expect(profile).toHaveLength(4)
+    profile.forEach((value, i) => expect(value).toBeCloseTo([10, 20, 30, 40][i], 6))
+  })
+
+  it("keeps a stop on the chart for as long as it lasted", () => {
+    // Moving for 100s, stopped for 800s with only two fixes, moving again for 100s
+    const locations = [
+      ...Array.from({ length: 11 }, (_, i) => ({ latitude: 0, longitude: 0, timestamp: 1000 + i * 10, speed: 10 })),
+      { latitude: 0, longitude: 0, timestamp: 1200, speed: 0 },
+      { latitude: 0, longitude: 0, timestamp: 1800, speed: 0 },
+      ...Array.from({ length: 11 }, (_, i) => ({ latitude: 0, longitude: 0, timestamp: 1900 + i * 10, speed: 10 }))
+    ]
+    const profile = buildSpeedProfile(locations, 11)
+
+    expect(profile.slice(2, 9)).toEqual([0, 0, 0, 0, 0, 0, 0])
+  })
+
+  it("places a speed by its own time when earlier points reported none", () => {
+    const locations = Array.from({ length: 20 }, (_, i) => ({
+      latitude: 0,
+      longitude: 0,
+      timestamp: 1000 + i * 10,
+      speed: i < 10 ? undefined : i
+    }))
+    expect(buildSpeedProfile(locations, 10)).toEqual([10.5, 10.5, 10.5, 10.5, 10.5, 10.5, 12.5, 14.5, 16.5, 18.5])
+  })
+
+  it("returns nothing when too few points carry a speed to draw a line", () => {
+    const locations = Array.from({ length: 10 }, (_, i) => ({
+      latitude: 0,
+      longitude: 0,
+      timestamp: 1000 + i,
+      speed: i < 2 ? 5 : undefined
+    }))
+    expect(buildSpeedProfile(locations, 120)).toEqual([])
+  })
+
+  it("spreads the points evenly when the trip spans no time", () => {
+    const locations = [1, 2, 3, 4].map((speed) => ({ latitude: 0, longitude: 0, speed }))
+    expect(buildSpeedProfile(locations, 120)).toEqual([1, 2, 3, 4])
+  })
+})
+
+describe("buildElevationProfile", () => {
+  it("gives a stretch its share of the distance, not its share of the points", () => {
+    // 91 fixes over the first tenth of the route, 9 over the rest
+    const dense = Array.from({ length: 91 }, (_, i) => ({ latitude: i * 0.0001, longitude: 0, altitude: 0 }))
+    const sparse = Array.from({ length: 9 }, (_, i) => ({
+      latitude: 0.009 + (i + 1) * 0.009,
+      longitude: 0,
+      altitude: 1000
+    }))
+
+    expect(buildElevationProfile([...dense, ...sparse], 11)).toEqual([
+      0, 0, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000
+    ])
+  })
+
+  it("measures distance over every point, including those with no altitude", () => {
+    const locations = Array.from({ length: 20 }, (_, i) => ({
+      latitude: i * 0.001,
+      longitude: 0,
+      altitude: i < 10 ? undefined : 100 + i
+    }))
+    expect(buildElevationProfile(locations, 10)).toEqual([
+      110.5, 110.5, 110.5, 110.5, 110.5, 110.5, 112.5, 114.5, 116.5, 118.5
+    ])
+  })
+
+  it("spreads the points evenly when the trip covers no distance", () => {
+    const locations = [1, 2, 3, 4].map((altitude) => ({ latitude: 52.52, longitude: 13.405, altitude }))
+    expect(buildElevationProfile(locations, 120)).toEqual([1, 2, 3, 4])
   })
 })

@@ -16,8 +16,6 @@ interface InteractiveLineChartProps {
   backgroundColor: string
   formatValue: (value: number) => string
   height?: number
-  activeIndex?: number | null
-  onActiveIndexChange?: (index: number | null) => void
 }
 
 const CHART_PADDING = { top: 24, bottom: 20, left: 40, right: 0 }
@@ -31,14 +29,10 @@ export function InteractiveLineChart({
   textColor,
   backgroundColor,
   formatValue,
-  height = 140,
-  activeIndex: externalIndex,
-  onActiveIndexChange
+  height = 140
 }: InteractiveLineChartProps) {
   const [chartWidth, setChartWidth] = useState(0)
-  const [internalIndex, setInternalIndex] = useState<number | null>(null)
-  const activeIndex = externalIndex !== undefined ? externalIndex : internalIndex
-  const setActiveIndex = onActiveIndexChange ?? setInternalIndex
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const widthRef = useRef(0)
   const dataRef = useRef(data)
   dataRef.current = data

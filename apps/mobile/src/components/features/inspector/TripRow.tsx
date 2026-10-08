@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useMemo } from "react"
+import React from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { Check } from "lucide-react-native"
 import { radius } from "@colota/shared"
@@ -11,7 +11,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
 import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { formatDistance, formatDuration, formatSpeed, formatTime, spokenDistance } from "../../../utils/geo"
-import { computeTripStats, getTripColor } from "../../../utils/trips"
+import { getTripColor } from "../../../utils/trips"
 import type { Trip } from "../../../types/global"
 import { t } from "../../../i18n/t"
 import { useTranslation } from "../../../i18n/useTranslation"
@@ -45,7 +45,7 @@ export function TripRow({ trip, index, selected, selecting, onPress, onLongPress
   const { colors } = useTheme()
   useTranslation()
   const duration = trip.endTime - trip.startTime
-  const avgSpeed = useMemo(() => computeTripStats(trip.locations).avgSpeed, [trip.locations])
+  const avgSpeed = duration > 0 ? trip.distance / duration : 0
   const start = formatTime(trip.startTime)
   const end = formatTime(trip.endTime)
   const detail = [formatDistance(trip.distance), formatDuration(duration), avgSpeed > 0 ? formatSpeed(avgSpeed) : null]

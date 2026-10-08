@@ -56,7 +56,7 @@ jest.mock("react-native-safe-area-context", () => ({
 jest.mock("../../components/features/inspector/InteractiveLineChart", () => {
   const R = require("react")
   const { View } = require("react-native")
-  return { InteractiveLineChart: (_props: any) => R.createElement(View, { testID: "Chart" }) }
+  return { InteractiveLineChart: (props: any) => R.createElement(View, { testID: "Chart", data: props.data }) }
 })
 
 jest.mock("../../components/ui/ExportFormatDialog", () => {
@@ -381,6 +381,59 @@ describe("TripDetailScreen - header and stepper", () => {
     const bar = headerRight(props)
     expect(bar.getByLabelText("Export trip")).toBeTruthy()
     expect(bar.getByLabelText("Delete trip")).toBeTruthy()
+  })
+})
+
+describe("TripDetailScreen - charts", () => {
+  beforeEach(async () => {
+    ;(NativeLocationService.getSetting as jest.Mock).mockImplementation((key: string) =>
+      Promise.resolve(key === "unitSystem" ? "metric" : "")
+    )
+    await loadDisplayPreferences()
+  })
+
+  afterEach(async () => {
+    ;(NativeLocationService.getSetting as jest.Mock).mockResolvedValue("")
+    await loadDisplayPreferences()
+  })
+
+  it("draws speed on the first chart and elevation on the second, since each sits over its own axis labels", async () => {
+    const trip = makeTrip(6)
+    trip.locations = trip.locations.map((l, i) => ({ ...l, speed: i + 1, altitude: 100 + i * 10 }))
+
+    const { getAllByTestId } = render(<TripDetailScreen {...makeProps(trip)} />)
+    await act(async () => {})
+
+    const [speed, elevation] = getAllByTestId("Chart")
+    expect(speed.props.data).toEqual([1, 2, 3, 4, 5, 6])
+    expect(elevation.props.data.map(Math.round)).toEqual([100, 110, 120, 130, 140, 150])
+  })
+
+  it("reads the peak speed and the elevation range from the points, not from the averaged chart", async () => {
+    // Four fixes a second and a metre apart share one chart bucket, so the chart shows their mean
+    const dense = [0, 1, 2, 3].map((i) => ({
+      id: i + 1,
+      latitude: 52.52 + i * 0.00001,
+      longitude: 13.405,
+      timestamp: 1000 + i,
+      speed: i === 1 ? 30 : 2,
+      altitude: i === 1 ? 500 : 100
+    }))
+    const sparse = [1, 2].map((i) => ({
+      id: i + 4,
+      latitude: 52.52 + i * 0.5,
+      longitude: 13.405,
+      timestamp: 1000 + i * 1000,
+      speed: 2,
+      altitude: 100
+    }))
+    const trip = { ...makeTrip(6), locations: [...dense, ...sparse] }
+
+    const { getByText } = render(<TripDetailScreen {...makeProps(trip)} />)
+    await act(async () => {})
+
+    expect(getByText(/^max 108[.,]0 km\/h$/)).toBeTruthy()
+    expect(getByText(/^100 ?m - 500 ?m$/)).toBeTruthy()
   })
 })
 

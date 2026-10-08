@@ -17,8 +17,7 @@ jest.mock("../../../../utils/geo", () => ({
 }))
 
 jest.mock("../../../../utils/trips", () => ({
-  getTripColor: (i: number) => `#color${i}`,
-  computeTripStats: () => ({ avgSpeed: 0, elevationGain: 0, elevationLoss: 0 })
+  getTripColor: (i: number) => `#color${i}`
 }))
 
 jest.mock("lucide-react-native", () => {

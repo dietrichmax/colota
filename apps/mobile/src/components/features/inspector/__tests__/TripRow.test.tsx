@@ -33,16 +33,15 @@ const START = 8 * 3600 + 12 * 60
 const END = START + 6 * 60
 
 function makeTrip(): Trip {
-  const speed = 17 / 3.6
   return {
     index: 2,
     locations: [
-      { latitude: 0, longitude: 0, timestamp: START, speed },
-      { latitude: 0.01, longitude: 0, timestamp: END, speed }
+      { latitude: 0, longitude: 0, timestamp: START },
+      { latitude: 0.01, longitude: 0, timestamp: END }
     ],
     startTime: START,
     endTime: END,
-    distance: 1100,
+    distance: 1700,
     locationCount: 2,
     startIndex: 5
   }
@@ -68,7 +67,7 @@ describe("TripRow", () => {
     const { getByText } = renderRow()
 
     expect(getByText("Trip 2")).toBeTruthy()
-    expect(getByText("1.1 km · 6min · 17.0 km/h")).toBeTruthy()
+    expect(getByText("1.7 km · 6min · 17.0 km/h")).toBeTruthy()
   })
 
   it("speaks the whole row with units a screen reader can say, and offers the details it opens", () => {
@@ -76,7 +75,7 @@ describe("TripRow", () => {
     const row = getByTestId("trip-row")
 
     expect(row.props.accessibilityRole).toBe("button")
-    expect(row.props.accessibilityLabel).toBe("Trip 2, 08:12 to 08:18, 1.1 kilometres, 6 minutes")
+    expect(row.props.accessibilityLabel).toBe("Trip 2, 08:12 to 08:18, 1.7 kilometres, 6 minutes")
     expect(row.props.accessibilityHint).toBe("Opens trip details")
   })
 
@@ -135,7 +134,7 @@ describe("TripRow", () => {
     const { View } = require("react-native")
 
     expect(getByText("Trip 2").props.numberOfLines).toBeUndefined()
-    expect(getByText("1.1 km · 6min · 17.0 km/h").props.numberOfLines).toBeUndefined()
+    expect(getByText("1.7 km · 6min · 17.0 km/h").props.numberOfLines).toBeUndefined()
     const titleRow = UNSAFE_getAllByType(View).find((v: any) => StyleSheet.flatten(v.props.style)?.flexWrap === "wrap")
     expect(titleRow).toBeTruthy()
     expect(StyleSheet.flatten(getByText("Trip 2").props.style).flexShrink).toBeUndefined()

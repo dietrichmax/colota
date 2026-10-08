@@ -23,7 +23,14 @@ import { TripSwatch } from "../components/features/inspector/TripRow"
 import { ExportFormatDialog } from "../components/ui/ExportFormatDialog"
 import { InspectorDock } from "../components/features/inspector/InspectorDock"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
-import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
+import {
+  getTripColor,
+  computeTripStats,
+  buildSpeedProfile,
+  buildElevationProfile,
+  buildBoundaryOverrideMap,
+  splitBlockedReason
+} from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatShortDistance, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { size, space } from "../constants"
@@ -36,21 +43,6 @@ import type { RootScreenProps } from "../types/navigation"
 import { useTranslation } from "../i18n/useTranslation"
 
 const MAX_BARS = 120
-
-/** Downsample an array to at most maxBars entries by averaging buckets. */
-function downsample(values: number[], maxBars: number): number[] {
-  if (values.length <= maxBars) return values
-  const bucketSize = values.length / maxBars
-  const result: number[] = []
-  for (let i = 0; i < maxBars; i++) {
-    const start = Math.floor(i * bucketSize)
-    const end = Math.floor((i + 1) * bucketSize)
-    let sum = 0
-    for (let j = start; j < end; j++) sum += values[j]
-    result.push(sum / (end - start))
-  }
-  return result
-}
 
 const MAP_VIEWPORT_SHARE = 0.5
 // The point card may cover this much of the map; a band of tiles always stays above it.
@@ -78,7 +70,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const displayName = t("history.trip", { index: trip.index })
 
   const [exportOpen, setExportOpen] = useState(false)
-  const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
   // Without these, a boundary the user merged reads as a plain gap and refuses to split
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
   // Splitting before they arrive would judge a merged boundary as a plain gap and refuse a legal split
@@ -118,7 +109,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   // Reset transient UI state when switching to a different trip.
   useEffect(() => {
-    setChartActiveIndex(null)
     setExportOpen(false)
     setSelectedPointId(null)
   }, [trip.index])
@@ -261,24 +251,17 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     navigation.setOptions({ headerRight })
   }, [navigation, headerRight])
 
-  const speedProfile = useMemo(() => {
-    const raw = trip.locations.filter((loc) => loc.speed != null).map((loc) => loc.speed ?? 0)
-    return downsample(raw, MAX_BARS)
-  }, [trip])
+  const speedProfile = useMemo(() => buildSpeedProfile(trip.locations, MAX_BARS), [trip])
+  const elevationProfile = useMemo(() => buildElevationProfile(trip.locations, MAX_BARS), [trip])
 
-  const elevationProfile = useMemo(() => {
-    const raw = trip.locations.filter((loc) => loc.altitude != null).map((loc) => loc.altitude ?? 0)
-    return downsample(raw, MAX_BARS)
-  }, [trip])
-
-  const maxSpeed = useMemo(() => speedProfile.reduce((max, v) => Math.max(max, v), 0), [speedProfile])
+  const maxSpeed = useMemo(() => trip.locations.reduce((max, loc) => Math.max(max, loc.speed ?? 0), 0), [trip])
   const minElevation = useMemo(
-    () => elevationProfile.reduce((min, v) => Math.min(min, v), Infinity),
-    [elevationProfile]
+    () => trip.locations.reduce((min, loc) => Math.min(min, loc.altitude ?? Infinity), Infinity),
+    [trip]
   )
   const maxElevation = useMemo(
-    () => elevationProfile.reduce((max, v) => Math.max(max, v), -Infinity),
-    [elevationProfile]
+    () => trip.locations.reduce((max, loc) => Math.max(max, loc.altitude ?? -Infinity), -Infinity),
+    [trip]
   )
   const elevationRange = maxElevation - minElevation
 
@@ -399,8 +382,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                   textColor={colors.text}
                   backgroundColor={colors.card}
                   formatValue={(v) => formatSpeed(v, 0)}
-                  activeIndex={chartActiveIndex}
-                  onActiveIndexChange={setChartActiveIndex}
                 />
               </View>
               <View style={styles.chartLabels}>
@@ -430,8 +411,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                 textColor={colors.text}
                 backgroundColor={colors.card}
                 formatValue={formatShortDistance}
-                activeIndex={chartActiveIndex}
-                onActiveIndexChange={setChartActiveIndex}
               />
               <View style={styles.chartLabels}>
                 {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
