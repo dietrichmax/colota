@@ -102,8 +102,10 @@ Each entry in the `profiles` array describes one [tracking profile](tracking-pro
 | `interval` | number | (required) | GPS interval in seconds (must be >= 1) |
 | `distance` | number | (required) | Movement threshold in meters |
 | `syncInterval` | number | (required) | Sync interval in seconds (0 = instant) |
-| `condition.type` | string | (required) | `charging`, `android_auto`, `wifi_any`, `wifi_ssid`, `speed_above`, `speed_below`, or `stationary` |
+| `condition.type` | string | (required) | `charging`, `android_auto`, `bluetooth_device`, `wifi_any`, `wifi_ssid`, `speed_above`, `speed_below`, or `stationary` |
 | `condition.ssid` | string | - | Required for `wifi_ssid`. Network name as shown in Wi-Fi settings |
+| `condition.bluetoothAddress` | string | - | Required for `bluetooth_device`. The paired device's MAC address, e.g. `AA:BB:CC:DD:EE:FF` |
+| `condition.bluetoothName` | string | - | Optional for `bluetooth_device`. Label shown in the app; matching uses the address only |
 | `condition.speedThreshold` | number | - | Required for `speed_above` / `speed_below`. Speed in m/s (divide km/h by 3.6) |
 | `priority` | number | `10` | Higher value wins when multiple profiles match |
 | `activationDelay` | number | `0` (stationary: `60`) | Seconds the condition must keep matching before the profile is applied (0 = immediate). For `stationary`, how long the device must be still before activating |

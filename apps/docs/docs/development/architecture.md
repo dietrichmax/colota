@@ -260,11 +260,11 @@ Database access layer for tracking profiles and trip events. Maintains a `TimedC
 
 ### ConditionMonitor
 
-Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it: on every Wi-Fi network that comes or goes and when Location comes back on, because a name read while Location was off is blank. Forwards state changes to `ProfileManager` for condition evaluation.
+Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, Bluetooth device connections via the ACL `BroadcastReceiver` (seeded once from the A2DP and headset profile proxies, since ACL broadcasts report changes only), and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it: on every Wi-Fi network that comes or goes and when Location comes back on, because a name read while Location was off is blank. Forwards state changes to `ProfileManager` for condition evaluation.
 
 ### ProfileConstants
 
-Centralized constants for condition type strings (`charging`, `android_auto`, `speed_above`, `speed_below`, `stationary`, `wifi_any`, `wifi_ssid`), event types (`activated`, `deactivated`), cache TTL, speed buffer size, and minimum interval.
+Centralized constants for condition type strings (`charging`, `android_auto`, `speed_above`, `speed_below`, `stationary`, `wifi_any`, `wifi_ssid`, `bluetooth_device`), event types (`activated`, `deactivated`), cache TTL, speed buffer size, and minimum interval.
 
 ### SecureStorageHelper
 

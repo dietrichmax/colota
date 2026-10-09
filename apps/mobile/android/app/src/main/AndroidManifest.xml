@@ -30,6 +30,12 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
+    <!-- Bluetooth permissions -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- BLUETOOTH implies a required Bluetooth feature, which would hide the app from devices without one -->
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+
     <!-- Boot Receiver -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 

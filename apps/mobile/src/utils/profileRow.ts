@@ -26,13 +26,21 @@ const speedOf = (profile: Pick<TrackingProfile, "condition">) =>
 
 const networkOf = (profile: Pick<TrackingProfile, "condition">) => profile.condition.ssid?.trim() ?? ""
 
+const deviceOf = (profile: Pick<TrackingProfile, "condition">) =>
+  profile.condition.bluetoothName?.trim() || profile.condition.bluetoothAddress || ""
+
+const unsetKey = (profile: Pick<TrackingProfile, "condition">) => {
+  const { type } = profile.condition
+  if (type === "wifi_ssid" && networkOf(profile) === "") return "condition.wifi_any.list"
+  if (type === "bluetooth_device" && deviceOf(profile) === "") return "condition.bluetooth_device.listUnset"
+  return null
+}
+
 /** "When charging", "Speed above 50 km/h": the clause a row and the editor's sentence open with. */
 export function conditionText(profile: Pick<TrackingProfile, "condition">): string {
-  const entry = conditionOf(profile)
-  const network = networkOf(profile)
-  // The editor's live sentence before a network is named; saved profiles always carry one.
-  const key = entry.type === "wifi_ssid" && network === "" ? "condition.wifi_any.list" : entry.listKey
-  return t(key, { speed: speedOf(profile), network })
+  // The editor's live sentence before a network or device is named; saved profiles always carry one.
+  const key = unsetKey(profile) ?? conditionOf(profile).listKey
+  return t(key, { speed: speedOf(profile), network: networkOf(profile), device: deviceOf(profile) })
 }
 
 /** The recording half; a stationary profile forces the distance to 0, so "any movement" would mislead. */
@@ -55,7 +63,11 @@ export function recordingPhrase(profile: ProfileLike): string {
 export function profileRowSub(profile: ProfileLike, inForce: boolean, isOfflineMode: boolean): string {
   const condition = inForce
     ? t("profile.row.active", {
-        condition: t(conditionOf(profile).clauseKey, { speed: speedOf(profile), network: networkOf(profile) })
+        condition: t(conditionOf(profile).clauseKey, {
+          speed: speedOf(profile),
+          network: networkOf(profile),
+          device: deviceOf(profile)
+        })
       })
     : conditionText(profile)
   const parts = [condition, recordingClause(profile)]

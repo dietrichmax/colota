@@ -5,7 +5,9 @@
  
 package com.Colota.bridge
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -54,6 +56,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import java.lang.ref.WeakReference
@@ -710,6 +713,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
                 config.getDouble("speedThreshold").toFloat() else null,
             wifiSsid = config.getStringOrNull("wifiSsid")?.takeIf { it.isNotBlank() },
+            bluetoothAddress = config.bluetoothAddressOrNull(),
+            bluetoothName = config.getStringOrNull("bluetoothName")?.takeIf { it.isNotBlank() },
             deactivationDelaySeconds = config.getInt("deactivationDelaySeconds"),
             activationDelaySeconds = config.getInt("activationDelaySeconds"),
         )
@@ -732,6 +737,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             hasSpeedThreshold = config.hasKey("speedThreshold"),
             wifiSsid = config.getStringOrNull("wifiSsid")?.takeIf { it.isNotBlank() },
             hasWifiSsid = config.hasKey("wifiSsid"),
+            bluetoothAddress = config.bluetoothAddressOrNull(),
+            bluetoothName = config.getStringOrNull("bluetoothName")?.takeIf { it.isNotBlank() },
+            hasBluetoothDevice = config.hasKey("bluetoothAddress"),
             deactivationDelaySeconds = config.getIntOrNull("deactivationDelaySeconds"),
             activationDelaySeconds = config.getIntOrNull("activationDelaySeconds"),
             enabled = config.getBooleanOrNull("enabled"),
@@ -745,6 +753,35 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         val changed = profileHelper.deleteProfile(id)
         afterProfileMutation(changed)
         changed
+    }
+
+    /** Uppercase, the form the connection broadcasts report, so the stored address compares directly. */
+    private fun ReadableMap.bluetoothAddressOrNull(): String? =
+        getStringOrNull("bluetoothAddress")?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
+
+    /** Resolves an empty list without the Nearby devices permission; the editor asks for it first. */
+    @SuppressLint("MissingPermission")
+    @ReactMethod
+    fun getBondedBluetoothDevices(promise: Promise) {
+        val array = Arguments.createArray()
+        try {
+            val adapter = (reactApplicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+            adapter?.bondedDevices.orEmpty()
+                .map { device ->
+                    val alias = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) device.alias else null
+                    (alias ?: device.name ?: device.address) to device.address.uppercase()
+                }
+                .sortedBy { it.first.lowercase() }
+                .forEach { (name, address) ->
+                    array.pushMap(Arguments.createMap().apply {
+                        putString("name", name)
+                        putString("address", address)
+                    })
+                }
+        } catch (e: SecurityException) {
+            AppLogger.w(TAG, "Reading paired Bluetooth devices denied: ${e.message}")
+        }
+        promise.resolve(array)
     }
 
     @ReactMethod

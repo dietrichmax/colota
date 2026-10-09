@@ -1,2 +1,3 @@
+- Tracking profiles can switch on a paired Bluetooth device, such as your car or headphones
 - Less memory used when opening a day with many points and when sending a large upload backlog
 - Fixed a trip's average speed and its speed and elevation charts being skewed towards stretches recorded with more points

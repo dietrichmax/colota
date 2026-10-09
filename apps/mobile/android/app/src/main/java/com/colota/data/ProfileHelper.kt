@@ -30,6 +30,8 @@ class ProfileHelper(private val context: Context) {
         val speedThreshold: Float?,
         /** The network the profile matches by name; null for every other condition. */
         val wifiSsid: String? = null,
+        /** The paired device's MAC address the profile matches; null for every other condition. */
+        val bluetoothAddress: String? = null,
         val deactivationDelaySeconds: Int,
         val activationDelaySeconds: Int,
     )
@@ -53,7 +55,7 @@ class ProfileHelper(private val context: Context) {
                 arrayOf(
                     "id", "name", "interval_ms", "min_update_distance",
                     "sync_interval_seconds", "priority", "condition_type",
-                    "speed_threshold", "wifi_ssid", "deactivation_delay_seconds",
+                    "speed_threshold", "wifi_ssid", "bluetooth_address", "deactivation_delay_seconds",
                     "activation_delay_seconds",
                 ),
                 "enabled = 1",
@@ -69,6 +71,7 @@ class ProfileHelper(private val context: Context) {
                 val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
                 val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
                 val wifiSsidIdx = cursor.getColumnIndexOrThrow("wifi_ssid")
+                val btAddressIdx = cursor.getColumnIndexOrThrow("bluetooth_address")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
                 val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
 
@@ -83,6 +86,7 @@ class ProfileHelper(private val context: Context) {
                         conditionType = cursor.getString(conditionIdx),
                         speedThreshold = if (cursor.isNull(speedIdx)) null else cursor.getFloat(speedIdx),
                         wifiSsid = if (cursor.isNull(wifiSsidIdx)) null else cursor.getString(wifiSsidIdx),
+                        bluetoothAddress = if (cursor.isNull(btAddressIdx)) null else cursor.getString(btAddressIdx),
                         deactivationDelaySeconds = cursor.getInt(delayIdx),
                         activationDelaySeconds = cursor.getInt(activationDelayIdx),
                     ))
@@ -113,6 +117,8 @@ class ProfileHelper(private val context: Context) {
                 val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
                 val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
                 val wifiSsidIdx = cursor.getColumnIndexOrThrow("wifi_ssid")
+                val btAddressIdx = cursor.getColumnIndexOrThrow("bluetooth_address")
+                val btNameIdx = cursor.getColumnIndexOrThrow("bluetooth_name")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
                 val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
                 val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
@@ -137,6 +143,16 @@ class ProfileHelper(private val context: Context) {
                         } else {
                             putString("wifiSsid", cursor.getString(wifiSsidIdx))
                         }
+                        if (cursor.isNull(btAddressIdx)) {
+                            putNull("bluetoothAddress")
+                        } else {
+                            putString("bluetoothAddress", cursor.getString(btAddressIdx))
+                        }
+                        if (cursor.isNull(btNameIdx)) {
+                            putNull("bluetoothName")
+                        } else {
+                            putString("bluetoothName", cursor.getString(btNameIdx))
+                        }
                         putInt("deactivationDelaySeconds", cursor.getInt(delayIdx))
                         putInt("activationDelaySeconds", cursor.getInt(activationDelayIdx))
                         putBoolean("enabled", cursor.getInt(enabledIdx) == 1)
@@ -160,6 +176,8 @@ class ProfileHelper(private val context: Context) {
         conditionType: String,
         speedThreshold: Float?,
         wifiSsid: String?,
+        bluetoothAddress: String?,
+        bluetoothName: String?,
         deactivationDelaySeconds: Int,
         activationDelaySeconds: Int,
     ): Int {
@@ -172,6 +190,8 @@ class ProfileHelper(private val context: Context) {
             put("condition_type", conditionType)
             if (speedThreshold != null) put("speed_threshold", speedThreshold) else putNull("speed_threshold")
             if (wifiSsid != null) put("wifi_ssid", wifiSsid) else putNull("wifi_ssid")
+            if (bluetoothAddress != null) put("bluetooth_address", bluetoothAddress) else putNull("bluetooth_address")
+            if (bluetoothName != null) put("bluetooth_name", bluetoothName) else putNull("bluetooth_name")
             put("deactivation_delay_seconds", deactivationDelaySeconds)
             put("activation_delay_seconds", activationDelaySeconds)
             put("enabled", 1)
@@ -200,6 +220,9 @@ class ProfileHelper(private val context: Context) {
         hasSpeedThreshold: Boolean = false,
         wifiSsid: String? = null,
         hasWifiSsid: Boolean = false,
+        bluetoothAddress: String? = null,
+        bluetoothName: String? = null,
+        hasBluetoothDevice: Boolean = false,
         deactivationDelaySeconds: Int? = null,
         activationDelaySeconds: Int? = null,
         enabled: Boolean? = null,
@@ -216,6 +239,10 @@ class ProfileHelper(private val context: Context) {
             }
             if (hasWifiSsid) {
                 if (wifiSsid != null) put("wifi_ssid", wifiSsid) else putNull("wifi_ssid")
+            }
+            if (hasBluetoothDevice) {
+                if (bluetoothAddress != null) put("bluetooth_address", bluetoothAddress) else putNull("bluetooth_address")
+                if (bluetoothName != null) put("bluetooth_name", bluetoothName) else putNull("bluetooth_name")
             }
             deactivationDelaySeconds?.let { put("deactivation_delay_seconds", it) }
             activationDelaySeconds?.let { put("activation_delay_seconds", it) }

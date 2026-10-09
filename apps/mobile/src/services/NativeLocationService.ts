@@ -6,6 +6,7 @@
 import { NativeModules } from "react-native"
 import {
   AuthConfig,
+  BluetoothDeviceInfo,
   ClientCertInfo,
   ClientCertInfoResult,
   DailyStat,
@@ -483,7 +484,9 @@ class NativeLocationService {
       condition: {
         type: p.conditionType,
         ...(p.speedThreshold != null ? { speedThreshold: p.speedThreshold } : {}),
-        ...(p.wifiSsid != null ? { ssid: p.wifiSsid } : {})
+        ...(p.wifiSsid != null ? { ssid: p.wifiSsid } : {}),
+        ...(p.bluetoothAddress != null ? { bluetoothAddress: p.bluetoothAddress } : {}),
+        ...(p.bluetoothName != null ? { bluetoothName: p.bluetoothName } : {})
       },
       activationDelay: p.activationDelaySeconds,
       deactivationDelay: p.deactivationDelaySeconds,
@@ -508,6 +511,8 @@ class NativeLocationService {
       conditionType: profile.condition.type,
       speedThreshold: profile.condition.speedThreshold ?? null,
       wifiSsid: profile.condition.ssid ?? null,
+      bluetoothAddress: profile.condition.bluetoothAddress ?? null,
+      bluetoothName: profile.condition.bluetoothName ?? null,
       deactivationDelaySeconds: profile.deactivationDelay,
       activationDelaySeconds: profile.activationDelay
     })
@@ -530,6 +535,8 @@ class NativeLocationService {
       config.conditionType = update.condition.type
       config.speedThreshold = update.condition.speedThreshold ?? null
       config.wifiSsid = update.condition.ssid ?? null
+      config.bluetoothAddress = update.condition.bluetoothAddress ?? null
+      config.bluetoothName = update.condition.bluetoothName ?? null
     }
     if (update.deactivationDelay !== undefined) config.deactivationDelaySeconds = update.deactivationDelay
     if (update.activationDelay !== undefined) config.activationDelaySeconds = update.activationDelay
@@ -655,6 +662,18 @@ class NativeLocationService {
   static async getCurrentSsid(): Promise<string> {
     this.ensureModule()
     return this.safeExecute(() => LocationServiceModule.getCurrentSsid(), "", "getCurrentSsid failed")
+  }
+
+  /**
+   * Returns the paired Bluetooth devices, or an empty list without the Nearby devices permission.
+   */
+  static async getBondedBluetoothDevices(): Promise<BluetoothDeviceInfo[]> {
+    this.ensureModule()
+    return this.safeExecute(
+      () => LocationServiceModule.getBondedBluetoothDevices(),
+      [],
+      "getBondedBluetoothDevices failed"
+    )
   }
 
   /**

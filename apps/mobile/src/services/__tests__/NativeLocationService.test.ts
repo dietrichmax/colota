@@ -463,6 +463,8 @@ describe("NativeLocationService", () => {
           conditionType: "wifi_ssid",
           speedThreshold: null,
           wifiSsid: "HomeNet",
+          bluetoothAddress: null,
+          bluetoothName: null,
           deactivationDelaySeconds: 60,
           activationDelaySeconds: 0,
           enabled: true,
@@ -482,6 +484,23 @@ describe("NativeLocationService", () => {
           activationDelaySeconds: 0,
           enabled: true,
           createdAt: 1700000000
+        },
+        {
+          id: 3,
+          name: "Car",
+          intervalMs: 5000,
+          minUpdateDistance: 0,
+          syncIntervalSeconds: 60,
+          priority: 20,
+          conditionType: "bluetooth_device",
+          speedThreshold: null,
+          wifiSsid: null,
+          bluetoothAddress: "AA:BB:CC:DD:EE:FF",
+          bluetoothName: "My Car",
+          deactivationDelaySeconds: 60,
+          activationDelaySeconds: 0,
+          enabled: true,
+          createdAt: 1700000000
         }
       ])
 
@@ -491,6 +510,12 @@ describe("NativeLocationService", () => {
       expect(profiles[0].interval).toBe(60)
       expect(profiles[1].condition).toEqual({ type: "speed_above", speedThreshold: 13.89 })
       expect(profiles[1].condition).not.toHaveProperty("ssid")
+      expect(profiles[0].condition).not.toHaveProperty("bluetoothAddress")
+      expect(profiles[2].condition).toEqual({
+        type: "bluetooth_device",
+        bluetoothAddress: "AA:BB:CC:DD:EE:FF",
+        bluetoothName: "My Car"
+      })
     })
 
     it("sends the SSID on create", async () => {
@@ -508,6 +533,36 @@ describe("NativeLocationService", () => {
 
       expect(nativeMock.createProfile).toHaveBeenCalledWith(
         expect.objectContaining({ conditionType: "wifi_ssid", wifiSsid: "HomeNet" })
+      )
+    })
+
+    it("sends the Bluetooth device on create", async () => {
+      await NativeLocationService.createProfile({
+        name: "Car",
+        interval: 5,
+        distance: 0,
+        syncInterval: 60,
+        priority: 20,
+        condition: { type: "bluetooth_device", bluetoothAddress: "AA:BB:CC:DD:EE:FF", bluetoothName: "My Car" },
+        activationDelay: 0,
+        deactivationDelay: 60,
+        enabled: true
+      })
+
+      expect(nativeMock.createProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          conditionType: "bluetooth_device",
+          bluetoothAddress: "AA:BB:CC:DD:EE:FF",
+          bluetoothName: "My Car"
+        })
+      )
+    })
+
+    it("clears the stored Bluetooth device when the condition no longer names one", async () => {
+      await NativeLocationService.updateProfile({ id: 1, condition: { type: "charging" } })
+
+      expect(nativeMock.updateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ conditionType: "charging", bluetoothAddress: null, bluetoothName: null })
       )
     })
 

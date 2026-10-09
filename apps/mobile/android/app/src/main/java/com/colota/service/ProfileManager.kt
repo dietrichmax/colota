@@ -59,6 +59,7 @@ class ProfileManager(
     @Volatile private var isCarMode = false
     @Volatile private var isWifiConnected = false
     @Volatile private var currentSsid: String = ""
+    @Volatile private var connectedBluetoothAddresses: Set<String> = emptySet()
     @Volatile var isStationary = false
         private set
     // The current still run, timed by location.time and written without the lock.
@@ -84,6 +85,12 @@ class ProfileManager(
     fun onWifiStateChanged(connected: Boolean, ssid: String) {
         isWifiConnected = connected
         currentSsid = ssid
+        evaluate()
+    }
+
+    /** Called on the main thread with the uppercase MAC addresses of the connected Bluetooth devices. */
+    fun onBluetoothDevicesChanged(addresses: Set<String>) {
+        connectedBluetoothAddresses = addresses
         evaluate()
     }
 
@@ -238,6 +245,10 @@ class ProfileManager(
                 // and a profile may carry no name. Either way the condition does not match.
                 val target = profile.wifiSsid
                 isWifiConnected && !target.isNullOrBlank() && target.equals(currentSsid, ignoreCase = true)
+            }
+            ProfileConstants.CONDITION_BLUETOOTH_DEVICE -> {
+                val target = profile.bluetoothAddress
+                !target.isNullOrBlank() && target.uppercase() in connectedBluetoothAddresses
             }
             else -> false
         }

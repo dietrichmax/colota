@@ -63,8 +63,8 @@ class ProfileHelperTest {
         val columns = listOf(
             "id", "name", "interval_ms", "min_update_distance",
             "sync_interval_seconds", "priority", "condition_type",
-            "speed_threshold", "wifi_ssid", "deactivation_delay_seconds", "activation_delay_seconds",
-            "enabled", "created_at"
+            "speed_threshold", "wifi_ssid", "bluetooth_address", "bluetooth_name",
+            "deactivation_delay_seconds", "activation_delay_seconds", "enabled", "created_at"
         )
 
         for ((idx, col) in columns.withIndex()) {
@@ -144,6 +144,7 @@ class ProfileHelperTest {
         assertEquals("charging", profiles[0].conditionType)
         assertNull(profiles[0].speedThreshold)
         assertNull(profiles[0].wifiSsid)
+        assertNull(profiles[0].bluetoothAddress)
     }
 
     @Test
@@ -279,6 +280,58 @@ class ProfileHelperTest {
             ProfileHelper(mockk(relaxed = true)).getProfilesAsArray()
 
             verify { map.putString("wifiSsid", "HomeNet") }
+        } finally {
+            unmockkStatic(Arguments::class)
+        }
+    }
+
+    @Test
+    fun `getEnabledProfiles reads the Bluetooth device address`() {
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Car", "interval_ms" to 5000L,
+                "min_update_distance" to 0f, "sync_interval_seconds" to 60,
+                "priority" to 20, "condition_type" to "bluetooth_device",
+                "speed_threshold" to null, "wifi_ssid" to null,
+                "bluetooth_address" to "AA:BB:CC:DD:EE:FF", "bluetooth_name" to "My Car",
+                "deactivation_delay_seconds" to 60
+            )
+        ))
+
+        every { mockDb.query(any(), any(), eq("enabled = 1"), any(), any(), any(), any()) } returns cursor
+
+        val profiles = ProfileHelper(mockk(relaxed = true)).getEnabledProfiles()
+
+        assertEquals(1, profiles.size)
+        assertEquals("bluetooth_device", profiles[0].conditionType)
+        assertEquals("AA:BB:CC:DD:EE:FF", profiles[0].bluetoothAddress)
+    }
+
+    @Test
+    fun `getProfilesAsArray reads the Bluetooth device`() {
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Car", "interval_ms" to 5000L,
+                "min_update_distance" to 0f, "sync_interval_seconds" to 60,
+                "priority" to 20, "condition_type" to "bluetooth_device",
+                "speed_threshold" to null, "wifi_ssid" to null,
+                "bluetooth_address" to "AA:BB:CC:DD:EE:FF", "bluetooth_name" to "My Car",
+                "deactivation_delay_seconds" to 60, "activation_delay_seconds" to 0,
+                "enabled" to 1, "created_at" to 0
+            )
+        ))
+        every { mockDb.query(any(), any(), any(), any(), any(), any(), any()) } returns cursor
+
+        mockkStatic(Arguments::class)
+        try {
+            val map = mockk<WritableMap>(relaxed = true)
+            every { Arguments.createArray() } returns mockk(relaxed = true)
+            every { Arguments.createMap() } returns map
+
+            ProfileHelper(mockk(relaxed = true)).getProfilesAsArray()
+
+            verify { map.putString("bluetoothAddress", "AA:BB:CC:DD:EE:FF") }
+            verify { map.putString("bluetoothName", "My Car") }
         } finally {
             unmockkStatic(Arguments::class)
         }

@@ -13,6 +13,7 @@ object ProfileConstants {
     const val CONDITION_STATIONARY = "stationary"
     const val CONDITION_WIFI_ANY = "wifi_any"
     const val CONDITION_WIFI_SSID = "wifi_ssid"
+    const val CONDITION_BLUETOOTH_DEVICE = "bluetooth_device"
 
     /**
      * Conditions whose re-evaluation depends on a fresh stream of location fixes.

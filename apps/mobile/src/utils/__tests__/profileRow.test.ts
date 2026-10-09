@@ -76,6 +76,14 @@ const wifi = profile({
   distance: 5,
   condition: { type: "wifi_any" }
 })
+const carAudio = profile({
+  id: 7,
+  name: "Car audio",
+  interval: 5,
+  distance: 0,
+  syncInterval: 60,
+  condition: { type: "bluetooth_device", bluetoothAddress: "AA:BB:CC:DD:EE:FF", bluetoothName: "My Car" }
+})
 const settings = { interval: 30, distance: 2, syncInterval: 300, isOfflineMode: false }
 
 describe("profileRowSub", () => {
@@ -129,6 +137,19 @@ describe("profileRowSub", () => {
     expect(conditionText(driving)).toBe("Speed above 31 mph")
     expect(profileRowSub(driving, false, false)).toBe("Speed above 31 mph · Every 2 s after 33 ft · syncs every 1 min")
     await units("metric")
+  })
+
+  it("names the Bluetooth device, by address when it has no name, and stays generic before one is picked", () => {
+    expect(profileRowSub(carAudio, false, false)).toBe(
+      'Connected to "My Car" · Every 5 s, any movement · syncs every 1 min'
+    )
+    expect(profileRowSub(carAudio, true, false)).toBe(
+      'Active · connected to "My Car" · Every 5 s, any movement · syncs every 1 min'
+    )
+    expect(conditionText({ condition: { type: "bluetooth_device", bluetoothAddress: "AA:BB:CC:DD:EE:FF" } })).toBe(
+      'Connected to "AA:BB:CC:DD:EE:FF"'
+    )
+    expect(conditionText({ condition: { type: "bluetooth_device" } })).toBe("When connected to a Bluetooth device")
   })
 
   it("reads the network name, and falls back to plain Wi-Fi while the field is still empty", () => {

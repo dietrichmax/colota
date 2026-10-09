@@ -13,7 +13,7 @@ A tracking profile is a rule: while a condition holds, such as charging, Android
 ## Use Cases
 
 - **Charging** - Increase tracking frequency while plugged in (battery isn't a concern)
-- **Driving** - Switch to frequent updates when Android Auto connects or speed exceeds a threshold
+- **Driving** - Switch to frequent updates when Android Auto or your car's Bluetooth connects, or speed exceeds a threshold
 - **Walking** - Use longer intervals at low speeds to conserve battery
 - **At home or work** - Use longer intervals while on a trusted Wi-Fi network
 - **Stationary** - Record a periodic heartbeat point (e.g. every 30 min) as proof-of-presence while not moving
@@ -37,19 +37,22 @@ The list opens with a line that says which profile is in force and its values, "
 
 ## Condition Types
 
-| Condition         | Trigger                                                   |
-| ----------------- | --------------------------------------------------------- |
-| **Charging**      | Phone is plugged in to a power source                     |
-| **Android Auto**  | Android Auto is connected                                 |
-| **Wi-Fi**         | Connected to a Wi-Fi network                              |
-| **Wi-Fi network** | Connected to the network you name (SSID)                  |
-| **Speed above**   | Average speed exceeds the speed you set (km/h or mph)     |
-| **Speed below**   | Average speed drops below the speed you set (km/h or mph) |
-| **Stationary**    | Still for the activation delay (60 s by default)          |
+| Condition            | Trigger                                                   |
+| -------------------- | --------------------------------------------------------- |
+| **Charging**         | Phone is plugged in to a power source                     |
+| **Android Auto**     | Android Auto is connected                                 |
+| **Bluetooth device** | Connected to the paired device you pick, such as your car |
+| **Wi-Fi**            | Connected to a Wi-Fi network                              |
+| **Wi-Fi network**    | Connected to the network you name (SSID)                  |
+| **Speed above**      | Average speed exceeds the speed you set (km/h or mph)     |
+| **Speed below**      | Average speed drops below the speed you set (km/h or mph) |
+| **Stationary**       | Still for the activation delay (60 s by default)          |
 
 A stationary profile records less often, but GPS stays on. To stop GPS while you stay somewhere, use a [geofence](geofencing) with WiFi pause or motionless pause.
 
 Wi-Fi conditions react to network changes as they happen. A lost connection deactivates after the profile's deactivation delay — set it to 0 if you want the profile to drop the instant the network disappears. New Wi-Fi / Wi-Fi network profiles get the usual 0 s activation and 60 s deactivation defaults.
+
+The Bluetooth device condition is for cars without Android Auto: pick the car's audio system from your paired devices and the profile applies while the phone is connected to it. The device is matched by its address, so renaming it does not break the profile. Listing paired devices and seeing connections needs the **Nearby devices** permission (Android 12+), which the editor offers to grant when you pick the condition. Without it the condition never matches. Like Wi-Fi, a disconnect deactivates after the profile's deactivation delay, which also rides out a short drop when the car restarts.
 
 Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) that has to hold across 60 seconds of fixes, so unlike speed-below it does not flap on GPS noise near zero. The window is measured over the fixes themselves, so a stretch with no fixes at all is not counted as stillness and the profile waits for the stream instead of switching on.
 
@@ -112,6 +115,7 @@ If you use both a Speed Below and a Stationary profile, give Stationary the high
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Stationary | Stationary | 1800s | 0m | 40 | 60s | n/a | Heartbeat while not moving |
 | Driving | Android Auto | 10s | 1m | 30 | 0s | 30s | Detailed route while driving |
+| Car | Bluetooth device | 5s | 0m | 30 | 0s | 60s | Detailed route in a car without Android Auto |
 | Walking | Speed below 8 km/h | 60s | 2m | 20 | 20s | 45s | Battery-friendly on foot |
 | Home | Wi-Fi network | 300s | 10m | 25 | 0s | 60s | Relaxed updates on a trusted network |
 | Charging | Charging | 15s | 0m | 10 | 0s | 30s | High accuracy while plugged in |
@@ -139,4 +143,4 @@ When a profile is active, Colota shows it in three places:
 
 All of them clear when the profile deactivates (after the deactivation delay) or when tracking stops.
 
-A blank name saves as the condition's name, so two untouched charging profiles are both called "Charging"; a setup link import replaces a profile by name, so give profiles you share distinct names. Sharing a **Wi-Fi network** profile also shares the network name it watches.
+A blank name saves as the condition's name, so two untouched charging profiles are both called "Charging"; a setup link import replaces a profile by name, so give profiles you share distinct names. Sharing a **Wi-Fi network** profile also shares the network name it watches, and sharing a **Bluetooth device** profile shares the device's name and address. A shared Bluetooth profile only matches on a phone paired with that same device.

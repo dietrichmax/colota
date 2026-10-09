@@ -561,7 +561,7 @@ class LocationServiceModuleTest {
         val module = LocationServiceModule(mockContext)
         val helper = mockk<ProfileHelper>(relaxed = true)
         setField(module, "profileHelper", helper)
-        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 7
+        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 7
 
         awaitPromise { promise ->
             module.createProfile(
@@ -581,7 +581,7 @@ class LocationServiceModuleTest {
             )
         }
 
-        verify { helper.insertProfile("Home", 60000L, 10f, 300, 15, "wifi_ssid", null, "HomeNet", 60, 0) }
+        verify { helper.insertProfile("Home", 60000L, 10f, 300, 15, "wifi_ssid", null, "HomeNet", null, null, 60, 0) }
     }
 
     @Test
@@ -604,7 +604,72 @@ class LocationServiceModuleTest {
         verify {
             helper.updateProfile(
                 any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                isNull(), eq(true), any(), any(), any()
+                isNull(), eq(true), any(), any(), any(), any(), any(), any()
+            )
+        }
+    }
+
+    // ========================================================================
+    // Tracking profiles — Bluetooth device plumbing
+    // ========================================================================
+
+    @Test
+    fun `createProfile forwards the Bluetooth device with the address uppercased`() {
+        val module = LocationServiceModule(mockContext)
+        val helper = mockk<ProfileHelper>(relaxed = true)
+        setField(module, "profileHelper", helper)
+        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 8
+
+        awaitPromise { promise ->
+            module.createProfile(
+                JavaOnlyMap().apply {
+                    putString("name", "Car")
+                    putDouble("intervalMs", 5000.0)
+                    putDouble("minUpdateDistance", 0.0)
+                    putInt("syncIntervalSeconds", 60)
+                    putInt("priority", 20)
+                    putString("conditionType", "bluetooth_device")
+                    putNull("speedThreshold")
+                    putNull("wifiSsid")
+                    putString("bluetoothAddress", " aa:bb:cc:dd:ee:ff ")
+                    putString("bluetoothName", "My Car")
+                    putInt("deactivationDelaySeconds", 60)
+                    putInt("activationDelaySeconds", 0)
+                },
+                promise
+            )
+        }
+
+        verify {
+            helper.insertProfile(
+                "Car", 5000L, 0f, 60, 20, "bluetooth_device", null, null,
+                "AA:BB:CC:DD:EE:FF", "My Car", 60, 0
+            )
+        }
+    }
+
+    @Test
+    fun `updateProfile carries the hasBluetoothDevice tri-state so the columns can be cleared`() {
+        val module = LocationServiceModule(mockContext)
+        val helper = mockk<ProfileHelper>(relaxed = true)
+        setField(module, "profileHelper", helper)
+
+        awaitPromise { promise ->
+            module.updateProfile(
+                JavaOnlyMap().apply {
+                    putInt("id", 3)
+                    putString("conditionType", "charging")
+                    putNull("bluetoothAddress")
+                    putNull("bluetoothName")
+                },
+                promise
+            )
+        }
+
+        verify {
+            helper.updateProfile(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                any(), any(), isNull(), isNull(), eq(true), any(), any(), any()
             )
         }
     }

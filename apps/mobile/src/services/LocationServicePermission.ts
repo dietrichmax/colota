@@ -29,6 +29,11 @@ const ANDROID_13 = 33
 /** Android 17 (API 37) - local network enforced via ACCESS_LOCAL_NETWORK */
 const ANDROID_LOCAL_NETWORK = 37
 
+/** Android 12 (API 31) - Bluetooth connections need BLUETOOTH_CONNECT (Nearby devices) */
+const ANDROID_12 = 31
+
+export type BluetoothPermissionResult = "granted" | "denied" | "blocked"
+
 /**
  * Callback registered by LocationDisclosureModal to show the themed disclosure.
  * Without one nothing is requested: the reviewed disclosure is the only one Colota shows.
@@ -211,5 +216,28 @@ export async function ensureLocalNetworkPermission(): Promise<boolean> {
   } catch (err) {
     logger.error("[PermissionService] Local network permission request failed:", err)
     return false
+  }
+}
+
+export async function checkBluetoothPermission(): Promise<boolean> {
+  if (Platform.OS !== "android") return true
+  if (getAndroidVersion() < ANDROID_12) return true
+  return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT)
+}
+
+/**
+ * Requests the Nearby devices permission the Bluetooth profile condition needs.
+ * "blocked" means Android no longer shows the dialog, so only app settings can grant it.
+ */
+export async function requestBluetoothPermission(): Promise<BluetoothPermissionResult> {
+  if (await checkBluetoothPermission()) return "granted"
+
+  try {
+    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT)
+    if (result === PermissionsAndroid.RESULTS.GRANTED) return "granted"
+    return result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN ? "blocked" : "denied"
+  } catch (err) {
+    logger.error("[PermissionService] Bluetooth permission request failed:", err)
+    return "denied"
   }
 }

@@ -690,6 +690,38 @@ describe("SetupImportScreen", () => {
       )
     })
 
+    it("rejects a Bluetooth profile without a valid device address", () => {
+      for (const condition of [
+        { type: "bluetooth_device" },
+        { type: "bluetooth_device", bluetoothAddress: "My Car" }
+      ]) {
+        const { getByText, unmount } = renderScreen(encode({ profiles: [{ ...validProfile, condition }] }))
+        expect(getByText("Invalid configuration")).toBeTruthy()
+        unmount()
+      }
+    })
+
+    it("imports a Bluetooth profile with its address uppercased and its name trimmed", async () => {
+      const config = {
+        profiles: [
+          {
+            ...validProfile,
+            condition: { type: "bluetooth_device", bluetoothAddress: " aa:bb:cc:dd:ee:ff ", bluetoothName: " My Car " }
+          }
+        ]
+      }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply configuration"))
+
+      await waitFor(() => expect(mockCreateProfile).toHaveBeenCalledTimes(1))
+      expect(mockCreateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          condition: { type: "bluetooth_device", bluetoothAddress: "AA:BB:CC:DD:EE:FF", bluetoothName: "My Car" }
+        })
+      )
+    })
+
     it("accepts the any-network condition without extra fields", () => {
       const config = { profiles: [{ ...validProfile, condition: { type: "wifi_any" } }] }
       const { getByText } = renderScreen(encode(config))

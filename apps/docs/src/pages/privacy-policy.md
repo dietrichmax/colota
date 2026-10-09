@@ -34,7 +34,7 @@ If you create pause zones (geofences), the App stores zone names, coordinates, r
 
 ### Condition Monitoring
 
-When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto), GPS speed derived from location updates, and Wi-Fi connectivity to automatically switch tracking configurations. For a named-network profile the App reads the connected network's name when the connection changes; the name you configure for the profile is stored in the local profile database, while the detected state itself is transient and is not stored. The name of the currently active pause zone is persisted across service restarts to maintain continuity but is cleared when the zone is exited.
+When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto), Bluetooth device connections, GPS speed derived from location updates, and Wi-Fi connectivity to automatically switch tracking configurations. For a Bluetooth device profile the App reads the list of paired devices while you pick one, and stores the picked device's name and address in the local profile database; which devices are connected is checked on the device only and is not stored. For a named-network profile the App reads the connected network's name when the connection changes; the name you configure for the profile is stored in the local profile database, while the detected state itself is transient and is not stored. The name of the currently active pause zone is persisted across service restarts to maintain continuity but is cleared when the zone is exited.
 
 ### Sensor Data
 
@@ -144,6 +144,8 @@ Since all data is stored locally on your device, you have full control:
 | Network State                     | Sync condition checks and WiFi pause in geofence zones  |
 | Wi-Fi State                       | SSID detection for sync and tracking-profile conditions |
 | Local Network (Android 17+)       | Required for sync to servers on the local network       |
+| Nearby Devices (Android 12+)      | Bluetooth device condition for tracking profiles        |
+| Bluetooth (Android 11 and lower)  | Bluetooth device condition for tracking profiles        |
 | Battery Optimization Exemption    | Optional, prevents system from restricting the app      |
 
 ## Children's Privacy

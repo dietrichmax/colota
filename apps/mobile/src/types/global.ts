@@ -385,7 +385,14 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
 // ============================================================================
 
 export type ProfileConditionType =
-  "charging" | "android_auto" | "speed_above" | "speed_below" | "stationary" | "wifi_any" | "wifi_ssid"
+  | "charging"
+  | "android_auto"
+  | "bluetooth_device"
+  | "speed_above"
+  | "speed_below"
+  | "stationary"
+  | "wifi_any"
+  | "wifi_ssid"
 
 export interface ProfileCondition {
   type: ProfileConditionType
@@ -393,6 +400,16 @@ export interface ProfileCondition {
   speedThreshold?: number
   /** Wi-Fi network name in the user's own casing (only for wifi_ssid conditions) */
   ssid?: string
+  /** Paired device MAC address, uppercase (only for bluetooth_device conditions) */
+  bluetoothAddress?: string
+  /** Device name when it was picked, for display only; matching uses the address (only for bluetooth_device conditions) */
+  bluetoothName?: string
+}
+
+/** A paired Bluetooth device as the profile editor lists it */
+export interface BluetoothDeviceInfo {
+  name: string
+  address: string
 }
 
 export interface TrackingProfile {

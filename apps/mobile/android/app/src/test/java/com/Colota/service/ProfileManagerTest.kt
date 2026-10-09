@@ -163,6 +163,26 @@ class ProfileManagerTest {
         activationDelaySeconds = activationDelay
     )
 
+    private fun bluetoothProfile(
+        id: Int = 7,
+        address: String? = "AA:BB:CC:DD:EE:FF",
+        priority: Int = 20,
+        deactivationDelay: Int = 60,
+        activationDelay: Int = 0
+    ) = ProfileHelper.CachedProfile(
+        id = id,
+        name = "Car",
+        intervalMs = 5000,
+        minUpdateDistance = 0f,
+        syncIntervalSeconds = 60,
+        priority = priority,
+        conditionType = ProfileConstants.CONDITION_BLUETOOTH_DEVICE,
+        speedThreshold = null,
+        bluetoothAddress = address,
+        deactivationDelaySeconds = deactivationDelay,
+        activationDelaySeconds = activationDelay
+    )
+
     private fun mockLocation(speed: Float, hasSpeed: Boolean = true, timeMs: Long = t0): Location {
         return mockk {
             every { this@mockk.speed } returns speed
@@ -367,6 +387,72 @@ class ProfileManagerTest {
         advanceTimeBy(1_000)
 
         assertNull(switchedProfileName)
+    }
+
+    // --- Bluetooth condition ---
+
+    @Test
+    fun `activates the bluetooth profile while its device is connected`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(bluetoothProfile())
+
+        val manager = createManager()
+        manager.onBluetoothDevicesChanged(setOf("11:22:33:44:55:66", "AA:BB:CC:DD:EE:FF"))
+
+        assertEquals("Car", switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+    }
+
+    @Test
+    fun `matches a stored lowercase address against the uppercase connected set`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(bluetoothProfile(address = "aa:bb:cc:dd:ee:ff"))
+
+        val manager = createManager()
+        manager.onBluetoothDevicesChanged(setOf("AA:BB:CC:DD:EE:FF"))
+
+        assertEquals("Car", switchedProfileName)
+    }
+
+    @Test
+    fun `does not activate the bluetooth profile for another device or none`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(bluetoothProfile())
+
+        val manager = createManager()
+        manager.onBluetoothDevicesChanged(setOf("11:22:33:44:55:66"))
+        assertNull(switchedProfileName)
+
+        manager.onBluetoothDevicesChanged(emptySet())
+        assertNull(switchedProfileName)
+    }
+
+    @Test
+    fun `a bluetooth profile without an address never matches`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(bluetoothProfile(address = null))
+
+        val manager = createManager()
+        manager.onBluetoothDevicesChanged(setOf("AA:BB:CC:DD:EE:FF"))
+
+        assertNull(switchedProfileName)
+    }
+
+    @Test
+    fun `deactivates the bluetooth profile after its deactivation delay when the device disconnects`() = testScope.runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(bluetoothProfile(deactivationDelay = 30))
+
+        val manager = createManager()
+        manager.defaultInterval = 10000L
+        manager.defaultDistance = 0f
+        manager.defaultSyncInterval = 0
+
+        manager.onBluetoothDevicesChanged(setOf("AA:BB:CC:DD:EE:FF"))
+        assertEquals("Car", switchedProfileName)
+
+        manager.onBluetoothDevicesChanged(emptySet())
+        assertEquals("Car", switchedProfileName)
+
+        advanceTimeBy(31_000)
+
+        assertNull(switchedProfileName)
+        assertEquals(10000L, switchedInterval)
     }
 
     // --- Speed conditions ---

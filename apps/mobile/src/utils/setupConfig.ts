@@ -66,6 +66,7 @@ const VALID_DAWARICH_MODES: DawarichMode[] = ["single", "batch"]
 const VALID_AUTH_TYPES: AuthType[] = ["none", "basic", "bearer"]
 
 const VALID_PROFILE_CONDITIONS = PROFILE_CONDITIONS.map((c) => c.type)
+const BLUETOOTH_ADDRESS = /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i
 
 export function detectPreset(settings: Partial<Settings>): SyncPreset {
   for (const [name, config] of Object.entries(TRACKING_PRESETS)) {
@@ -428,11 +429,26 @@ export function validateConfig(raw: unknown): ValidationResult {
       if (needsSpeed && (typeof condRaw.speedThreshold !== "number" || condRaw.speedThreshold <= 0)) continue
       const needsSsid = condType === "wifi_ssid"
       if (needsSsid && (typeof condRaw.ssid !== "string" || condRaw.ssid.trim() === "")) continue
+      const needsDevice = condType === "bluetooth_device"
+      if (
+        needsDevice &&
+        (typeof condRaw.bluetoothAddress !== "string" || !BLUETOOTH_ADDRESS.test(condRaw.bluetoothAddress.trim()))
+      ) {
+        continue
+      }
       const condition: TrackingProfile["condition"] = needsSpeed
         ? { type: condType, speedThreshold: condRaw.speedThreshold as number }
         : needsSsid
           ? { type: condType, ssid: (condRaw.ssid as string).trim() }
-          : { type: condType }
+          : needsDevice
+            ? {
+                type: condType,
+                bluetoothAddress: (condRaw.bluetoothAddress as string).trim().toUpperCase(),
+                ...(typeof condRaw.bluetoothName === "string" && condRaw.bluetoothName.trim() !== ""
+                  ? { bluetoothName: condRaw.bluetoothName.trim() }
+                  : {})
+              }
+            : { type: condType }
 
       const delays = defaultProfileDelays(condType)
       profiles.push({

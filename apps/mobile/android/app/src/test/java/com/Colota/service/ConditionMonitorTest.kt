@@ -5,6 +5,10 @@
 
 package com.Colota.service
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -280,6 +284,125 @@ class ConditionMonitorTest {
     }
 
     // ========================================================================
+    // Bluetooth condition source
+    // ========================================================================
+
+    @Test
+    fun `start reports no devices when the phone has no Bluetooth`() {
+        every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_BLUETOOTH_DEVICE)
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns null
+
+        monitor.start()
+
+        verify { mockProfileManager.onBluetoothDevicesChanged(emptySet()) }
+        assertNull(getField(monitor, "bluetoothReceiver"))
+    }
+
+    @Test
+    fun `start seeds the devices already connected over A2DP and headset`() {
+        val adapter = mockBluetoothAdapter(enabled = true)
+        val car = mockBluetoothDevice("aa:bb:cc:dd:ee:ff")
+        every { adapter.getProfileProxy(any(), any(), any()) } answers {
+            val profile = thirdArg<Int>()
+            val devices = if (profile == BluetoothProfile.HEADSET) listOf(car) else emptyList()
+            val proxy = mockk<BluetoothProfile> { every { connectedDevices } returns devices }
+            secondArg<BluetoothProfile.ServiceListener>().onServiceConnected(profile, proxy)
+            true
+        }
+
+        monitor.start()
+
+        verify { adapter.getProfileProxy(mockContext, any(), BluetoothProfile.A2DP) }
+        verify { adapter.getProfileProxy(mockContext, any(), BluetoothProfile.HEADSET) }
+        verify(exactly = 2) { adapter.closeProfileProxy(any(), any()) }
+        // Pushed once, after both proxies answered, so a half-read set never deactivates the profile.
+        verify(exactly = 1) { mockProfileManager.onBluetoothDevicesChanged(setOf("AA:BB:CC:DD:EE:FF")) }
+        verify(exactly = 1) { mockProfileManager.onBluetoothDevicesChanged(any()) }
+    }
+
+    @Test
+    fun `start still reports when a profile proxy is unavailable`() {
+        val adapter = mockBluetoothAdapter(enabled = true)
+        every { adapter.getProfileProxy(any(), any(), any()) } returns false
+
+        monitor.start()
+
+        verify(exactly = 1) { mockProfileManager.onBluetoothDevicesChanged(emptySet()) }
+    }
+
+    @Test
+    fun `proxy results arriving after stop are dropped`() {
+        val adapter = mockBluetoothAdapter(enabled = true)
+        val listeners = mutableListOf<Pair<Int, BluetoothProfile.ServiceListener>>()
+        every { adapter.getProfileProxy(any(), any(), any()) } answers {
+            listeners.add(thirdArg<Int>() to secondArg<BluetoothProfile.ServiceListener>())
+            true
+        }
+        monitor.start()
+        monitor.stop()
+
+        val proxy = mockk<BluetoothProfile> { every { connectedDevices } returns listOf(mockBluetoothDevice("AA:BB:CC:DD:EE:FF")) }
+        listeners.forEach { (profile, listener) -> listener.onServiceConnected(profile, proxy) }
+
+        verify(exactly = 0) { mockProfileManager.onBluetoothDevicesChanged(any()) }
+        verify(exactly = 2) { adapter.closeProfileProxy(any(), proxy) }
+    }
+
+    @Test
+    fun `bluetooth receiver tracks devices connecting and disconnecting`() {
+        mockBluetoothAdapter(enabled = false)
+        monitor.start()
+        val receiver = getField(monitor, "bluetoothReceiver") as BroadcastReceiver
+
+        receiver.onReceive(mockContext, aclIntent(BluetoothDevice.ACTION_ACL_CONNECTED, "aa:bb:cc:dd:ee:ff"))
+        verify { mockProfileManager.onBluetoothDevicesChanged(setOf("AA:BB:CC:DD:EE:FF")) }
+
+        receiver.onReceive(mockContext, aclIntent(BluetoothDevice.ACTION_ACL_CONNECTED, "11:22:33:44:55:66"))
+        verify { mockProfileManager.onBluetoothDevicesChanged(setOf("AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66")) }
+
+        receiver.onReceive(mockContext, aclIntent(BluetoothDevice.ACTION_ACL_DISCONNECTED, "AA:BB:CC:DD:EE:FF"))
+        verify { mockProfileManager.onBluetoothDevicesChanged(setOf("11:22:33:44:55:66")) }
+    }
+
+    @Test
+    fun `turning Bluetooth off clears every connected device`() {
+        mockBluetoothAdapter(enabled = false)
+        monitor.start()
+        val receiver = getField(monitor, "bluetoothReceiver") as BroadcastReceiver
+        receiver.onReceive(mockContext, aclIntent(BluetoothDevice.ACTION_ACL_CONNECTED, "AA:BB:CC:DD:EE:FF"))
+
+        val off = mockk<Intent> {
+            every { action } returns BluetoothAdapter.ACTION_STATE_CHANGED
+            every { getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) } returns BluetoothAdapter.STATE_TURNING_OFF
+        }
+        receiver.onReceive(mockContext, off)
+
+        // Once from the disabled adapter at start, once from the state change.
+        verify(exactly = 2) { mockProfileManager.onBluetoothDevicesChanged(emptySet()) }
+    }
+
+    @Test
+    fun `stop unregisters the bluetooth receiver`() {
+        mockBluetoothAdapter(enabled = false)
+        monitor.start()
+        val receiver = getField(monitor, "bluetoothReceiver") as BroadcastReceiver
+
+        monitor.stop()
+
+        verify { mockContext.unregisterReceiver(receiver) }
+        assertNull(getField(monitor, "bluetoothReceiver"))
+    }
+
+    @Test
+    fun `start does not touch Bluetooth without a Bluetooth condition`() {
+        mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
+        monitor.start()
+
+        verify(exactly = 0) { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) }
+        assertNull(getField(monitor, "bluetoothReceiver"))
+    }
+
+    // ========================================================================
     // Charging receiver — power events
     // ========================================================================
 
@@ -433,6 +556,7 @@ class ConditionMonitorTest {
         setField(spy, "networkManager", mockNetworkManager)
         setField(spy, "profileManager", mockProfileManager)
         setField(spy, "mainHandler", mockHandler)
+        setField(spy, "connectedBluetoothAddresses", mutableSetOf<String>())
 
         // Stub car connection methods — CarConnection cannot be constructed in unit tests
         // because CarConnectionTypeLiveData's static initializer uses Uri.Builder which
@@ -441,6 +565,29 @@ class ConditionMonitorTest {
         every { spy["stopCarConnectionMonitor"]() } returns Unit
 
         return spy
+    }
+
+    private fun mockBluetoothAdapter(enabled: Boolean): BluetoothAdapter {
+        every { mockProfileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_BLUETOOTH_DEVICE)
+        val btAdapter = mockk<BluetoothAdapter>(relaxed = true) {
+            every { isEnabled } returns enabled
+        }
+        val manager = mockk<BluetoothManager> { every { adapter } returns btAdapter }
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns manager
+        return btAdapter
+    }
+
+    private fun mockBluetoothDevice(address: String) = mockk<BluetoothDevice> {
+        every { this@mockk.address } returns address
+    }
+
+    private fun aclIntent(action: String, address: String): Intent {
+        val device = mockBluetoothDevice(address)
+        return mockk {
+            every { this@mockk.action } returns action
+            @Suppress("DEPRECATION")
+            every { getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) } returns device
+        }
     }
 
     private fun mockBatteryStatus(status: Int) {
