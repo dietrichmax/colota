@@ -34,6 +34,7 @@ jest.mock("../../../index", () => {
         sub ? R.createElement(Text, null, sub) : null
       ),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children, style }: any) => R.createElement(View, { testID: "card", style }, children),
     Divider: () => R.createElement(View, { testID: "divider" }),
     StateLine: ({ label, caption, testID }: any) =>
@@ -165,6 +166,7 @@ describe("SyncStrategySettings", () => {
       expect(getByText("Recording")).toBeTruthy()
       expect(getByText("Sync interval")).toBeTruthy()
       expect(getByText("Sync only on")).toBeTruthy()
+      expect(getByText("Positioning accuracy")).toBeTruthy()
       expect(getByText("Accuracy filter")).toBeTruthy()
       expect(queryByText("Network settings")).toBeNull()
     })
@@ -513,6 +515,71 @@ describe("SyncStrategySettings", () => {
 
       expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 1 }))
       expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 1 }))
+    })
+  })
+
+  describe("positioning accuracy", () => {
+    it("offers High and Balanced, defaulting to High", () => {
+      const { getByTestId, getByText } = renderComponent()
+
+      expect(getByText("Positioning accuracy")).toBeTruthy()
+      expect(getByTestId("accuracy-mode-high").props.accessibilityState).toMatchObject({ checked: true })
+      expect(getByTestId("accuracy-mode-balanced").props.accessibilityState).toMatchObject({ checked: false })
+      expect(
+        getByText(
+          "Both options affect the continuous stream only. Fresh checks for geofences and the stationary heartbeat stay high accuracy."
+        )
+      ).toBeTruthy()
+    })
+
+    it("saves Balanced immediately, like the other recording controls", () => {
+      const { getByTestId } = renderComponent({ accuracyMode: "high" })
+
+      fireEvent.press(getByTestId("accuracy-mode-balanced"))
+
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ accuracyMode: "balanced" }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyMode: "balanced" }))
+    })
+
+    it("warns that a stricter accuracy filter will drop Balanced fixes, and offers a usable threshold", () => {
+      const { getByTestId, getByText } = renderComponent({
+        accuracyMode: "balanced",
+        filterInaccurateLocations: true,
+        accuracyThreshold: 30
+      })
+
+      expect(getByTestId("accuracy-mode-filter-warning")).toBeTruthy()
+      expect(
+        getByText("Balanced fixes can be coarser than 100 m. The accuracy filter is stricter and may drop most points.")
+      ).toBeTruthy()
+
+      fireEvent.press(getByTestId("accuracy-mode-filter-fix"))
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(
+        expect.objectContaining({ accuracyThreshold: 100, accuracyMode: "balanced" })
+      )
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 100 }))
+    })
+
+    it("stays quiet unless Balanced meets a stricter filter", () => {
+      expect(
+        renderComponent({
+          accuracyMode: "balanced",
+          filterInaccurateLocations: true,
+          accuracyThreshold: 100
+        }).queryByTestId("accuracy-mode-filter-warning")
+      ).toBeNull()
+      expect(
+        renderComponent({
+          accuracyMode: "balanced",
+          filterInaccurateLocations: false,
+          accuracyThreshold: 30
+        }).queryByTestId("accuracy-mode-filter-warning")
+      ).toBeNull()
+      expect(
+        renderComponent({ accuracyMode: "high", filterInaccurateLocations: true, accuracyThreshold: 30 }).queryByTestId(
+          "accuracy-mode-filter-warning"
+        )
+      ).toBeNull()
     })
   })
 

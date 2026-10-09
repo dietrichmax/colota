@@ -186,6 +186,18 @@ export function validateConfig(raw: unknown): ValidationResult {
     })
   }
 
+  // Strict exact match, unlike the running app's settings (trimmed/case-insensitive): the value is
+  // machine-generated, and the sibling enum fields (httpMethod, dawarichMode, ...) parse the same way.
+  if ("accuracyMode" in obj && (obj.accuracyMode === "high" || obj.accuracyMode === "balanced")) {
+    settings.accuracyMode = obj.accuracyMode
+    entries.push({
+      field: "accuracyMode",
+      label: t("setup.field.accuracyMode"),
+      value: t(obj.accuracyMode === "balanced" ? "trackingSync.accuracy.balanced" : "trackingSync.accuracy.high"),
+      category: "tracking"
+    })
+  }
+
   if ("isOfflineMode" in obj && typeof obj.isOfflineMode === "boolean") {
     settings.isOfflineMode = obj.isOfflineMode
     entries.push({

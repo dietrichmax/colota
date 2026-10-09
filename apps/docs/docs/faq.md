@@ -42,6 +42,8 @@ To ensure modifications stay open source, especially server-side components.
 
 3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/tracking-settings#accuracy-filter) helps remove poor fixes.
 
+Set [Positioning accuracy](/docs/configuration/tracking-settings#positioning-accuracy) to **Balanced** to trade fix precision for battery.
+
 ### Can I use maps without internet?
 
 Yes. Go to **Settings → Offline maps** to download map areas to your device. Pan and zoom the map to frame the area you want, give it a name, and tap **Download area**. Downloaded tiles persist across app restarts and work without any network connection. See [Offline maps](/docs/guides/offline-maps) for details.
@@ -76,7 +78,7 @@ Android is suspending the app to save power. Exempt Colota from battery optimiza
 
 ### How much battery does it use?
 
-Depends on your settings. With the **Balanced** preset (30s interval, batch sync), typical usage is moderate. See [Battery Optimization](/docs/guides/battery-optimization) for tips.
+Depends on your settings. With the **Balanced** sync preset (30s interval, batch sync), typical usage is moderate. See [Battery Optimization](/docs/guides/battery-optimization) for tips.
 
 ### How do I update the app?
 

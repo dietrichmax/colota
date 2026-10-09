@@ -125,6 +125,7 @@ describe("NativeLocationService", () => {
         retryInterval: 30,
         filterInaccurateLocations: false,
         accuracyThreshold: 50,
+        accuracyMode: "high" as const,
         isOfflineMode: false,
         syncCondition: "any" as const,
         syncSsid: "",
@@ -149,6 +150,34 @@ describe("NativeLocationService", () => {
       )
     })
 
+    it("forwards the positioning accuracy mode to native", async () => {
+      const settings = {
+        interval: 5,
+        distance: 10,
+        endpoint: "https://example.com",
+        fieldMap: { lat: "lat", lon: "lon", acc: "acc" },
+        syncInterval: 0,
+        retryInterval: 30,
+        filterInaccurateLocations: false,
+        accuracyThreshold: 50,
+        accuracyMode: "balanced" as const,
+        isOfflineMode: false,
+        syncCondition: "any" as const,
+        syncSsid: "",
+        customFields: [],
+        apiTemplate: "custom" as const,
+        syncPreset: "instant" as const,
+        httpMethod: "POST" as const,
+        dawarichMode: "single" as const,
+        overlandBatchSize: 50,
+        hasCompletedSetup: false
+      }
+
+      await NativeLocationService.start(settings)
+
+      expect(nativeMock.startService).toHaveBeenCalledWith(expect.objectContaining({ accuracyMode: "balanced" }))
+    })
+
     it("passes apiTemplate and httpMethod GET to native for traccar template", async () => {
       const settings = {
         interval: 5,
@@ -159,6 +188,7 @@ describe("NativeLocationService", () => {
         retryInterval: 30,
         filterInaccurateLocations: false,
         accuracyThreshold: 50,
+        accuracyMode: "high" as const,
         isOfflineMode: false,
         syncCondition: "any" as const,
         syncSsid: "",
@@ -191,6 +221,7 @@ describe("NativeLocationService", () => {
         retryInterval: 30,
         filterInaccurateLocations: false,
         accuracyThreshold: 50,
+        accuracyMode: "high" as const,
         isOfflineMode: false,
         syncCondition: "any" as const,
         syncSsid: "",

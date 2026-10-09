@@ -536,12 +536,13 @@ class LocationForegroundService : Service() {
         val bypassOsFilter = needsLocationStreamForProfiles()
         val osMinDistance = if (bypassOsFilter) 0f else config.minUpdateDistance
         
-        AppLogger.d(TAG, "Requesting location updates: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, osFilter=${osMinDistance}m")
+        AppLogger.d(TAG, "Requesting location updates: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, osFilter=${osMinDistance}m, accuracyMode=${config.accuracyMode.wireName}")
 
         try {
             locationProvider.requestLocationUpdates(
                 intervalMs = config.interval,
                 minDistanceMeters = osMinDistance,
+                accuracy = config.accuracyMode,
                 looper = Looper.getMainLooper(),
                 callback = callback
             )
@@ -1680,6 +1681,7 @@ class LocationForegroundService : Service() {
         profileManager.defaultInterval = config.interval
         profileManager.defaultDistance = config.minUpdateDistance
         profileManager.defaultSyncInterval = config.syncIntervalSeconds
+        profileManager.defaultAccuracyMode = config.accuracyMode
 
         val parsedFieldMap = PayloadBuilder.parseFieldMap(config.fieldMap) ?: emptyMap()
         val parsedCustomFields = PayloadBuilder.parseCustomFields(config.customFields) ?: emptyMap()
@@ -1687,7 +1689,7 @@ class LocationForegroundService : Service() {
         payloadCustomFields = parsedCustomFields
 
         AppLogger.d(TAG, buildString {
-            append("Config loaded: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, accuracy=${config.accuracyThreshold}m")
+            append("Config loaded: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, accuracy=${config.accuracyThreshold}m, accuracyMode=${config.accuracyMode.wireName}")
             append(", endpoint=${if (config.endpoint.isBlank()) "NOT CONFIGURED" else AppLogger.maskSensitiveUrlValues(config.endpoint)}")
             append(", offline=${config.isOfflineMode}, sync=${if (config.syncIntervalSeconds == 0) "instant" else "${config.syncIntervalSeconds}s"}")
             if (parsedFieldMap.isNotEmpty()) append(", fieldMap=${parsedFieldMap.size} mappings")

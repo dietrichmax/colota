@@ -508,4 +508,17 @@ describe("parseRawSettings", () => {
     // parseInt("not-a-number", 10) returns NaN, but we should not propagate NaN
     expect(Number.isFinite(settings.overlandBatchSize)).toBe(true)
   })
+
+  it("round-trips accuracyMode from raw SQLite", () => {
+    expect(parseRawSettings({ accuracyMode: "balanced" }).accuracyMode).toBe("balanced")
+    expect(parseRawSettings({ accuracyMode: "high" }).accuracyMode).toBe("high")
+    // Native fromWire trims and is case-insensitive; the JS fallback matches it exactly
+    expect(parseRawSettings({ accuracyMode: "Balanced" }).accuracyMode).toBe("balanced")
+    expect(parseRawSettings({ accuracyMode: "  BALANCED " }).accuracyMode).toBe("balanced")
+  })
+
+  it("defaults accuracyMode to high for installs without the key or with an unknown value", () => {
+    expect(parseRawSettings({}).accuracyMode).toBe("high")
+    expect(parseRawSettings({ accuracyMode: "warp" }).accuracyMode).toBe("high")
+  })
 })

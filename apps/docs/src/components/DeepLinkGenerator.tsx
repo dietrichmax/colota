@@ -78,6 +78,7 @@ export default function DeepLinkGenerator() {
   const [distance, setDistance] = useState("")
   const [accuracyThreshold, setAccuracyThreshold] = useState("")
   const [filterInaccurateLocations, setFilterInaccurateLocations] = useState("")
+  const [accuracyMode, setAccuracyMode] = useState("")
 
   // Sync
   const [syncInterval, setSyncInterval] = useState("")
@@ -119,6 +120,7 @@ export default function DeepLinkGenerator() {
     if (distance) obj.distance = Number(distance)
     if (accuracyThreshold) obj.accuracyThreshold = Number(accuracyThreshold)
     if (filterInaccurateLocations) obj.filterInaccurateLocations = filterInaccurateLocations === "true"
+    if (accuracyMode) obj.accuracyMode = accuracyMode
 
     if (syncInterval) obj.syncInterval = Number(syncInterval)
     if (isOfflineMode) obj.isOfflineMode = isOfflineMode === "true"
@@ -228,6 +230,7 @@ export default function DeepLinkGenerator() {
     distance,
     accuracyThreshold,
     filterInaccurateLocations,
+    accuracyMode,
     syncInterval,
     isOfflineMode,
     syncCondition,
@@ -477,6 +480,16 @@ export default function DeepLinkGenerator() {
               <option value="">-- not set --</option>
               <option value="true">Enabled</option>
               <option value="false">Disabled</option>
+            </select>
+          </div>
+        </div>
+        <div className={styles.row}>
+          <div className={styles.field}>
+            <label className={styles.label}>Positioning accuracy</label>
+            <select className={styles.select} value={accuracyMode} onChange={(e) => setAccuracyMode(e.target.value)}>
+              <option value="">-- not set --</option>
+              <option value="high">High</option>
+              <option value="balanced">Balanced</option>
             </select>
           </div>
         </div>

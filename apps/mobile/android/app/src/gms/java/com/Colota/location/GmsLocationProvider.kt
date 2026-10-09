@@ -16,6 +16,12 @@ class GmsLocationProvider(context: Context) : LocationProvider {
 
     companion object {
         private const val TAG = "GmsLocationProvider"
+
+        /** Pure mode → GMS priority mapping, kept free of side effects so it is unit-testable. */
+        internal fun priorityFor(accuracy: LocationAccuracy): Int = when (accuracy) {
+            LocationAccuracy.HIGH -> Priority.PRIORITY_HIGH_ACCURACY
+            LocationAccuracy.BALANCED -> Priority.PRIORITY_BALANCED_POWER_ACCURACY
+        }
     }
 
     private val fusedClient: FusedLocationProviderClient =
@@ -26,6 +32,7 @@ class GmsLocationProvider(context: Context) : LocationProvider {
     override fun requestLocationUpdates(
         intervalMs: Long,
         minDistanceMeters: Float,
+        accuracy: LocationAccuracy,
         looper: Looper,
         callback: LocationUpdateCallback
     ) {
@@ -36,14 +43,14 @@ class GmsLocationProvider(context: Context) : LocationProvider {
         }
         callbackMap[callback] = gmsCallback
 
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMs)
+        val request = LocationRequest.Builder(priorityFor(accuracy), intervalMs)
             .setMinUpdateIntervalMillis(intervalMs)
             .setMinUpdateDistanceMeters(minDistanceMeters)
             .build()
 
         try {
             fusedClient.requestLocationUpdates(request, gmsCallback, looper)
-            AppLogger.d(TAG, "Started FusedLocationProvider updates: interval=${intervalMs}ms, distance=${minDistanceMeters}m")
+            AppLogger.d(TAG, "Started FusedLocationProvider updates: interval=${intervalMs}ms, distance=${minDistanceMeters}m, accuracy=${accuracy.wireName}")
         } catch (e: SecurityException) {
             callbackMap.remove(callback)
             throw e
@@ -71,6 +78,8 @@ class GmsLocationProvider(context: Context) : LocationProvider {
     }
 
     override fun getCurrentLocation(timeoutMs: Long, onResult: (Location?) -> Unit) {
+        // Intentionally always High accuracy (#951), regardless of the configured stream mode: this
+        // one-shot probe decides pause-zone exit, the watchdog and the stationary heartbeat.
         // setMaxUpdateAgeMillis(0) forbids the cached fix, forcing a real GNSS acquisition.
         val request = CurrentLocationRequest.Builder()
             .setPriority(Priority.PRIORITY_HIGH_ACCURACY)

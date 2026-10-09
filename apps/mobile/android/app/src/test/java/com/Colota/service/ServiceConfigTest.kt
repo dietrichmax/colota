@@ -8,6 +8,7 @@ package com.Colota.service
 import android.content.Intent
 import android.os.Bundle
 import com.Colota.data.DatabaseHelper
+import com.Colota.location.LocationAccuracy
 import com.Colota.sync.ApiFormat
 import com.facebook.react.bridge.JavaOnlyMap
 import io.mockk.every
@@ -200,6 +201,66 @@ class ServiceConfigTest {
         assertEquals(500, ServiceConfig.fromDatabase(tooHigh).overlandBatchSize)
     }
 
+    // --- accuracyMode ---
+
+    @Test
+    fun `fromDatabase reads accuracyMode balanced`() {
+        val db = mockDbHelper(baseSettings + ("accuracyMode" to "balanced"))
+        assertEquals(LocationAccuracy.BALANCED, ServiceConfig.fromDatabase(db).accuracyMode)
+    }
+
+    @Test
+    fun `fromDatabase defaults accuracyMode to high for missing or unknown values`() {
+        assertEquals(LocationAccuracy.HIGH, ServiceConfig.fromDatabase(mockDbHelper(baseSettings)).accuracyMode)
+        assertEquals(
+            LocationAccuracy.HIGH,
+            ServiceConfig.fromDatabase(mockDbHelper(baseSettings + ("accuracyMode" to "low_power"))).accuracyMode
+        )
+    }
+
+    @Test
+    fun `fromReadableMap reads accuracyMode`() {
+        val db = mockDbHelper(baseSettings)
+        val map = JavaOnlyMap().apply { putString("accuracyMode", "balanced") }
+        assertEquals(LocationAccuracy.BALANCED, ServiceConfig.fromReadableMap(map, db).accuracyMode)
+    }
+
+    @Test
+    fun `fromReadableMap falls back to db accuracyMode when the key is absent`() {
+        val db = mockDbHelper(baseSettings + ("accuracyMode" to "balanced"))
+        assertEquals(LocationAccuracy.BALANCED, ServiceConfig.fromReadableMap(JavaOnlyMap(), db).accuracyMode)
+    }
+
+    @Test
+    fun `fromIntent reads accuracyMode from extras`() {
+        val bundle = mockk<Bundle> {
+            every { getString("endpoint") } returns null
+            every { getString("accuracyMode") } returns "balanced"
+            every { containsKey(any()) } returns false
+            every { containsKey("accuracyMode") } returns true
+        }
+        val intent = mockk<Intent> {
+            every { extras } returns bundle
+        }
+        val db = mockDbHelper(baseSettings + ("accuracyMode" to "high"))
+
+        assertEquals(LocationAccuracy.BALANCED, ServiceConfig.fromIntent(intent, db).accuracyMode)
+    }
+
+    @Test
+    fun `fromIntent falls back to db accuracyMode when the extra is absent`() {
+        val bundle = mockk<Bundle> {
+            every { getString("endpoint") } returns null
+            every { containsKey(any()) } returns false
+        }
+        val intent = mockk<Intent> {
+            every { extras } returns bundle
+        }
+        val db = mockDbHelper(baseSettings + ("accuracyMode" to "balanced"))
+
+        assertEquals(LocationAccuracy.BALANCED, ServiceConfig.fromIntent(intent, db).accuracyMode)
+    }
+
     // --- data class defaults ---
 
     @Test
@@ -226,6 +287,7 @@ class ServiceConfigTest {
         assertEquals(0, config.syncIntervalSeconds)
         assertEquals(50.0f, config.accuracyThreshold, 0.001f)
         assertFalse(config.filterInaccurateLocations)
+        assertEquals(LocationAccuracy.HIGH, config.accuracyMode)
         assertEquals(30, config.retryIntervalSeconds)
         assertFalse(config.isOfflineMode)
         assertEquals("any", config.syncCondition)
@@ -289,6 +351,7 @@ class ServiceConfigTest {
             every { getInt("syncInterval") } returns 300
             every { getFloat("accuracyThreshold") } returns 25.0f
             every { getBoolean("filterInaccurateLocations") } returns true
+            every { getString("accuracyMode") } returns "balanced"
             every { getInt("retryInterval") } returns 60
             every { getBoolean("isOfflineMode") } returns true
             every { getString("syncCondition") } returns "wifi_any"
@@ -311,6 +374,7 @@ class ServiceConfigTest {
         assertEquals(300, config.syncIntervalSeconds)
         assertEquals(25.0f, config.accuracyThreshold, 0.001f)
         assertTrue(config.filterInaccurateLocations)
+        assertEquals(LocationAccuracy.BALANCED, config.accuracyMode)
         assertEquals(60, config.retryIntervalSeconds)
         assertTrue(config.isOfflineMode)
         assertEquals("wifi_any", config.syncCondition)
@@ -336,6 +400,7 @@ class ServiceConfigTest {
         verify { intent.putExtra("interval", 10000L) }
         verify { intent.putExtra("syncInterval", 300) }
         verify { intent.putExtra("httpMethod", "GET") }
+        verify { intent.putExtra("accuracyMode", "high") }
     }
 
     // --- fromReadableMap ---

@@ -110,6 +110,9 @@ export type HttpMethod = "POST" | "GET"
 
 export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
 
+/** Positioning accuracy of the continuous location stream (#951). */
+export type AccuracyMode = "high" | "balanced"
+
 export type ApiTemplateName =
   "custom" | "dawarich" | "geopulse" | "overland" | "owntracks" | "phonetrack" | "reitti" | "traccar"
 
@@ -316,6 +319,7 @@ export interface Settings {
   distance: number
   filterInaccurateLocations: boolean
   accuracyThreshold: number
+  accuracyMode: AccuracyMode
 
   // Endpoint & Mapping
   endpoint: string
@@ -348,6 +352,7 @@ export const DEFAULT_SETTINGS: Settings = {
   retryInterval: TRACKING_PRESETS.instant.retryInterval,
   filterInaccurateLocations: false,
   accuracyThreshold: 50,
+  accuracyMode: "high",
   syncPreset: "instant",
   isOfflineMode: false,
   syncCondition: "any",

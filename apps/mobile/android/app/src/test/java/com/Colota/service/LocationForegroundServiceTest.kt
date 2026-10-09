@@ -8,6 +8,7 @@ import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.SettingsKeys
+import com.Colota.location.LocationAccuracy
 import com.Colota.location.LocationProvider
 import com.Colota.location.LocationUpdateCallback
 import com.Colota.sync.PayloadBuilder
@@ -680,7 +681,7 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `setupLocationUpdates stops service on SecurityException`() {
-        every { locationProvider.requestLocationUpdates(any(), any(), any(), any()) } throws SecurityException("no permission")
+        every { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) } throws SecurityException("no permission")
 
         invokeSetupLocationUpdates()
 
@@ -689,7 +690,7 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `setupLocationUpdates stops service on generic Exception`() {
-        every { locationProvider.requestLocationUpdates(any(), any(), any(), any()) } throws RuntimeException("provider crashed")
+        every { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) } throws RuntimeException("provider crashed")
 
         invokeSetupLocationUpdates()
 
@@ -1134,7 +1135,7 @@ class LocationForegroundServiceTest {
         invokeRecoverStalledStream()
 
         verify { locationProvider.removeLocationUpdates(any()) }
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1146,7 +1147,7 @@ class LocationForegroundServiceTest {
 
         invokeRecoverStalledStream()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1159,7 +1160,7 @@ class LocationForegroundServiceTest {
 
         invokeRecoverStalledStream()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1171,7 +1172,7 @@ class LocationForegroundServiceTest {
 
         invokeRecoverStalledStream()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1185,7 +1186,7 @@ class LocationForegroundServiceTest {
         advanceTimeBy(5 * 60_000L + 1)
         runCurrent()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
         assertTrue("and it has to keep ticking afterwards", getField<Job?>("trackingHeartbeatJob")?.isActive == true)
     }
 
@@ -1236,7 +1237,7 @@ class LocationForegroundServiceTest {
 
         invokeRecoverStalledStream()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1248,7 +1249,7 @@ class LocationForegroundServiceTest {
 
         invokeRecoverStalledStream()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1266,7 +1267,7 @@ class LocationForegroundServiceTest {
 
         invokeRecoverStalledStream()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1897,7 +1898,7 @@ class LocationForegroundServiceTest {
         invokeApplyProfileConfig(interval = 2000L, distance = 5f, syncInterval = 30)
 
         verify { locationProvider.removeLocationUpdates(oldCallback) }
-        verify { locationProvider.requestLocationUpdates(2000L, 5f, any(), any()) }
+        verify { locationProvider.requestLocationUpdates(2000L, 5f, any(), any(), any()) }
     }
 
     @Test
@@ -1982,8 +1983,23 @@ class LocationForegroundServiceTest {
 
         invokeSetupLocationUpdates()
 
-        verify { locationProvider.requestLocationUpdates(5000L, 50f, any(), any()) }
+        verify { locationProvider.requestLocationUpdates(5000L, 50f, any(), any(), any()) }
         assertFalse(getField("lastRequestedBypassOsFilter"))
+    }
+
+    @Test
+    fun `setupLocationUpdates passes the configured accuracy mode`() {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 0f,
+            accuracyMode = LocationAccuracy.BALANCED
+        ))
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_CHARGING)
+
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, LocationAccuracy.BALANCED, any(), any()) }
     }
 
     @Test
@@ -1998,7 +2014,7 @@ class LocationForegroundServiceTest {
 
         invokeSetupLocationUpdates()
 
-        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any(), any()) }
         assertTrue(getField("lastRequestedBypassOsFilter"))
     }
 
@@ -2014,7 +2030,7 @@ class LocationForegroundServiceTest {
 
         invokeSetupLocationUpdates()
 
-        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any(), any()) }
     }
 
     @Test
@@ -2029,7 +2045,7 @@ class LocationForegroundServiceTest {
 
         invokeSetupLocationUpdates()
 
-        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any(), any()) }
     }
 
     @Test
@@ -2048,7 +2064,7 @@ class LocationForegroundServiceTest {
         invokeHandleRecheckProfiles()
 
         verify { locationProvider.removeLocationUpdates(existingCallback) }
-        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any(), any()) }
     }
 
     @Test
@@ -2067,7 +2083,7 @@ class LocationForegroundServiceTest {
         invokeHandleRecheckProfiles()
 
         verify(exactly = 0) { locationProvider.removeLocationUpdates(any()) }
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2078,7 +2094,7 @@ class LocationForegroundServiceTest {
 
         invokeHandleRecheckProfiles()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -2191,7 +2207,7 @@ class LocationForegroundServiceTest {
     @Test
     fun `location callback sheds its registration once the service scope is gone`() {
         val registered = slot<LocationUpdateCallback>()
-        every { locationProvider.requestLocationUpdates(any(), any(), any(), capture(registered)) } just Runs
+        every { locationProvider.requestLocationUpdates(any(), any(), any(), any(), capture(registered)) } just Runs
         invokeSetupLocationUpdates()
         setField("serviceScope", null)
 
@@ -2461,7 +2477,7 @@ class LocationForegroundServiceTest {
 
         invokeExitPauseZone()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2472,7 +2488,7 @@ class LocationForegroundServiceTest {
 
         invokeExitPauseZone()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2484,7 +2500,7 @@ class LocationForegroundServiceTest {
 
         invokeExitPauseZone()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -2557,7 +2573,7 @@ class LocationForegroundServiceTest {
 
         assertFalse(getField<Boolean>("isMotionlessPaused"))
         verify { dbHelper.saveSetting("pause_zone_motionless_active", "false") }
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2573,7 +2589,7 @@ class LocationForegroundServiceTest {
         invokeOnMotionStateChange(MotionState.MOVING)
 
         assertFalse(getField<Boolean>("isMotionlessPaused"))
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2663,7 +2679,7 @@ class LocationForegroundServiceTest {
 
         invokeMaybeResumeGps()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2674,7 +2690,7 @@ class LocationForegroundServiceTest {
 
         invokeMaybeResumeGps()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2685,7 +2701,7 @@ class LocationForegroundServiceTest {
 
         invokeMaybeResumeGps()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2694,7 +2710,7 @@ class LocationForegroundServiceTest {
 
         invokeMaybeResumeGps()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -2721,7 +2737,7 @@ class LocationForegroundServiceTest {
         invokeApplyZoneSettingsIfChanged(homeGeofence) // pauseOnWifi=false
 
         assertFalse(getField<Boolean>("isWifiPaused"))
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2736,7 +2752,7 @@ class LocationForegroundServiceTest {
 
         assertFalse(getField<Boolean>("isMotionlessPaused"))
         verify { dbHelper.saveSetting("pause_zone_motionless_active", "false") }
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2751,7 +2767,7 @@ class LocationForegroundServiceTest {
 
         invokeApplyZoneSettingsIfChanged(homeGeofence)
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2766,7 +2782,7 @@ class LocationForegroundServiceTest {
 
         invokeApplyZoneSettingsIfChanged(motionlessGeofence)
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -2991,7 +3007,7 @@ class LocationForegroundServiceTest {
 
         invokeSetupLocationUpdates()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -3002,7 +3018,7 @@ class LocationForegroundServiceTest {
 
         invokeSetupLocationUpdates()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -3050,7 +3066,7 @@ class LocationForegroundServiceTest {
         invokeRestoreMotionlessHold(null, savedActive = true)
         invokeSetupLocationUpdates()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -3082,7 +3098,7 @@ class LocationForegroundServiceTest {
 
         assertFalse(getField<Boolean>("isWifiPaused"))
         assertFalse(getField<Boolean>("isMotionlessPaused"))
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -3097,7 +3113,7 @@ class LocationForegroundServiceTest {
 
         invokeMaybeResumeGps()
 
-        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -3299,7 +3315,7 @@ class LocationForegroundServiceTest {
 
         invokeGeofenceHeartbeatFired()
 
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -3367,7 +3383,7 @@ class LocationForegroundServiceTest {
         invokeGeofenceHeartbeatFired(shouldBeTracking = true)
 
         verify(exactly = 0) { service.stopSelf() }
-        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -3525,6 +3541,35 @@ class LocationForegroundServiceTest {
             verify { AppLogger.maskSensitiveUrlValues("https://example.com/api?token=secret123") }
             assertTrue("endpoint must be the masked value", configLine!!.contains("endpoint=https://example.com/api?token=secr***"))
             assertFalse("raw credential must not be logged", configLine.contains("secret123"))
+        } finally {
+            unmockkObject(ServiceConfig.Companion)
+        }
+    }
+
+    @Test
+    fun `loadConfigFromIntent hands the accuracy mode to the ProfileManager`() {
+        mockkObject(ServiceConfig.Companion)
+        try {
+            every { ServiceConfig.fromDatabase(any()) } returns
+                ServiceConfig(accuracyMode = LocationAccuracy.BALANCED)
+
+            invokeLoadConfigFromIntent(null)
+
+            verify { profileManager.defaultAccuracyMode = LocationAccuracy.BALANCED }
+        } finally {
+            unmockkObject(ServiceConfig.Companion)
+        }
+    }
+
+    @Test
+    fun `loadConfigFromIntent keeps High as the ProfileManager accuracy default`() {
+        mockkObject(ServiceConfig.Companion)
+        try {
+            every { ServiceConfig.fromDatabase(any()) } returns ServiceConfig(accuracyMode = LocationAccuracy.HIGH)
+
+            invokeLoadConfigFromIntent(null)
+
+            verify { profileManager.defaultAccuracyMode = LocationAccuracy.HIGH }
         } finally {
             unmockkObject(ServiceConfig.Companion)
         }

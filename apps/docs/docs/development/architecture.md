@@ -48,7 +48,7 @@ The mobile app has a **React Native** UI layer and **native Kotlin** modules for
 
 All native code lives in `apps/mobile/android/app/src/`, organized by build flavor:
 
-- `src/main/java/com/colota/` - Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface), `backup/`, `export/`
+- `src/main/java/com/colota/` - Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface + `LocationAccuracy`), `backup/`, `export/`
 - `src/gms/java/com/colota/location/` - Google Play Services location provider
 - `src/foss/java/com/colota/location/` - Native Android location provider
 
@@ -144,6 +144,10 @@ Location services are abstracted behind a `LocationProvider` interface (`locatio
 
 Each flavor provides a `LocationProviderFactory` that instantiates and returns the correct implementation at runtime. The service and bridge code in `src/main/` depends only on the `LocationProvider` interface, never on a concrete class.
 
+`requestLocationUpdates(...)` takes a `LocationAccuracy` (`high` / `balanced`, from the global **Positioning accuracy** setting) and each provider maps it to its own request: GMS to `Priority.PRIORITY_HIGH_ACCURACY` / `PRIORITY_BALANCED_POWER_ACCURACY` (100 / 102) and FOSS to `LocationRequestCompat.QUALITY_HIGH_ACCURACY` / `QUALITY_BALANCED_POWER_ACCURACY` (100 / 102), both behind a pure, unit-tested function. The API defines these as trade-offs, not distances; `QUALITY_BALANCED_POWER_ACCURACY` is also the builder's default.
+
+`getCurrentLocation(...)` is deliberately requested at High accuracy (best-effort on the FOSS raw-GPS path below Android 12, where the compat API takes no quality hint) - it drives pause-zone exit, the pause watchdog and the stationary heartbeat, where a network-only fix could falsely end a geofence pause. `LocationAccuracy.fromWire()` falls back to `HIGH` for unknown or absent values.
+
 ### LocationForegroundService
 
 An Android foreground service that runs continuously for GPS tracking. Manages:
@@ -153,7 +157,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Geofence entry delay - keeps recording for 3.5× the configured tracking interval before pausing on zone entry, logging real arrival points for backends like GeoPulse
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
 - Battery critical shutdown (below 5% while unplugged), detected via a battery-broadcast receiver so it fires even while GPS is paused in a zone
-- Location accuracy filtering
+- Location accuracy filtering and the global positioning accuracy mode
 - Stationary detection - slows GPS to the profile's interval after 60s of fixes without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). It keeps working inside a pause zone and during an entry delay, since fixes reach `ProfileManager` before the in-zone drop; only a hold that stops the stream can prevent a verdict.
 - Queuing data for server sync
 

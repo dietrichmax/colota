@@ -36,6 +36,7 @@ export function buildSetupConfig(parts: SetupShareParts, sel: SetupShareSelectio
     config.distance = settings.distance
     config.accuracyThreshold = settings.accuracyThreshold
     config.filterInaccurateLocations = settings.filterInaccurateLocations
+    config.accuracyMode = settings.accuracyMode
   }
 
   if (sel.sync) {

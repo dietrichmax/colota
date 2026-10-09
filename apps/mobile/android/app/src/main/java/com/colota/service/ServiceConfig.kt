@@ -8,6 +8,7 @@ package com.Colota.service
 import android.content.Intent
 import android.os.Bundle
 import com.Colota.data.DatabaseHelper
+import com.Colota.location.LocationAccuracy
 import com.Colota.sync.ApiFormat
 import com.facebook.react.bridge.ReadableMap
 import org.json.JSONObject
@@ -22,6 +23,7 @@ data class ServiceConfig(
     val syncIntervalSeconds: Int = 0,
     val accuracyThreshold: Float = 50.0f,
     val filterInaccurateLocations: Boolean = false,
+    val accuracyMode: LocationAccuracy = LocationAccuracy.HIGH,
     val retryIntervalSeconds: Int = 30,
     val isOfflineMode: Boolean = false,
     val syncCondition: String = "any",
@@ -54,6 +56,7 @@ data class ServiceConfig(
                 syncIntervalSeconds = saved["syncInterval"]?.toIntOrNull() ?: 0,
                 accuracyThreshold = saved["accuracyThreshold"]?.toFloatOrNull() ?: 50.0f,
                 filterInaccurateLocations = saved["filterInaccurateLocations"]?.toBoolean() ?: false,
+                accuracyMode = LocationAccuracy.fromWire(saved["accuracyMode"]),
                 retryIntervalSeconds = saved["retryInterval"]?.toIntOrNull() ?: 30,
                 isOfflineMode = saved["isOfflineMode"]?.toBoolean() ?: false,
                 syncCondition = saved["syncCondition"] ?: if (saved["isWifiOnlySync"]?.toBoolean() == true) "wifi_any" else "any",
@@ -101,6 +104,7 @@ data class ServiceConfig(
                 syncIntervalSeconds = config.getIntOrNull("syncInterval") ?: dbConfig.syncIntervalSeconds,
                 accuracyThreshold = config.getDoubleOrNull("accuracyThreshold")?.toFloat() ?: dbConfig.accuracyThreshold,
                 filterInaccurateLocations = config.getBooleanOrNull("filterInaccurateLocations") ?: dbConfig.filterInaccurateLocations,
+                accuracyMode = config.getStringOrNull("accuracyMode")?.let { LocationAccuracy.fromWire(it) } ?: dbConfig.accuracyMode,
                 retryIntervalSeconds = config.getIntOrNull("retryInterval") ?: dbConfig.retryIntervalSeconds,
                 isOfflineMode = config.getBooleanOrNull("isOfflineMode") ?: dbConfig.isOfflineMode,
                 syncCondition = config.getStringOrNull("syncCondition") ?: dbConfig.syncCondition,
@@ -124,6 +128,9 @@ data class ServiceConfig(
                 syncIntervalSeconds = extras.getIntOrDefault("syncInterval", dbConfig.syncIntervalSeconds),
                 accuracyThreshold = extras.getFloatOrDefault("accuracyThreshold", dbConfig.accuracyThreshold),
                 filterInaccurateLocations = extras.getBooleanOrDefault("filterInaccurateLocations", dbConfig.filterInaccurateLocations),
+                accuracyMode = if (extras.containsKey("accuracyMode"))
+                    LocationAccuracy.fromWire(extras.getString("accuracyMode"))
+                else dbConfig.accuracyMode,
                 retryIntervalSeconds = extras.getIntOrDefault("retryInterval", dbConfig.retryIntervalSeconds),
                 isOfflineMode = extras.getBooleanOrDefault("isOfflineMode", dbConfig.isOfflineMode),
                 syncCondition = extras.getStringOrDefault("syncCondition", dbConfig.syncCondition) ?: "any",
@@ -147,6 +154,7 @@ data class ServiceConfig(
             putExtra("syncInterval", syncIntervalSeconds)
             putExtra("accuracyThreshold", accuracyThreshold)
             putExtra("filterInaccurateLocations", filterInaccurateLocations)
+            putExtra("accuracyMode", accuracyMode.wireName)
             putExtra("retryInterval", retryIntervalSeconds)
             putExtra("isOfflineMode", isOfflineMode)
             putExtra("syncCondition", syncCondition)

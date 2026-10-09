@@ -14,6 +14,7 @@ const settings = {
   distance: 5,
   filterInaccurateLocations: true,
   accuracyThreshold: 50,
+  accuracyMode: "balanced",
   endpoint: "https://example.com/api",
   fieldMap: { lat: "latitude" },
   customFields: [{ key: "device", value: "phone" }],
@@ -101,6 +102,7 @@ describe("setupLink", () => {
     // tracking + sync + api
     expect(result.config.settings.interval).toBe(10)
     expect(result.config.settings.accuracyThreshold).toBe(50)
+    expect(result.config.settings.accuracyMode).toBe("balanced")
     expect(result.config.settings.syncInterval).toBe(0)
     expect(result.config.settings.endpoint).toBe("https://example.com/api")
     // The import screen finds the endpoint by this id to give it its own block; the label translates.
@@ -119,6 +121,25 @@ describe("setupLink", () => {
     // The network name has to survive the share; the import screen rejects the profile without it.
     expect(result.config.profiles[1].condition).toEqual({ type: "wifi_ssid", ssid: "HomeNet" })
     expect(result.config.profiles[1]).not.toHaveProperty("id")
+  })
+
+  it("reads a valid positioning accuracy mode and rejects anything else", () => {
+    expect(validateConfig({ interval: 10, accuracyMode: "balanced" }).config.settings.accuracyMode).toBe("balanced")
+    expect(validateConfig({ interval: 10, accuracyMode: "high" }).config.settings.accuracyMode).toBe("high")
+
+    // Strict, like the sibling enum fields: the value is app-generated, so casing, whitespace and type all lose.
+    expect(validateConfig({ interval: 10, accuracyMode: "turbo" }).config.settings.accuracyMode).toBeUndefined()
+    expect(validateConfig({ interval: 10, accuracyMode: 1 }).config.settings.accuracyMode).toBeUndefined()
+    expect(validateConfig({ interval: 10, accuracyMode: null }).config.settings.accuracyMode).toBeUndefined()
+    expect(validateConfig({ interval: 10, accuracyMode: " Balanced " }).config.settings.accuracyMode).toBeUndefined()
+
+    const entry = validateConfig({ interval: 10, accuracyMode: "balanced" }).entries.find(
+      (e) => e.field === "accuracyMode"
+    )
+    expect(entry).toMatchObject({ field: "accuracyMode", category: "tracking" })
+
+    // An invalid mode alone is not a setting, so the link carries nothing to apply.
+    expect(validateConfig({ accuracyMode: "turbo" }).valid).toBe(false)
   })
 
   it("omits credentials entirely when that category is unchecked", () => {

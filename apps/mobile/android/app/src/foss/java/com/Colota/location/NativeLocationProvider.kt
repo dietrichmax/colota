@@ -33,6 +33,12 @@ class NativeLocationProvider(context: Context) : LocationProvider {
     companion object {
         private const val TAG = "NativeLocationProvider"
 
+        /** Pure mode → LocationRequestCompat quality mapping, kept free of side effects so it is unit-testable. */
+        internal fun qualityFor(accuracy: LocationAccuracy): Int = when (accuracy) {
+            LocationAccuracy.HIGH -> LocationRequestCompat.QUALITY_HIGH_ACCURACY
+            LocationAccuracy.BALANCED -> LocationRequestCompat.QUALITY_BALANCED_POWER_ACCURACY
+        }
+
         internal fun selectProvider(locationManager: LocationManager): String =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 && LocationManagerCompat.hasProvider(locationManager, LocationManager.FUSED_PROVIDER)
@@ -54,6 +60,7 @@ class NativeLocationProvider(context: Context) : LocationProvider {
     override fun requestLocationUpdates(
         intervalMs: Long,
         minDistanceMeters: Float,
+        accuracy: LocationAccuracy,
         looper: Looper,
         callback: LocationUpdateCallback
     ) {
@@ -66,13 +73,13 @@ class NativeLocationProvider(context: Context) : LocationProvider {
         // The legacy requestLocationUpdates overload runs at balanced power on API 31+,
         // which can keep the fused provider from ever engaging GNSS.
         val request = LocationRequestCompat.Builder(intervalMs)
-            .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
+            .setQuality(qualityFor(accuracy))
             .setMinUpdateDistanceMeters(minDistanceMeters)
             .build()
 
         try {
             LocationManagerCompat.requestLocationUpdates(locationManager, provider, request, listener, looper)
-            AppLogger.d(TAG, "Started $provider updates: interval=${intervalMs}ms, distance=${minDistanceMeters}m")
+            AppLogger.d(TAG, "Started $provider updates: interval=${intervalMs}ms, distance=${minDistanceMeters}m, accuracy=${accuracy.wireName}")
         } catch (e: SecurityException) {
             locationManager.removeUpdates(listener)
             throw e

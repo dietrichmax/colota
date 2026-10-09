@@ -11,6 +11,7 @@ import {
   TRACKING_PRESETS,
   SelectablePreset,
   SyncCondition,
+  AccuracyMode,
   SavedTrackingProfile
 } from "../../../types/global"
 import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
@@ -19,6 +20,7 @@ import {
   Button,
   Card,
   Divider,
+  FieldMessage,
   NumericInput,
   RadioRow,
   SectionTitle,
@@ -51,6 +53,17 @@ interface SyncStrategySettingsProps {
 type NumericKey = "interval" | "distance" | "accuracyThreshold"
 
 const NUMERIC_MIN: Record<NumericKey, number> = { interval: 1, distance: 0, accuracyThreshold: 1 }
+
+/**
+ * The accuracy options name a power/accuracy tradeoff, not a distance, so Balanced has no guaranteed
+ * metre figure; 100 m is the conservative floor below which a strict filter drops most Balanced points.
+ */
+const BALANCED_FIX_ACCURACY_M = 100
+
+const ACCURACY_MODE_OPTIONS: { value: AccuracyMode; labelKey: TranslationKey; subKey: TranslationKey }[] = [
+  { value: "high", labelKey: "trackingSync.accuracy.high", subKey: "trackingSync.accuracy.high.sub" },
+  { value: "balanced", labelKey: "trackingSync.accuracy.balanced", subKey: "trackingSync.accuracy.balanced.sub" }
+]
 
 const SYNC_CONDITION_OPTIONS: { value: SyncCondition; labelKey: TranslationKey; subKey: TranslationKey }[] = [
   { value: "any", labelKey: "trackingSync.condition.any", subKey: "trackingSync.condition.any.sub" },
@@ -214,6 +227,13 @@ export function SyncStrategySettings({
   const filterHint = settings.filterInaccurateLocations
     ? t("trackingSync.filter.on", { threshold: thresholdShown })
     : t("trackingSync.filter.off", { threshold: thresholdShown })
+
+  // Balanced with a stricter filter drops nearly every fix (#951); warn and offer a usable threshold.
+  const balancedFloorShown = `${metersToInput(BALANCED_FIX_ACCURACY_M)} ${unit}`
+  const showBalancedFilterWarning =
+    settings.accuracyMode === "balanced" &&
+    settings.filterInaccurateLocations &&
+    settings.accuracyThreshold < BALANCED_FIX_ACCURACY_M
 
   const ssidTyped = settings.syncSsid
   const offerCurrentSsid = currentSsid !== "" && currentSsid.toLowerCase() !== ssidTyped.toLowerCase()
@@ -388,6 +408,46 @@ export function SyncStrategySettings({
         </>
       )}
 
+      <SectionTitle style={styles.groupTop}>{t("trackingSync.accuracy.title")}</SectionTitle>
+      <Card rows>
+        <View accessibilityRole="radiogroup" accessibilityLabel={t("trackingSync.accuracy.title")} style={styles.group}>
+          {ACCURACY_MODE_OPTIONS.map(({ value, labelKey, subKey }) => (
+            <RadioRow
+              key={value}
+              testID={`accuracy-mode-${value}`}
+              label={t(labelKey)}
+              sub={t(subKey)}
+              selected={settings.accuracyMode === value}
+              onPress={() => {
+                const next = { ...settings, accuracyMode: value }
+                onSettingsChange(next)
+                onImmediateSave(next)
+              }}
+            />
+          ))}
+        </View>
+        <FieldMessage style={!showBalancedFilterWarning ? styles.hintTail : undefined}>
+          {t("trackingSync.accuracy.hint")}
+        </FieldMessage>
+        {showBalancedFilterWarning && (
+          <View testID="accuracy-mode-filter-warning" style={styles.filterField}>
+            <FieldMessage variant="warning">
+              {t("trackingSync.accuracy.filterWarning", { threshold: balancedFloorShown })}
+            </FieldMessage>
+            <Button
+              variant="secondary"
+              testID="accuracy-mode-filter-fix"
+              title={t("trackingSync.accuracy.filterFix", { threshold: balancedFloorShown })}
+              onPress={() => {
+                const next = { ...settings, accuracyThreshold: BALANCED_FIX_ACCURACY_M }
+                onSettingsChange(next)
+                onImmediateSave(next)
+              }}
+            />
+          </View>
+        )}
+      </Card>
+
       <SectionTitle style={styles.groupTop}>{t("trackingSync.section.accuracy")}</SectionTitle>
       <Card rows>
         <SettingRow label={t("trackingSync.filter")} hint={filterHint}>
@@ -446,6 +506,10 @@ const styles = StyleSheet.create({
   // Button bakes marginVertical space.sm, which completes the 16 to the next row.
   revealButtonTail: {
     paddingBottom: space.sm
+  },
+  // A rows Card strips its own vertical padding, so the trailing hint has to carry the card's inset.
+  hintTail: {
+    marginBottom: space.lg
   },
   batch: {
     paddingTop: space.lg

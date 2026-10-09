@@ -356,6 +356,7 @@ class DatabaseHelper private constructor(context: Context) :
             "syncInterval" to "0",
             "accuracyThreshold" to "50.0",
             "filterInaccurateLocations" to "false",
+            "accuracyMode" to "high",
             "retryInterval" to "30",
             "isOfflineMode" to "false",
             "syncCondition" to "any",

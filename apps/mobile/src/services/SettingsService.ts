@@ -54,6 +54,7 @@ export const SettingsService = {
 
       case "syncCondition":
       case "syncSsid":
+      case "accuracyMode":
         stringValue = String(value)
         break
 

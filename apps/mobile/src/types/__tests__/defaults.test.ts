@@ -64,6 +64,10 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.overlandBatchSize).toBe(50)
   })
 
+  it("defaults positioning accuracy to high, preserving the historical behaviour", () => {
+    expect(DEFAULT_SETTINGS.accuracyMode).toBe("high")
+  })
+
   it("has all required Settings keys", () => {
     const requiredKeys: (keyof Settings)[] = [
       "interval",
@@ -78,6 +82,7 @@ describe("DEFAULT_SETTINGS", () => {
       "syncPreset",
       "filterInaccurateLocations",
       "accuracyThreshold",
+      "accuracyMode",
       "httpMethod",
       "dawarichMode",
       "overlandBatchSize"

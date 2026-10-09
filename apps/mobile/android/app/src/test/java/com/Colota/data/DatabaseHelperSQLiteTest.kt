@@ -94,6 +94,7 @@ class DatabaseHelperSQLiteTest {
         assertEquals("false", settings["tracking_enabled"])
         assertEquals("POST", settings["httpMethod"])
         assertEquals("custom", settings["apiTemplate"])
+        assertEquals("high", settings["accuracyMode"])
     }
 
     @Test

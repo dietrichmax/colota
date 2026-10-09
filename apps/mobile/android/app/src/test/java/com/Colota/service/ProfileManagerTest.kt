@@ -7,6 +7,7 @@ package com.Colota.service
 
 import android.location.Location
 import com.Colota.data.ProfileHelper
+import com.Colota.location.LocationAccuracy
 import com.Colota.util.AppLogger
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -1298,6 +1299,37 @@ class ProfileManagerTest {
         // Locations without speed data
         feedStillRun(manager, speed = 0f, hasSpeed = false)
 
+        assertEquals("Stationary", switchedProfileName)
+    }
+
+    @Test
+    fun `under balanced accuracy a speed-less fix does not count as stillness`() = testScope.runTest {
+        // Balanced hands the stream speed-less network fixes; a missing speed is not proof of stillness
+        val profile = stationaryProfile(activationDelay = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultAccuracyMode = LocationAccuracy.BALANCED
+
+        manager.onLocationUpdate(mockLocation(0f, hasSpeed = false, timeMs = t0))
+        assertNull(switchedProfileName)
+        assertFalse(manager.isStationary)
+
+        // A fix that carries a (real or fallback-derived) speed still decides
+        manager.onLocationUpdate(mockLocation(0.1f, hasSpeed = true, timeMs = t0 + 6_000))
+        assertEquals("Stationary", switchedProfileName)
+        assertTrue(manager.isStationary)
+    }
+
+    @Test
+    fun `high accuracy keeps treating a speed-less fix as stillness`() = testScope.runTest {
+        val profile = stationaryProfile(activationDelay = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultAccuracyMode = LocationAccuracy.HIGH
+
+        manager.onLocationUpdate(mockLocation(0f, hasSpeed = false, timeMs = t0))
         assertEquals("Stationary", switchedProfileName)
     }
 

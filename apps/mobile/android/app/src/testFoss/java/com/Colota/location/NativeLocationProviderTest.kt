@@ -7,6 +7,7 @@ package com.Colota.location
 
 import android.content.Context
 import android.location.LocationManager
+import androidx.core.location.LocationRequestCompat
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -42,5 +43,23 @@ class NativeLocationProviderTest {
         shadowOf(locationManager).setProviderEnabled(LocationManager.FUSED_PROVIDER, true)
 
         assertEquals(LocationManager.GPS_PROVIDER, NativeLocationProvider.selectProvider(locationManager))
+    }
+
+    @Test
+    fun `maps high accuracy to the high quality request`() {
+        assertEquals(
+            LocationRequestCompat.QUALITY_HIGH_ACCURACY,
+            NativeLocationProvider.qualityFor(LocationAccuracy.HIGH)
+        )
+        assertEquals(100, NativeLocationProvider.qualityFor(LocationAccuracy.HIGH))
+    }
+
+    @Test
+    fun `maps balanced accuracy to the balanced power request`() {
+        assertEquals(
+            LocationRequestCompat.QUALITY_BALANCED_POWER_ACCURACY,
+            NativeLocationProvider.qualityFor(LocationAccuracy.BALANCED)
+        )
+        assertEquals(102, NativeLocationProvider.qualityFor(LocationAccuracy.BALANCED))
     }
 }

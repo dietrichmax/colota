@@ -8,6 +8,7 @@ package com.Colota.service
 import com.Colota.util.AppLogger
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.ProfileHelper
+import com.Colota.location.LocationAccuracy
 import kotlinx.coroutines.*
 
 /**
@@ -45,6 +46,10 @@ class ProfileManager(
     @Volatile var defaultInterval: Long = 5000L
     @Volatile var defaultDistance: Float = 0f
     @Volatile var defaultSyncInterval: Int = 0
+
+    // Global positioning accuracy, written by the service on config load; read by
+    // evaluateStationaryState() so a non-High stream does not treat a speed-less fix as stillness (#951).
+    @Volatile var defaultAccuracyMode: LocationAccuracy = LocationAccuracy.HIGH
 
     // @Volatile: getActiveProfileName() reads it without the lock.
     @Volatile private var activeProfile: ProfileHelper.CachedProfile? = null
@@ -375,7 +380,17 @@ class ProfileManager(
         lastSampleAtMs = sampleAtMs
         if (gapMs >= 0) lastSampleGapMs = gapMs
 
-        val speed = if (location.hasSpeed()) location.speed else 0f
+        val speed = if (location.hasSpeed()) {
+            location.speed
+        } else if (defaultAccuracyMode == LocationAccuracy.HIGH) {
+            // High mode has always read an absent speed as stillness: on this path GNSS fixes carry it.
+            0f
+        } else {
+            // Balanced hands us speed-less network fixes, and a missing speed is not proof of stillness
+            // (#951). A derived speed from `applySpeedFallback()` sets `hasSpeed()` first, so only a
+            // genuinely speed-less fix reaches this branch.
+            return
+        }
 
         if (speed >= ProfileConstants.STATIONARY_SPEED_THRESHOLD) {
             runStartedAtMs = 0L

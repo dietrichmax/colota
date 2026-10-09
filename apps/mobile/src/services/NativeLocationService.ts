@@ -77,6 +77,7 @@ class NativeLocationService {
       retryInterval: settings.retryInterval,
       filterInaccurateLocations: settings.filterInaccurateLocations,
       accuracyThreshold: settings.accuracyThreshold,
+      accuracyMode: settings.accuracyMode,
       isOfflineMode: settings.isOfflineMode,
       syncCondition: settings.syncCondition,
       syncSsid: settings.syncSsid,

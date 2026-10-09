@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Tracking Settings
 
-Found under **Settings → Tracking & sync → Recording**. The accuracy filter has its own group, **Accuracy filter**, at the bottom of the same screen.
+Found under **Settings → Tracking & sync → Recording**. **Positioning accuracy** and **Accuracy filter** have their own groups further down the same screen.
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
@@ -12,12 +12,13 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 ## Available Settings
 
-| Setting                     | Description                       | Default   | Minimum |
-| --------------------------- | --------------------------------- | --------- | ------- |
-| Interval                    | Time between GPS fixes            | 5 seconds | 1 s     |
-| Movement threshold          | Minimum movement to keep a fix    | 0         | 0       |
-| Filter inaccurate locations | Enable/disable accuracy filtering | Off       | On/Off  |
-| Accuracy threshold          | Drop fixes rated worse than this  | 50        | 1       |
+| Setting                     | Description                            | Default   | Accepted values |
+| --------------------------- | -------------------------------------- | --------- | --------------- |
+| Interval                    | Time between GPS fixes                 | 5 seconds | ≥ 1 s           |
+| Movement threshold          | Minimum movement to keep a fix         | 0         | ≥ 0             |
+| Positioning accuracy        | High-precision or battery-saving fixes | High      | High / Balanced |
+| Filter inaccurate locations | Enable/disable accuracy filtering      | Off       | On/Off          |
+| Accuracy threshold          | Drop fixes rated worse than this       | 50        | ≥ 1             |
 
 The interval and movement threshold sit under **Custom** in the Recording group; picking a preset sets both. The two distance settings use whichever unit you picked in **Settings → Appearance**, so they read as meters or feet. Every number field takes whole numbers only and states its minimum under its label; a value below it is set to the minimum when you leave the field. There is no upper limit on any of the three numbers.
 
@@ -41,6 +42,17 @@ Only records a new location if you've moved at least this far since the last rec
 
 - **0**: Record every GPS fix (default)
 - **10-50 m**: Skip stationary updates, good for daily use
+
+## Positioning Accuracy
+
+How precise the continuous location stream is. The exact effect depends on the phone and its ROM.
+
+- **High** (default): the most accurate fixes, using more battery. This is what Colota has always used.
+- **Balanced**: coarser, battery-saving fixes that can arrive without bearing or altitude.
+
+Only the continuous stream follows this setting: the one-shot fresh fixes behind geofence exit, the pause watchdog and the stationary heartbeat stay High, so a network fix can't falsely end a pause. Changing the setting restarts tracking, so it applies at once. On the FOSS variant's raw-GPS path (Android 11 and older, or ROMs without a fused provider) the hint is ignored, so Balanced is a no-op there.
+
+With the **Accuracy filter** on and a strict threshold, Balanced fixes can be dropped; picking Balanced then offers a one-tap fix. Balanced fixes often carry no speed, so a [stationary profile](/docs/guides/tracking-profiles#condition-types) can resolve late - or not at all with intervals over a minute or network-only fixes - and the [position-jump filter](#position-jump-filter) can't compare speed on them.
 
 ## Accuracy Filter
 

@@ -54,6 +54,7 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `syncInterval` | number | Batch sync interval in seconds (0 = instant) |
 | `accuracyThreshold` | number | Discard locations less accurate than this (meters) |
 | `filterInaccurateLocations` | boolean | Enable accuracy filtering |
+| `accuracyMode` | string | Positioning accuracy: `high` (default) or `balanced` |
 | `isOfflineMode` | boolean | Store locally only, never sync |
 | `syncCondition` | string | `any`, `wifi_any`, `wifi_ssid`, or `vpn` |
 | `syncSsid` | string | Wi-Fi SSID to sync on (only used with `wifi_ssid`) |

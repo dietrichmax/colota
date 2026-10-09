@@ -63,6 +63,10 @@ export function parseRawSettings(allRaw: Record<string, string>): Settings {
       ? parseFloat(allRaw.accuracyThreshold)
       : DEFAULT_SETTINGS.accuracyThreshold,
 
+    // Older installs have no stored key; anything unrecognised falls back to High. Match the native
+    // LocationAccuracy.fromWire: trim + case-insensitive, so the two never disagree on a hand-edited value.
+    accuracyMode: allRaw.accuracyMode?.trim().toLowerCase() === "balanced" ? "balanced" : DEFAULT_SETTINGS.accuracyMode,
+
     isOfflineMode: allRaw.isOfflineMode === "true",
     syncCondition:
       (allRaw.syncCondition as any) ?? (allRaw.isWifiOnlySync === "true" ? "wifi_any" : DEFAULT_SETTINGS.syncCondition),

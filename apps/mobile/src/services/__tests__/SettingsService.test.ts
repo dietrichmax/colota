@@ -54,6 +54,11 @@ describe("SettingsService", () => {
       expect(mockSaveSetting).toHaveBeenCalledWith("filterInaccurateLocations", "true")
     })
 
+    it("saves accuracyMode unchanged under the same key", async () => {
+      await SettingsService.updateSetting("accuracyMode", "balanced")
+      expect(mockSaveSetting).toHaveBeenCalledWith("accuracyMode", "balanced")
+    })
+
     it("saves syncInterval as string number", async () => {
       await SettingsService.updateSetting("syncInterval", 300)
       expect(mockSaveSetting).toHaveBeenCalledWith("syncInterval", "300")

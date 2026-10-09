@@ -60,6 +60,7 @@ jest.mock("../../contexts/TrackingProvider", () => ({
       distance: 5,
       accuracyThreshold: 50,
       filterInaccurateLocations: true,
+      accuracyMode: "balanced",
       syncInterval: 0,
       retryInterval: 30,
       isOfflineMode: false,
@@ -141,6 +142,7 @@ describe("ShareSetupScreen", () => {
 
     const config = decode(shareSpy.mock.calls[0][0].message)
     expect(config.interval).toBe(10)
+    expect(config.accuracyMode).toBe("balanced") // the tracking category carries the accuracy mode too
     expect(config.endpoint).toBeUndefined() // API not toggled on
     expect(config.auth).toBeUndefined() // credentials not toggled on
   })
