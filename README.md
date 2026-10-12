@@ -85,6 +85,16 @@ The payload is forwarded unchanged (no OwnTracks conversion). The HA entity is n
 
 If the Colota app uses batch mode (Overland template), add `TARGET_n_BATCH_MODE=latest` so HA receives only the newest fix per upload instead of a replay of the whole batch — HA tracks the current position, not history. See [Batch handling](#batch-handling).
 
+> [!NOTE]
+> If you are using Home Assistant Cloud, the webhook URL shown after the setup points to `hooks.nabu.casa` and is formatted like this: `https://hooks.nabu.casa/<unique_id>`.
+> 
+> You can transform the webhook URL to a local format `http://<your-ha>:8123/api/webhook/<webhook_id>`. The value for `<webhook_id>` can be found in `/config/.storage/core.config_entries`. The entry in the file is named `Colota Webhook`.
+> 
+> You can also retrieve the value of `<webhook_id>` from CLI by running the following command on the Home Assistant host:
+> ```shell
+> jq '.data.entries[] | select(.domain=="colota") | .data' /config/.storage/core.config_entries
+> ```
+
 **Alternative — built-in OwnTracks webhook:**
 
 If you'd rather not install a custom integration, HA's built-in OwnTracks webhook also works. Add the OwnTracks integration via **Settings → Devices & Services → Add integration → OwnTracks**, then open its **Configure** dialog to reveal the webhook URL.
