@@ -143,4 +143,4 @@ When a profile is active, Colota shows it in three places:
 
 All of them clear when the profile deactivates (after the deactivation delay) or when tracking stops.
 
-A blank name saves as the condition's name, so two untouched charging profiles are both called "Charging"; a setup link import replaces a profile by name, so give profiles you share distinct names. Sharing a **Wi-Fi network** profile also shares the network name it watches, and sharing a **Bluetooth device** profile shares the device's name and address. A shared Bluetooth profile only matches on a phone paired with that same device.
+A blank name saves as the condition's name, so two untouched charging profiles are both called "Charging"; a setup link import replaces a profile by name, so give profiles you share distinct names. Sharing a **Wi-Fi network** profile also shares the network name it watches, and sharing a **Bluetooth device** profile shares the device's name and address. A shared Bluetooth profile only matches on a phone paired with that same device and with Nearby devices allowed.

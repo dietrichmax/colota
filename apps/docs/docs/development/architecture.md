@@ -254,7 +254,7 @@ When both WiFi and motionless pause are enabled, GPS only resumes when both cond
 
 ### ProfileManager
 
-Evaluates tracking profile conditions and switches GPS settings automatically. Supports seven condition types: charging, Android Auto / car mode, Wi-Fi (any network), Wi-Fi network (named SSID), speed above threshold, speed below threshold, and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
+Evaluates tracking profile conditions and switches GPS settings automatically. Supports eight condition types: charging, Android Auto / car mode, Bluetooth device, Wi-Fi (any network), Wi-Fi network (named SSID), speed above threshold, speed below threshold and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
 
 The stationary condition is decided by the fixes and never by a timer. `evaluateStationaryState` tracks a run of consecutive fixes below 0.3 m/s and the verdict is reached by the fix that completes the window, so a stream that stops delivering cannot produce one. A gap restarts the run unless it is within three times the previous gap, or 60 seconds if that is larger, and no gap over 15 minutes is ever tolerated. Calibrating on the previous gap keeps a sparse Doze cadence usable while a fast stream that goes quiet is treated as unobserved time rather than stillness; the window length deliberately plays no part, or a long window would license a long blackout. The motion sensor discards a run in progress as well as an active verdict.
 
@@ -264,7 +264,7 @@ Database access layer for tracking profiles and trip events. Maintains a `TimedC
 
 ### ConditionMonitor
 
-Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, Bluetooth device connections via the ACL `BroadcastReceiver` (seeded once from the A2DP and headset profile proxies, since ACL broadcasts report changes only), and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it: on every Wi-Fi network that comes or goes and when Location comes back on, because a name read while Location was off is blank. Forwards state changes to `ProfileManager` for condition evaluation.
+Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, Bluetooth device connections via the ACL `BroadcastReceiver` (seeded from the A2DP and headset profile proxies on every monitor start, since ACL broadcasts report changes only; a device on neither profile is seen at its next connect), and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it: on every Wi-Fi network that comes or goes and when Location comes back on, because a name read while Location was off is blank. Forwards state changes to `ProfileManager` for condition evaluation.
 
 ### ProfileConstants
 

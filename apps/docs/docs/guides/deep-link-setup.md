@@ -114,7 +114,7 @@ Each entry in the `profiles` array describes one [tracking profile](tracking-pro
 
 Imported profiles are appended by default. When both profiles and geofences are present the same "Replace ... with the same name" toggle on the import screen also deletes existing profiles whose names match before creating the incoming ones.
 
-You can build links with profiles using the in-browser generator above, the Node.js or Python snippets below, or by sharing profiles directly from the Tracking profiles screen in the app.
+You can build links with profiles using the in-browser generator above, the Node.js or Python snippets below, or by sharing profiles directly from the Tracking profiles screen in the app. The generator has no Bluetooth device condition, because the profile needs the device's address; share those profiles from the app.
 
 ## Generating Links Programmatically
 
