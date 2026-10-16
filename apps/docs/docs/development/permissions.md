@@ -39,7 +39,7 @@ Only the two location permissions are required. The app does not request anythin
 
 The **Local Network Permission** (Android 17+) is not part of this sequence. It is requested separately when you use **Test connection** with a local/private server endpoint.
 
-The **Nearby Devices** permission (Android 12+) is not part of the sequence either. The profile editor asks for it when you pick the **Bluetooth device** condition.
+The **Nearby Devices** permission (Android 12+) is not part of the sequence either. The device list of the **Bluetooth device** condition asks for it.
 
 ## Detailed Explanations
 

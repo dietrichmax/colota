@@ -1,7 +1,7 @@
 import React from "react"
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import { TrackingProfile } from "../../types/global"
-import { BLUETOOTH_REREAD_MS, SAVE_SUCCESS_DISPLAY_MS } from "../../constants"
+import { SAVE_SUCCESS_DISPLAY_MS } from "../../constants"
 
 const mockProfiles: TrackingProfile[] = [
   {
@@ -57,29 +57,17 @@ jest.mock("../../services/ProfileService", () => ({
 }))
 
 const mockGetCurrentSsid = jest.fn().mockResolvedValue("HomeNet")
-const mockGetBondedBluetoothDevices = jest.fn()
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
-    getCurrentSsid: () => mockGetCurrentSsid(),
-    getBondedBluetoothDevices: () => mockGetBondedBluetoothDevices()
+    getCurrentSsid: () => mockGetCurrentSsid()
   }
 }))
 
 const mockCheckBluetoothPermission = jest.fn()
-const mockRequestBluetoothPermission = jest.fn()
 jest.mock("../../services/LocationServicePermission", () => ({
-  checkBluetoothPermission: () => mockCheckBluetoothPermission(),
-  requestBluetoothPermission: () => mockRequestBluetoothPermission()
+  checkBluetoothPermission: () => mockCheckBluetoothPermission()
 }))
-
-const mockOpenSettings = jest.fn()
-jest.spyOn(require("react-native").Linking, "openSettings").mockImplementation(() => mockOpenSettings())
-
-const PAIRED = [
-  { name: "My Car", address: "AA:BB:CC:DD:EE:FF" },
-  { name: "Earbuds", address: "11:22:33:44:55:66" }
-]
 
 const mockShowAlert = jest.fn()
 const mockShowConfirm = jest.fn()
@@ -147,6 +135,21 @@ jest.mock("../../components", () => {
         R.createElement(Text, null, label),
         sub ? R.createElement(Text, null, sub) : null
       ),
+    ListItem: ({ testID, label, sub, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
+    SelectField: ({ testID, label, value, placeholder, error, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, value ?? placeholder),
+        error ? R.createElement(Text, null, error) : null
+      ),
     Button: ({ title, onPress, disabled, testID }: any) =>
       R.createElement(
         Pressable,
@@ -184,21 +187,33 @@ jest.mock("../../utils/logger", () => ({ logger: { error: jest.fn() } }))
 
 const mockGoBack = jest.fn()
 const mockSetOptions = jest.fn()
-const mockNavigation = { goBack: mockGoBack, setOptions: mockSetOptions }
+const mockNavigate = jest.fn()
+const mockNavigation = { goBack: mockGoBack, setOptions: mockSetOptions, navigate: mockNavigate, setParams: jest.fn() }
 
 import { ProfileEditorScreen } from "../ProfileEditorScreen"
+import type { BluetoothDeviceInfo } from "../../types/global"
 
 describe("ProfileEditorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockSettings = { isOfflineMode: false, interval: 5, distance: 0, syncInterval: 0 }
     mockGetProfiles.mockResolvedValue(mockProfiles)
+    mockCheckBluetoothPermission.mockResolvedValue(true)
   })
 
-  const renderNew = () =>
-    render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: {} } as any} />)
-  const renderEdit = (profileId = 1) =>
-    render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: { profileId } } as any} />)
+  // The device screen hands its pick back by merging it into the editor's params.
+  const renderAt = (params: Record<string, unknown>) => {
+    const screen = (p: Record<string, unknown>) => (
+      <ProfileEditorScreen navigation={mockNavigation as any} route={{ params: p } as any} />
+    )
+    const utils = render(screen(params))
+    return {
+      ...utils,
+      pickDevice: (bluetoothDevice: BluetoothDeviceInfo) => utils.rerender(screen({ ...params, bluetoothDevice }))
+    }
+  }
+  const renderNew = () => renderAt({})
+  const renderEdit = (profileId = 1) => renderAt({ profileId })
 
   describe("the sentence", () => {
     it("reads the draft back as the rule and follows every edit", () => {
@@ -338,39 +353,32 @@ describe("ProfileEditorScreen", () => {
   })
 
   describe("bluetooth device", () => {
-    beforeEach(() => {
-      mockCheckBluetoothPermission.mockResolvedValue(true)
-      mockRequestBluetoothPermission.mockResolvedValue("granted")
-      mockGetBondedBluetoothDevices.mockResolvedValue(PAIRED)
-    })
-
-    it("lists the paired devices and blocks Save until one is picked", async () => {
-      const { getByTestId, findByTestId, getByText } = renderNew()
-
+    it("blocks Save until a device is picked and opens the device screen for it", () => {
+      const { getByTestId, getByText } = renderNew()
       fireEvent.press(getByTestId("condition-bluetooth_device"))
-      await findByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")
 
-      expect(getByText("Earbuds")).toBeTruthy()
+      expect(getByText("Pick a device")).toBeTruthy()
       expect(getByText("Pick a device or the profile can't match")).toBeTruthy()
       expect(getByTestId("profile-sentence").props.children).toBe(
         "When connected to a Bluetooth device, track every 5 s, any movement and sync each fix."
       )
       expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(true)
 
-      fireEvent.press(getByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF"))
-      expect(getByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF").props.accessibilityState.checked).toBe(true)
-      expect(getByTestId("profile-sentence").props.children).toBe(
-        'Connected to "My Car", track every 5 s, any movement and sync each fix.'
-      )
-      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
+      fireEvent.press(getByTestId("nav-bluetooth-device"))
+      expect(mockNavigate).toHaveBeenCalledWith("Bluetooth Device", { selected: undefined })
     })
 
     it("saves the picked device's address and name", async () => {
-      const { getByTestId, findByTestId } = renderNew()
+      const { getByTestId, getByText, pickDevice } = renderNew()
       fireEvent.press(getByTestId("condition-bluetooth_device"))
-      fireEvent.press(await findByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF"))
-      fireEvent.press(getByTestId("save-profile-btn"))
 
+      pickDevice({ name: "My Car", address: "AA:BB:CC:DD:EE:FF" })
+      expect(getByText("My Car")).toBeTruthy()
+      expect(getByTestId("profile-sentence").props.children).toBe(
+        'Connected to "My Car", track every 5 s, any movement and sync each fix.'
+      )
+
+      fireEvent.press(getByTestId("save-profile-btn"))
       await waitFor(() =>
         expect(mockCreateProfile).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -380,91 +388,33 @@ describe("ProfileEditorScreen", () => {
       )
     })
 
-    it("asks for the Nearby devices permission before it can list anything", async () => {
-      mockCheckBluetoothPermission.mockResolvedValueOnce(false)
-      const { getByTestId, findByTestId, queryByTestId } = renderNew()
+    it("keeps the pick across a condition round trip and opens the device screen on it", async () => {
+      const { findByText, getByText, getByTestId } = renderEdit(3)
+      expect(await findByText("Old Car")).toBeTruthy()
 
-      fireEvent.press(getByTestId("condition-bluetooth_device"))
-      const allow = await findByTestId("bluetooth-allow")
-      expect(queryByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")).toBeNull()
-      expect(mockGetBondedBluetoothDevices).not.toHaveBeenCalled()
-
-      fireEvent.press(allow)
-      await findByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")
-      expect(mockRequestBluetoothPermission).toHaveBeenCalled()
-      expect(queryByTestId("bluetooth-allow")).toBeNull()
-    })
-
-    it("sends a blocked permission to app settings", async () => {
-      mockCheckBluetoothPermission.mockResolvedValue(false)
-      mockRequestBluetoothPermission.mockResolvedValue("blocked")
-      const { getByTestId, findByTestId, findByText } = renderNew()
-
-      fireEvent.press(getByTestId("condition-bluetooth_device"))
-      fireEvent.press(await findByTestId("bluetooth-allow"))
-      await findByText("Open app settings")
-
-      fireEvent.press(getByTestId("bluetooth-allow"))
-      expect(mockOpenSettings).toHaveBeenCalled()
-    })
-
-    it("says how to pair a device when none is paired", async () => {
-      mockGetBondedBluetoothDevices.mockResolvedValue([])
-      const { getByTestId, findByText } = renderNew()
-
-      fireEvent.press(getByTestId("condition-bluetooth_device"))
-      expect(await findByText("No paired devices. Pair one in Bluetooth settings, then come back.")).toBeTruthy()
-    })
-
-    // null is the bridge's answer while Bluetooth is off.
-    it("shows Bluetooth as off, not the saved device as unpaired", async () => {
-      mockGetBondedBluetoothDevices.mockResolvedValue(null)
-      const { findByText, getByTestId, queryByText } = renderEdit(3)
-
-      expect(await findByText("Bluetooth is off. Turn it on to see your paired devices.")).toBeTruthy()
-      expect(getByTestId("bluetooth-device-00:11:22:33:44:55").props.accessibilityState.checked).toBe(true)
-      expect(queryByText("No longer paired")).toBeNull()
-      expect(queryByText("No paired devices. Pair one in Bluetooth settings, then come back.")).toBeNull()
-    })
-
-    // The shade closes while Bluetooth is still turning on, so the read on focus still finds it off.
-    it("reads the paired devices again after Quick Settings closes", async () => {
-      const { AppState } = require("react-native")
-      mockGetBondedBluetoothDevices.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
-      const { getByTestId, findByText, findByTestId, queryByTestId } = renderNew()
-      fireEvent.press(getByTestId("condition-bluetooth_device"))
-      await findByText("Bluetooth is off. Turn it on to see your paired devices.")
-
-      jest.useFakeTimers()
-      const onFocus = (AppState.addEventListener as jest.Mock).mock.calls
-        .filter((call: unknown[]) => call[0] === "focus")
-        .at(-1)[1]
-      await act(async () => onFocus())
-      expect(queryByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")).toBeNull()
-
-      await act(async () => {
-        jest.advanceTimersByTime(BLUETOOTH_REREAD_MS)
+      fireEvent.press(getByTestId("nav-bluetooth-device"))
+      expect(mockNavigate).toHaveBeenCalledWith("Bluetooth Device", {
+        selected: { address: "00:11:22:33:44:55", name: "Old Car" }
       })
-      jest.useRealTimers()
-      expect(await findByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")).toBeTruthy()
-    })
-
-    it("keeps a stored device that is no longer paired, and the pick across a condition round trip", async () => {
-      const { getByTestId, findByTestId, getByText } = renderEdit(3)
-      const stored = await findByTestId("bluetooth-device-00:11:22:33:44:55")
-      expect(stored.props.accessibilityState.checked).toBe(true)
-      expect(getByText("No longer paired")).toBeTruthy()
 
       fireEvent.press(getByTestId("condition-charging"))
       fireEvent.press(getByTestId("condition-bluetooth_device"))
-      await findByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")
-      expect(getByTestId("bluetooth-device-00:11:22:33:44:55").props.accessibilityState.checked).toBe(true)
+      expect(getByText("Old Car")).toBeTruthy()
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
+    })
+
+    // A setup link or a revoked permission leaves a saved profile that can never match.
+    it("flags a saved device the service cannot see without the Nearby devices permission", async () => {
+      mockCheckBluetoothPermission.mockResolvedValue(false)
+      const { findByText, getByTestId } = renderEdit(3)
+
+      expect(await findByText("Nearby devices not allowed")).toBeTruthy()
       expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
     })
 
     it("clears the stored device when saved under another condition", async () => {
-      const { findByTestId, getByTestId } = renderEdit(3)
-      await findByTestId("bluetooth-device-00:11:22:33:44:55")
+      const { findByText, getByTestId } = renderEdit(3)
+      await findByText("Old Car")
 
       fireEvent.press(getByTestId("condition-charging"))
       fireEvent.press(getByTestId("save-profile-btn"))

@@ -6,10 +6,10 @@
 import React, { forwardRef, useState } from "react"
 import { View, Text, TextInput, Pressable, StyleSheet, StyleProp, ViewStyle } from "react-native"
 import type { TextInputProps, TextInputInstance } from "react-native"
-import { Eye, EyeOff, CircleAlert } from "lucide-react-native"
+import { Eye, EyeOff, CircleAlert, ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space, HIT_SLOP_MD } from "../../constants"
+import { size, space, HIT_SLOP_MD, STATE_LAYER_ALPHA } from "../../constants"
 import { radius } from "@colota/shared"
 import { FieldMessage } from "./FieldMessage"
 
@@ -134,6 +134,44 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
   )
 })
 
+type SelectFieldProps = {
+  label: string
+  value?: string
+  placeholder: string
+  onPress: () => void
+  error?: string
+  style?: StyleProp<ViewStyle>
+  testID?: string
+}
+
+/** TextField's look for a value picked on another screen: the box opens the picker instead of a keyboard. */
+export function SelectField({ label, value, placeholder, onPress, error, style, testID }: SelectFieldProps) {
+  const { colors } = useTheme()
+  const borderWidth = error ? 2 : 0
+
+  return (
+    <View style={style}>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
+      <View style={[styles.selectBox, { borderWidth, borderColor: colors.error, backgroundColor: colors.well }]}>
+        <Pressable
+          testID={testID}
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={[label, value ?? placeholder, error].filter(Boolean).join(", ")}
+          android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+          style={[styles.select, { paddingHorizontal: FIELD_INSET - borderWidth }]}
+        >
+          <Text numberOfLines={1} style={[styles.input, { color: value ? colors.text : colors.textLight }]}>
+            {value ?? placeholder}
+          </Text>
+          <ChevronRight size={size.icon.md} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+      {error ? <FieldMessage variant="error">{error}</FieldMessage> : null}
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   label: {
     fontSize: fontSizes.description,
@@ -162,6 +200,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     ...fonts.medium,
     fontVariant: ["tabular-nums"]
+  },
+  selectBox: {
+    borderRadius: radius.sm,
+    overflow: "hidden"
+  },
+  select: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    minHeight: size.touch
   },
   boxMultiline: {
     alignItems: "flex-start",

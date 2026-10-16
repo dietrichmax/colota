@@ -4,17 +4,13 @@
  */
 
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react"
-import { View, Text, StyleSheet, ScrollView, AppState, Linking } from "react-native"
+import { View, Text, StyleSheet, ScrollView, AppState } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { useTimeout } from "../hooks/useTimeout"
 import { ProfileService } from "../services/ProfileService"
 import NativeLocationService from "../services/NativeLocationService"
-import {
-  checkBluetoothPermission,
-  requestBluetoothPermission,
-  type BluetoothPermissionResult
-} from "../services/LocationServicePermission"
+import { checkBluetoothPermission } from "../services/LocationServicePermission"
 import { showAlert, showConfirm } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType, BluetoothDeviceInfo } from "../types/global"
 import { fontSizes, fonts, lineHeights } from "../styles/typography"
@@ -28,6 +24,7 @@ import {
   NumericInput,
   RadioRow,
   SectionTitle,
+  SelectField,
   SettingRow,
   TextField
 } from "../components"
@@ -37,14 +34,7 @@ import { shortDistanceUnit, inputToMeters, metersToInput, getSpeedUnit, speedToI
 import { formatDuration, syncIntervalLabel } from "../utils/dashboardState"
 import { conditionOf, profileSentence } from "../utils/profileRow"
 import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
-import {
-  BLUETOOTH_REREAD_MS,
-  PROFILE_CONDITIONS,
-  SAVE_SUCCESS_DISPLAY_MS,
-  defaultProfileDelays,
-  size,
-  space
-} from "../constants"
+import { PROFILE_CONDITIONS, SAVE_SUCCESS_DISPLAY_MS, defaultProfileDelays, size, space } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
 import { useTranslation } from "../i18n/useTranslation"
 
@@ -77,11 +67,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   })
   const [saving, setSaving] = useState(false)
   const [currentSsid, setCurrentSsid] = useState("")
-  const [btPermission, setBtPermission] = useState<BluetoothPermissionResult | null>(null)
-  const [pairedDevices, setPairedDevices] = useState<BluetoothDeviceInfo[]>([])
-  const [bluetoothOff, setBluetoothOff] = useState(false)
   // Survives a switch to another condition and back, like the typed network name.
   const [pickedDevice, setPickedDevice] = useState<BluetoothDeviceInfo | null>(null)
+  const [btAllowed, setBtAllowed] = useState(true)
   const [text, setText] = useState({
     interval: String(settings.interval),
     distance: String(metersToInput(settings.distance)),
@@ -93,7 +81,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   })
   const [note, setNote] = useState<{ key: NumericKey; text: string } | null>(null)
   const noteTimer = useTimeout()
-  const bluetoothReread = useTimeout()
 
   // Only fetched while the SSID field is open; the fallback keeps the offer button hidden.
   useEffect(() => {
@@ -112,34 +99,17 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     return () => sub.remove()
   }, [profile.condition.type])
 
-  const refreshPairedDevices = useCallback(async () => {
-    const granted = await checkBluetoothPermission()
-    // A denial already seen stays "blocked", so the button keeps pointing at app settings.
-    setBtPermission((prev) => (granted ? "granted" : prev === "blocked" ? "blocked" : "denied"))
-    const devices = granted ? await NativeLocationService.getBondedBluetoothDevices() : []
-    setBluetoothOff(devices === null)
-    setPairedDevices(devices ?? [])
-  }, [])
-
+  // Without Nearby devices the profile never matches, so the device field says so.
   useEffect(() => {
     if (profile.condition.type !== "bluetooth_device") return
 
-    refreshPairedDevices()
-    // Pairing a device or granting the permission in settings and coming back should list it.
+    const readPermission = () => checkBluetoothPermission().then(setBtAllowed)
+    readPermission()
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") refreshPairedDevices()
+      if (state === "active") readPermission()
     })
-    // Quick Settings opens over the app without pausing it, so only a focus event follows a toggle there.
-    const focusSub = AppState.addEventListener("focus", () => {
-      refreshPairedDevices()
-      bluetoothReread.set(refreshPairedDevices, BLUETOOTH_REREAD_MS)
-    })
-    return () => {
-      sub.remove()
-      focusSub.remove()
-      bluetoothReread.clear()
-    }
-  }, [profile.condition.type, refreshPairedDevices, bluetoothReread])
+    return () => sub.remove()
+  }, [profile.condition.type])
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerTitle: isEditing ? t("profileEditor.titleEdit") : t("profileEditor.titleNew") })
@@ -233,33 +203,22 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const ssidError = isWifiSsid && text.ssid.trim() === "" ? t("profileEditor.wifi.empty") : undefined
   const offerCurrentSsid = currentSsid !== "" && currentSsid.trim().toLowerCase() !== text.ssid.trim().toLowerCase()
 
-  const handleDevice = (device: BluetoothDeviceInfo) => {
+  const handleDevice = useCallback((device: BluetoothDeviceInfo) => {
     setPickedDevice(device)
     setProfile((prev) => ({
       ...prev,
       condition: { ...prev.condition, bluetoothAddress: device.address, bluetoothName: device.name }
     }))
-  }
+  }, [])
+
+  // The device screen hands its pick back through the route; clearing it stops a re-apply.
+  const incomingDevice = route?.params?.bluetoothDevice
+  useEffect(() => {
+    if (!incomingDevice) return
+    handleDevice(incomingDevice)
+    navigation.setParams({ bluetoothDevice: undefined })
+  }, [incomingDevice, handleDevice, navigation])
   const deviceError = isBluetooth && !pickedDevice ? t("profileEditor.bluetooth.empty") : undefined
-  // A picked device that was unpaired since still shows, so the profile never loses it silently.
-  const deviceRows =
-    pickedDevice && !pairedDevices.some((d) => d.address === pickedDevice.address)
-      ? [
-          { ...pickedDevice, unpaired: btPermission === "granted" && !bluetoothOff },
-          ...pairedDevices.map((d) => ({ ...d, unpaired: false }))
-        ]
-      : pairedDevices.map((d) => ({ ...d, unpaired: false }))
-
-  const handleAllowBluetooth = async () => {
-    if (btPermission === "blocked") {
-      Linking.openSettings()
-      return
-    }
-    const result = await requestBluetoothPermission()
-    setBtPermission(result)
-    if (result === "granted") refreshPairedDevices()
-  }
-
   const priorityError =
     text.priority !== "" && parseWholeNumber(text.priority) === null ? t("validation.wholeNumber") : undefined
   const handlePriority = (value: string) => {
@@ -432,46 +391,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                 )}
                 {opt.type === "bluetooth_device" && type === opt.type && (
                   <View style={styles.reveal}>
-                    {btPermission !== null && btPermission !== "granted" && (
-                      <>
-                        <FieldMessage>{t("profileEditor.bluetooth.permission")}</FieldMessage>
-                        <Button
-                          variant="secondary"
-                          title={
-                            btPermission === "blocked"
-                              ? t("profileEditor.bluetooth.openSettings")
-                              : t("profileEditor.bluetooth.allow")
-                          }
-                          testID="bluetooth-allow"
-                          onPress={handleAllowBluetooth}
-                          style={styles.ssidUse}
-                        />
-                      </>
-                    )}
-                    {btPermission === "granted" && bluetoothOff && (
-                      <FieldMessage>{t("profileEditor.bluetooth.off")}</FieldMessage>
-                    )}
-                    {btPermission === "granted" && !bluetoothOff && pairedDevices.length === 0 && (
-                      <FieldMessage>{t("profileEditor.bluetooth.noDevices")}</FieldMessage>
-                    )}
-                    {deviceRows.length > 0 && (
-                      <View accessibilityRole="radiogroup">
-                        {deviceRows.map((device) => (
-                          <RadioRow
-                            key={device.address}
-                            testID={`bluetooth-device-${device.address}`}
-                            label={device.name}
-                            sub={device.unpaired ? t("profileEditor.bluetooth.unpaired") : device.address}
-                            selected={pickedDevice?.address === device.address}
-                            onPress={() => handleDevice({ name: device.name, address: device.address })}
-                          />
-                        ))}
-                      </View>
-                    )}
-                    {deviceError && btPermission === "granted" && pairedDevices.length > 0 ? (
-                      <FieldMessage variant="error">{deviceError}</FieldMessage>
-                    ) : null}
-                    <FieldMessage>{t("profileEditor.bluetooth.hint")}</FieldMessage>
+                    <SelectField
+                      label={t("profileEditor.bluetooth.device")}
+                      testID="nav-bluetooth-device"
+                      value={pickedDevice?.name}
+                      placeholder={t("profileEditor.bluetooth.pick")}
+                      error={deviceError ?? (btAllowed ? undefined : t("profileEditor.bluetooth.permission.title"))}
+                      onPress={() => navigation.navigate("Bluetooth Device", { selected: pickedDevice ?? undefined })}
+                    />
                   </View>
                 )}
               </React.Fragment>

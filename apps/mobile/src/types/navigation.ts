@@ -1,4 +1,4 @@
-import type { ApiTemplateName } from "./global"
+import type { ApiTemplateName, BluetoothDeviceInfo } from "./global"
 /**
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
@@ -29,7 +29,8 @@ export type RootStackParamList = {
   "Auto-Export": undefined
   "Data Management": undefined
   "Tracking Profiles": undefined
-  "Profile Editor": { profileId?: number } | undefined
+  "Profile Editor": { profileId?: number; bluetoothDevice?: BluetoothDeviceInfo } | undefined
+  "Bluetooth Device": { selected?: BluetoothDeviceInfo } | undefined
   "About Colota": undefined
   "Setup Import": undefined
   "Share Setup": undefined

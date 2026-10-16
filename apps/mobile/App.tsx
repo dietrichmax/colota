@@ -38,6 +38,7 @@ import {
   AboutScreen,
   TrackingProfilesScreen,
   ProfileEditorScreen,
+  BluetoothDeviceScreen,
   SetupImportScreen,
   ShareSetupScreen,
   TripDetailScreen,
@@ -141,6 +142,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     name: "Profile Editor",
     component: ProfileEditorScreen,
     titleKey: "screen.profileEditor"
+  },
+  {
+    name: "Bluetooth Device",
+    component: BluetoothDeviceScreen,
+    titleKey: "screen.bluetoothDevice"
   },
   {
     name: "About Colota",

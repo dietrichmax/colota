@@ -7,7 +7,7 @@ jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
 
-import { TextField } from "../TextField"
+import { TextField, SelectField } from "../TextField"
 
 const flat = (el: any) => StyleSheet.flatten(el.props.style)
 
@@ -109,5 +109,40 @@ describe("TextField", () => {
 
     expect(flat(getByTestId("server-input-box")).backgroundColor).toBe(lightColors.well)
     expect(flat(getByTestId("server-input-box")).backgroundColor).not.toBe(lightColors.background)
+  })
+})
+
+describe("SelectField", () => {
+  it("shows the picked value, or the placeholder until there is one, and opens the picker", () => {
+    const onPress = jest.fn()
+    const { getByText, getByTestId, rerender } = render(
+      <SelectField label="Device" placeholder="Pick a device" onPress={onPress} testID="device" />
+    )
+    expect(getByText("Pick a device")).toBeTruthy()
+
+    rerender(
+      <SelectField label="Device" value="My Car" placeholder="Pick a device" onPress={onPress} testID="device" />
+    )
+    expect(getByText("My Car")).toBeTruthy()
+
+    fireEvent.press(getByTestId("device"))
+    expect(onPress).toHaveBeenCalled()
+  })
+
+  // Same rule as TextField: the ring marks the error and the padding gives its width back.
+  it("grows the error ring without moving the value and names the error to a screen reader", () => {
+    const { getByTestId, getByText } = render(
+      <SelectField
+        label="Device"
+        placeholder="Pick a device"
+        error="Pick a device first"
+        onPress={() => {}}
+        testID="device"
+      />
+    )
+
+    expect(flat(getByTestId("device")).paddingHorizontal + 2).toBe(15)
+    expect(getByText("Pick a device first")).toBeTruthy()
+    expect(getByTestId("device").props.accessibilityLabel).toBe("Device, Pick a device, Pick a device first")
   })
 })
