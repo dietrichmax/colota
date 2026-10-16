@@ -17,7 +17,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 ## Tips
 
 1. **Increase GPS interval** - 5s to 30s saves significant battery
-2. **Use balanced positioning accuracy** - switch **Positioning accuracy** (Tracking & sync) to **Balanced** to trade fix precision for battery; leave it on **High** when accuracy matters
+2. **Lower the positioning accuracy** - switch **Positioning accuracy** (Tracking & sync) to **Lower accuracy** to trade fix precision for battery; leave it on **High accuracy** when accuracy matters
 3. **Enable accuracy filtering** - Reject poor GPS fixes to avoid unnecessary processing
 4. **Use batch sync** instead of instant - Reduces network usage and wake-ups
 5. **Create geofences** for home/work - Stops recording locations in known zones. Enable **Pause when on WiFi** to also stop GPS entirely when connected to your home network, or **Pause when motionless** to stop GPS after sitting still for a set time

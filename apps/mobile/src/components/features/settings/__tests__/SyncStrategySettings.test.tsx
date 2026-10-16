@@ -519,7 +519,7 @@ describe("SyncStrategySettings", () => {
   })
 
   describe("positioning accuracy", () => {
-    it("offers High and Balanced, defaulting to High", () => {
+    it("offers High accuracy and Lower accuracy, defaulting to High accuracy", () => {
       const { getByTestId, getByText } = renderComponent()
 
       expect(getByText("Positioning accuracy")).toBeTruthy()
@@ -532,54 +532,13 @@ describe("SyncStrategySettings", () => {
       ).toBeTruthy()
     })
 
-    it("saves Balanced immediately, like the other recording controls", () => {
+    it("saves Lower accuracy immediately, like the other recording controls", () => {
       const { getByTestId } = renderComponent({ accuracyMode: "high" })
 
       fireEvent.press(getByTestId("accuracy-mode-balanced"))
 
       expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ accuracyMode: "balanced" }))
       expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyMode: "balanced" }))
-    })
-
-    it("warns that a stricter accuracy filter will drop Balanced fixes, and offers a usable threshold", () => {
-      const { getByTestId, getByText } = renderComponent({
-        accuracyMode: "balanced",
-        filterInaccurateLocations: true,
-        accuracyThreshold: 30
-      })
-
-      expect(getByTestId("accuracy-mode-filter-warning")).toBeTruthy()
-      expect(
-        getByText("Balanced fixes can be coarser than 100 m. The accuracy filter is stricter and may drop most points.")
-      ).toBeTruthy()
-
-      fireEvent.press(getByTestId("accuracy-mode-filter-fix"))
-      expect(mockOnSettingsChange).toHaveBeenCalledWith(
-        expect.objectContaining({ accuracyThreshold: 100, accuracyMode: "balanced" })
-      )
-      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 100 }))
-    })
-
-    it("stays quiet unless Balanced meets a stricter filter", () => {
-      expect(
-        renderComponent({
-          accuracyMode: "balanced",
-          filterInaccurateLocations: true,
-          accuracyThreshold: 100
-        }).queryByTestId("accuracy-mode-filter-warning")
-      ).toBeNull()
-      expect(
-        renderComponent({
-          accuracyMode: "balanced",
-          filterInaccurateLocations: false,
-          accuracyThreshold: 30
-        }).queryByTestId("accuracy-mode-filter-warning")
-      ).toBeNull()
-      expect(
-        renderComponent({ accuracyMode: "high", filterInaccurateLocations: true, accuracyThreshold: 30 }).queryByTestId(
-          "accuracy-mode-filter-warning"
-        )
-      ).toBeNull()
     })
   })
 

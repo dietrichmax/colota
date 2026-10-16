@@ -488,8 +488,8 @@ export default function DeepLinkGenerator() {
             <label className={styles.label}>Positioning accuracy</label>
             <select className={styles.select} value={accuracyMode} onChange={(e) => setAccuracyMode(e.target.value)}>
               <option value="">-- not set --</option>
-              <option value="high">High</option>
-              <option value="balanced">Balanced</option>
+              <option value="high">High accuracy</option>
+              <option value="balanced">Lower accuracy</option>
             </select>
           </div>
         </div>

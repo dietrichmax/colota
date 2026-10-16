@@ -42,7 +42,7 @@ To ensure modifications stay open source, especially server-side components.
 
 3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/tracking-settings#accuracy-filter) helps remove poor fixes.
 
-Set [Positioning accuracy](/docs/configuration/tracking-settings#positioning-accuracy) to **Balanced** to trade fix precision for battery.
+Set [Positioning accuracy](/docs/configuration/tracking-settings#positioning-accuracy) to **Lower accuracy** to trade fix precision for battery.
 
 ### Can I use maps without internet?
 

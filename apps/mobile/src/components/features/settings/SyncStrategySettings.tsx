@@ -54,12 +54,6 @@ type NumericKey = "interval" | "distance" | "accuracyThreshold"
 
 const NUMERIC_MIN: Record<NumericKey, number> = { interval: 1, distance: 0, accuracyThreshold: 1 }
 
-/**
- * The accuracy options name a power/accuracy tradeoff, not a distance, so Balanced has no guaranteed
- * metre figure; 100 m is the conservative floor below which a strict filter drops most Balanced points.
- */
-const BALANCED_FIX_ACCURACY_M = 100
-
 const ACCURACY_MODE_OPTIONS: { value: AccuracyMode; labelKey: TranslationKey; subKey: TranslationKey }[] = [
   { value: "high", labelKey: "trackingSync.accuracy.high", subKey: "trackingSync.accuracy.high.sub" },
   { value: "balanced", labelKey: "trackingSync.accuracy.balanced", subKey: "trackingSync.accuracy.balanced.sub" }
@@ -227,13 +221,6 @@ export function SyncStrategySettings({
   const filterHint = settings.filterInaccurateLocations
     ? t("trackingSync.filter.on", { threshold: thresholdShown })
     : t("trackingSync.filter.off", { threshold: thresholdShown })
-
-  // Balanced with a stricter filter drops nearly every fix (#951); warn and offer a usable threshold.
-  const balancedFloorShown = `${metersToInput(BALANCED_FIX_ACCURACY_M)} ${unit}`
-  const showBalancedFilterWarning =
-    settings.accuracyMode === "balanced" &&
-    settings.filterInaccurateLocations &&
-    settings.accuracyThreshold < BALANCED_FIX_ACCURACY_M
 
   const ssidTyped = settings.syncSsid
   const offerCurrentSsid = currentSsid !== "" && currentSsid.toLowerCase() !== ssidTyped.toLowerCase()
@@ -426,26 +413,7 @@ export function SyncStrategySettings({
             />
           ))}
         </View>
-        <FieldMessage style={!showBalancedFilterWarning ? styles.hintTail : undefined}>
-          {t("trackingSync.accuracy.hint")}
-        </FieldMessage>
-        {showBalancedFilterWarning && (
-          <View testID="accuracy-mode-filter-warning" style={styles.filterField}>
-            <FieldMessage variant="warning">
-              {t("trackingSync.accuracy.filterWarning", { threshold: balancedFloorShown })}
-            </FieldMessage>
-            <Button
-              variant="secondary"
-              testID="accuracy-mode-filter-fix"
-              title={t("trackingSync.accuracy.filterFix", { threshold: balancedFloorShown })}
-              onPress={() => {
-                const next = { ...settings, accuracyThreshold: BALANCED_FIX_ACCURACY_M }
-                onSettingsChange(next)
-                onImmediateSave(next)
-              }}
-            />
-          </View>
-        )}
+        <FieldMessage style={styles.hintTail}>{t("trackingSync.accuracy.hint")}</FieldMessage>
       </Card>
 
       <SectionTitle style={styles.groupTop}>{t("trackingSync.section.accuracy")}</SectionTitle>
