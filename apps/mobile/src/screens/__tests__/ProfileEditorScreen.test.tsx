@@ -1,7 +1,7 @@
 import React from "react"
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import { TrackingProfile } from "../../types/global"
-import { SAVE_SUCCESS_DISPLAY_MS } from "../../constants"
+import { BLUETOOTH_REREAD_MS, SAVE_SUCCESS_DISPLAY_MS } from "../../constants"
 
 const mockProfiles: TrackingProfile[] = [
   {
@@ -414,6 +414,39 @@ describe("ProfileEditorScreen", () => {
 
       fireEvent.press(getByTestId("condition-bluetooth_device"))
       expect(await findByText("No paired devices. Pair one in Bluetooth settings, then come back.")).toBeTruthy()
+    })
+
+    // null is the bridge's answer while Bluetooth is off.
+    it("shows Bluetooth as off, not the saved device as unpaired", async () => {
+      mockGetBondedBluetoothDevices.mockResolvedValue(null)
+      const { findByText, getByTestId, queryByText } = renderEdit(3)
+
+      expect(await findByText("Bluetooth is off. Turn it on to see your paired devices.")).toBeTruthy()
+      expect(getByTestId("bluetooth-device-00:11:22:33:44:55").props.accessibilityState.checked).toBe(true)
+      expect(queryByText("No longer paired")).toBeNull()
+      expect(queryByText("No paired devices. Pair one in Bluetooth settings, then come back.")).toBeNull()
+    })
+
+    // The shade closes while Bluetooth is still turning on, so the read on focus still finds it off.
+    it("reads the paired devices again after Quick Settings closes", async () => {
+      const { AppState } = require("react-native")
+      mockGetBondedBluetoothDevices.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
+      const { getByTestId, findByText, findByTestId, queryByTestId } = renderNew()
+      fireEvent.press(getByTestId("condition-bluetooth_device"))
+      await findByText("Bluetooth is off. Turn it on to see your paired devices.")
+
+      jest.useFakeTimers()
+      const onFocus = (AppState.addEventListener as jest.Mock).mock.calls
+        .filter((call: unknown[]) => call[0] === "focus")
+        .at(-1)[1]
+      await act(async () => onFocus())
+      expect(queryByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")).toBeNull()
+
+      await act(async () => {
+        jest.advanceTimersByTime(BLUETOOTH_REREAD_MS)
+      })
+      jest.useRealTimers()
+      expect(await findByTestId("bluetooth-device-AA:BB:CC:DD:EE:FF")).toBeTruthy()
     })
 
     it("keeps a stored device that is no longer paired, and the pick across a condition round trip", async () => {

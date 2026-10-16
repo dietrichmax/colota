@@ -666,11 +666,11 @@ class NativeLocationService {
   }
 
   /**
-   * Returns the paired Bluetooth devices, or an empty list without the Nearby devices permission.
+   * Returns the paired Bluetooth devices, null while Bluetooth is off, or an empty list without the Nearby devices permission.
    */
-  static async getBondedBluetoothDevices(): Promise<BluetoothDeviceInfo[]> {
+  static async getBondedBluetoothDevices(): Promise<BluetoothDeviceInfo[] | null> {
     this.ensureModule()
-    return this.safeExecute(
+    return this.safeExecute<BluetoothDeviceInfo[] | null>(
       () => LocationServiceModule.getBondedBluetoothDevices(),
       [],
       "getBondedBluetoothDevices failed"

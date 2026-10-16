@@ -88,7 +88,8 @@ jest.mock("react-native", () => ({
       getProfiles: jest.fn().mockResolvedValue([]),
       createProfile: jest.fn().mockResolvedValue(3),
       updateProfile: jest.fn().mockResolvedValue(true),
-      deleteProfile: jest.fn().mockResolvedValue(true)
+      deleteProfile: jest.fn().mockResolvedValue(true),
+      getBondedBluetoothDevices: jest.fn().mockResolvedValue([])
     },
     BuildConfigModule: {
       VERSION_NAME: "1.0.0",
@@ -609,6 +610,18 @@ describe("NativeLocationService", () => {
       await NativeLocationService.updateProfile({ id: 1, enabled: false })
 
       expect(nativeMock.updateProfile.mock.calls[0][0]).not.toHaveProperty("wifiSsid")
+    })
+  })
+
+  describe("getBondedBluetoothDevices", () => {
+    it("passes null through, so the editor can tell Bluetooth off from no paired devices", async () => {
+      nativeMock.getBondedBluetoothDevices.mockResolvedValueOnce(null)
+      expect(await NativeLocationService.getBondedBluetoothDevices()).toBeNull()
+    })
+
+    it("returns an empty list when the native call fails", async () => {
+      nativeMock.getBondedBluetoothDevices.mockRejectedValueOnce(new Error("Native error"))
+      expect(await NativeLocationService.getBondedBluetoothDevices()).toEqual([])
     })
   })
 

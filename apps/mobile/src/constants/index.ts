@@ -17,6 +17,8 @@ export const RETENTION_PREVIEW_DEBOUNCE_MS = 300
 
 /** The log file grows off-thread, so the size is read once after the toggle settles. */
 export const LOG_SIZE_SETTLE_MS = 2000
+/** Quick Settings often closes before Bluetooth has turned on, so the paired list is read again after this. */
+export const BLUETOOTH_REREAD_MS = 2000
 
 export const LOG_FILTER_DEBOUNCE_MS = 200
 export const RETENTION_PRESET_DAYS = [30, 90, 365]

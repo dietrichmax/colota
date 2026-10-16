@@ -21,6 +21,8 @@ These are the permissions Colota uses and why. None are related to analytics, ad
 | Boot Completed                 | Yes         | Auto-restart tracking after device reboot                             |
 | Notifications                  | Optional    | Show the tracking notification (Android 13+)                          |
 | Local Network Access           | Android 17+ | Access local network servers (self-hosted)                            |
+| Nearby Devices                 | Optional    | Bluetooth device condition in tracking profiles (Android 12+)         |
+| Bluetooth                      | Optional    | Bluetooth device condition on Android 11 and lower                    |
 | Battery Optimization Exemption | Optional    | Prevent Android from killing the tracking service                     |
 | Wake Lock                      | Yes         | Briefly wake the CPU for the stationary heartbeat and background jobs |
 
@@ -36,6 +38,8 @@ When you start tracking for the first time, Colota requests permissions in seque
 Only the two location permissions are required. The app does not request anything until you tap "Start Tracking".
 
 The **Local Network Permission** (Android 17+) is not part of this sequence. It is requested separately when you use **Test connection** with a local/private server endpoint.
+
+The **Nearby Devices** permission (Android 12+) is not part of the sequence either. The profile editor asks for it when you pick the **Bluetooth device** condition.
 
 ## Detailed Explanations
 
@@ -98,6 +102,15 @@ Starting with Android 17, apps need this permission to connect to devices on the
 On some Android 16 devices, local network access may be enforced early via security patches. In this case, Android uses the **Nearby Wi-Fi Devices** (`NEARBY_WIFI_DEVICES`) permission instead. If your local server is unreachable on Android 16, go to **Android Settings > Apps > Colota > Permissions** and enable **Nearby devices** manually.
 
 :::
+
+### Nearby Devices
+
+```
+android.permission.BLUETOOTH_CONNECT
+android.permission.BLUETOOTH
+```
+
+Only the **Bluetooth device** condition in tracking profiles uses it. On Android 12 and later, **Nearby devices** (`BLUETOOTH_CONNECT`) lets Colota list your paired devices and see when one connects or disconnects. Colota does not scan for devices or connect to any. On Android 11 and lower the older `BLUETOOTH` permission does the same and is granted at install. Without it the condition never matches.
 
 ### Battery Optimization
 

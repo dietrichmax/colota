@@ -5,6 +5,9 @@
 
 package com.Colota.bridge
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -786,8 +789,56 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
+    // getBondedBluetoothDevices
+    // ========================================================================
+
+    @Test
+    fun `getBondedBluetoothDevices resolves null while Bluetooth is off, since the paired list reads empty then`() {
+        every { Arguments.createArray() } answers { JavaOnlyArray() }
+        stubBluetooth(enabled = false, bonded = setOf(mockBluetoothDevice("Car", "aa:bb:cc:dd:ee:ff")))
+        val promise = mockk<Promise>(relaxed = true)
+
+        LocationServiceModule(mockContext).getBondedBluetoothDevices(promise)
+
+        verify { promise.resolve(null) }
+    }
+
+    @Test
+    fun `getBondedBluetoothDevices lists the paired devices by name with the address uppercased`() {
+        every { Arguments.createArray() } answers { JavaOnlyArray() }
+        stubBluetooth(enabled = true, bonded = setOf(mockBluetoothDevice("Car", "aa:bb:cc:dd:ee:ff")))
+        val promise = mockk<Promise>(relaxed = true)
+
+        LocationServiceModule(mockContext).getBondedBluetoothDevices(promise)
+
+        verify {
+            promise.resolve(match {
+                val rows = it as JavaOnlyArray
+                rows.size() == 1 &&
+                    rows.getMap(0)?.getString("name") == "Car" &&
+                    rows.getMap(0)?.getString("address") == "AA:BB:CC:DD:EE:FF"
+            })
+        }
+    }
+
+    // ========================================================================
     // Helpers
     // ========================================================================
+
+    private fun stubBluetooth(enabled: Boolean, bonded: Set<BluetoothDevice>) {
+        val btAdapter = mockk<BluetoothAdapter> {
+            every { isEnabled } returns enabled
+            every { bondedDevices } returns bonded
+        }
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockk<BluetoothManager> {
+            every { adapter } returns btAdapter
+        }
+    }
+
+    private fun mockBluetoothDevice(name: String, address: String) = mockk<BluetoothDevice> {
+        every { this@mockk.name } returns name
+        every { this@mockk.address } returns address
+    }
 
     private fun createModule(): LocationServiceModule {
         val unsafeClass = Class.forName("sun.misc.Unsafe")

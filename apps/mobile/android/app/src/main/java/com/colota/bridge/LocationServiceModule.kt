@@ -759,13 +759,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private fun ReadableMap.bluetoothAddressOrNull(): String? =
         getStringOrNull("bluetoothAddress")?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
 
-    /** Resolves an empty list without the Nearby devices permission; the editor asks for it first. */
+    /** Resolves null while Bluetooth is off, since the paired list reads empty then, and an empty list without the Nearby devices permission. */
     @SuppressLint("MissingPermission")
     @ReactMethod
     fun getBondedBluetoothDevices(promise: Promise) {
         val array = Arguments.createArray()
         try {
             val adapter = (reactApplicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+            if (adapter != null && !adapter.isEnabled) {
+                promise.resolve(null)
+                return
+            }
             adapter?.bondedDevices.orEmpty()
                 .map { device ->
                     val alias = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) device.alias else null

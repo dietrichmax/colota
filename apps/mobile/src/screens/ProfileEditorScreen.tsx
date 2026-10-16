@@ -38,6 +38,7 @@ import { formatDuration, syncIntervalLabel } from "../utils/dashboardState"
 import { conditionOf, profileSentence } from "../utils/profileRow"
 import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import {
+  BLUETOOTH_REREAD_MS,
   PROFILE_CONDITIONS,
   SAVE_SUCCESS_DISPLAY_MS,
   defaultProfileDelays,
@@ -78,6 +79,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const [currentSsid, setCurrentSsid] = useState("")
   const [btPermission, setBtPermission] = useState<BluetoothPermissionResult | null>(null)
   const [pairedDevices, setPairedDevices] = useState<BluetoothDeviceInfo[]>([])
+  const [bluetoothOff, setBluetoothOff] = useState(false)
   // Survives a switch to another condition and back, like the typed network name.
   const [pickedDevice, setPickedDevice] = useState<BluetoothDeviceInfo | null>(null)
   const [text, setText] = useState({
@@ -91,6 +93,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   })
   const [note, setNote] = useState<{ key: NumericKey; text: string } | null>(null)
   const noteTimer = useTimeout()
+  const bluetoothReread = useTimeout()
 
   // Only fetched while the SSID field is open; the fallback keeps the offer button hidden.
   useEffect(() => {
@@ -113,7 +116,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     const granted = await checkBluetoothPermission()
     // A denial already seen stays "blocked", so the button keeps pointing at app settings.
     setBtPermission((prev) => (granted ? "granted" : prev === "blocked" ? "blocked" : "denied"))
-    setPairedDevices(granted ? await NativeLocationService.getBondedBluetoothDevices() : [])
+    const devices = granted ? await NativeLocationService.getBondedBluetoothDevices() : []
+    setBluetoothOff(devices === null)
+    setPairedDevices(devices ?? [])
   }, [])
 
   useEffect(() => {
@@ -124,8 +129,17 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") refreshPairedDevices()
     })
-    return () => sub.remove()
-  }, [profile.condition.type, refreshPairedDevices])
+    // Quick Settings opens over the app without pausing it, so only a focus event follows a toggle there.
+    const focusSub = AppState.addEventListener("focus", () => {
+      refreshPairedDevices()
+      bluetoothReread.set(refreshPairedDevices, BLUETOOTH_REREAD_MS)
+    })
+    return () => {
+      sub.remove()
+      focusSub.remove()
+      bluetoothReread.clear()
+    }
+  }, [profile.condition.type, refreshPairedDevices, bluetoothReread])
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerTitle: isEditing ? t("profileEditor.titleEdit") : t("profileEditor.titleNew") })
@@ -231,7 +245,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const deviceRows =
     pickedDevice && !pairedDevices.some((d) => d.address === pickedDevice.address)
       ? [
-          { ...pickedDevice, unpaired: btPermission === "granted" },
+          { ...pickedDevice, unpaired: btPermission === "granted" && !bluetoothOff },
           ...pairedDevices.map((d) => ({ ...d, unpaired: false }))
         ]
       : pairedDevices.map((d) => ({ ...d, unpaired: false }))
@@ -434,7 +448,10 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                         />
                       </>
                     )}
-                    {btPermission === "granted" && pairedDevices.length === 0 && (
+                    {btPermission === "granted" && bluetoothOff && (
+                      <FieldMessage>{t("profileEditor.bluetooth.off")}</FieldMessage>
+                    )}
+                    {btPermission === "granted" && !bluetoothOff && pairedDevices.length === 0 && (
                       <FieldMessage>{t("profileEditor.bluetooth.noDevices")}</FieldMessage>
                     )}
                     {deviceRows.length > 0 && (
