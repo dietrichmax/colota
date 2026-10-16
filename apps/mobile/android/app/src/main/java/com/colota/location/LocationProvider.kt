@@ -50,7 +50,7 @@ interface LocationProvider {
     /**
      * Actively acquire one fresh fix, forbidding cached locations.
      *
-     * Always requested at High accuracy, independent of the configured stream mode (#951): this one-shot
+     * Always requested at High accuracy, independent of the configured stream mode: this one-shot
      * probe drives pause-zone exit, the pause watchdog and the stationary heartbeat, and a network-only
      * fix could falsely exit a geofence. Best-effort on the FOSS raw-GPS path below Android 12, where the
      * compat API takes no quality hint.

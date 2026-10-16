@@ -110,7 +110,7 @@ export type HttpMethod = "POST" | "GET"
 
 export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
 
-/** Positioning accuracy of the continuous location stream (#951). */
+/** Positioning accuracy of the continuous location stream. */
 export type AccuracyMode = "high" | "balanced"
 
 export type ApiTemplateName =

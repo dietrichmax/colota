@@ -6,13 +6,12 @@
 package com.Colota.location
 
 /**
- * Positioning accuracy of the continuous location stream (#951).
+ * Positioning accuracy of the continuous location stream.
  *
- * [HIGH] preserves the historical behaviour (the provider may keep GNSS engaged). [BALANCED]
+ * [HIGH] lets the provider keep GNSS engaged. [BALANCED]
  * trades precision for battery by letting the provider prefer network / lower-power fixes.
  *
- * There is deliberately no `LOW_POWER` mode: it is cell-tower, city-level (~10 km) and would
- * reproduce the zigzag failure the maintainer reverted (#215).
+ * There is deliberately no `LOW_POWER` mode: its cell-tower, city-level fixes (~10 km) zigzag the track.
  */
 enum class LocationAccuracy(val wireName: String) {
     HIGH("high"),

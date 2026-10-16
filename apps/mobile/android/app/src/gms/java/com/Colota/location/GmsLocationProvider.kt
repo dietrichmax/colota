@@ -78,7 +78,7 @@ class GmsLocationProvider(context: Context) : LocationProvider {
     }
 
     override fun getCurrentLocation(timeoutMs: Long, onResult: (Location?) -> Unit) {
-        // Intentionally always High accuracy (#951), regardless of the configured stream mode: this
+        // Intentionally always High accuracy, regardless of the configured stream mode: this
         // one-shot probe decides pause-zone exit, the watchdog and the stationary heartbeat.
         // setMaxUpdateAgeMillis(0) forbids the cached fix, forcing a real GNSS acquisition.
         val request = CurrentLocationRequest.Builder()

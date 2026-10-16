@@ -48,7 +48,7 @@ class ProfileManager(
     @Volatile var defaultSyncInterval: Int = 0
 
     // Global positioning accuracy, written by the service on config load; read by
-    // evaluateStationaryState() so a non-High stream does not treat a speed-less fix as stillness (#951).
+    // evaluateStationaryState() so a non-High stream does not treat a speed-less fix as stillness.
     @Volatile var defaultAccuracyMode: LocationAccuracy = LocationAccuracy.HIGH
 
     // @Volatile: getActiveProfileName() reads it without the lock.
@@ -383,11 +383,11 @@ class ProfileManager(
         val speed = if (location.hasSpeed()) {
             location.speed
         } else if (defaultAccuracyMode == LocationAccuracy.HIGH) {
-            // High mode has always read an absent speed as stillness: on this path GNSS fixes carry it.
+            // Under High, GNSS fixes carry speed, so an absent one reads as stillness.
             0f
         } else {
-            // Balanced hands us speed-less network fixes, and a missing speed is not proof of stillness
-            // (#951). A derived speed from `applySpeedFallback()` sets `hasSpeed()` first, so only a
+            // Balanced hands us speed-less network fixes, and a missing speed is not proof of stillness.
+            // A derived speed from `applySpeedFallback()` sets `hasSpeed()` first, so only a
             // genuinely speed-less fix reaches this branch.
             return
         }
