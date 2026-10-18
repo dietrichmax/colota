@@ -144,6 +144,8 @@ class LocationForegroundServiceTest {
         unmockkObject(GeofenceHeartbeatScheduler)
         unmockkObject(TrackingWatchdogScheduler)
         unmockkStatic(android.os.Looper::class)
+        // A process-wide static: a start in one test would leave it true for the next.
+        LocationForegroundService::class.java.getDeclaredField("isStarted").apply { isAccessible = true }.setBoolean(null, false)
     }
 
     private fun injectDependencies() {
@@ -3617,6 +3619,52 @@ class LocationForegroundServiceTest {
         advanceUntilIdle()
 
         verify { notificationHelper.buildForegroundNotification(match { it.queuedCount == 7 }) }
+    }
+
+    @Test
+    fun `a start marks the instance started`() = runServiceTest {
+        makeCold()
+        assertFalse(LocationForegroundService.isStarted)
+
+        service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+
+        assertTrue(LocationForegroundService.isStarted)
+    }
+
+    @Test
+    fun `onDestroy clears the started flag`() = runServiceTest {
+        makeCold()
+        service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+
+        invokeOnDestroy()
+
+        assertFalse(LocationForegroundService.isStarted)
+    }
+
+    @Test
+    fun `a refused start leaves the instance not started`() = runServiceTest {
+        makeCold()
+        refuseStartForeground()
+
+        service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+
+        assertFalse(LocationForegroundService.isStarted)
+    }
+
+    @Test
+    fun `onTaskRemoved logs whether the instance was ever started`() = runServiceTest {
+        service.onTaskRemoved(null)
+        verify { AppLogger.d(any(), "Task removed (started=false)") }
+
+        makeCold()
+        service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+        service.onTaskRemoved(null)
+
+        verify { AppLogger.d(any(), "Task removed (started=true)") }
     }
 
     /** Without this, the tracking notification sits over a service that records nothing. */

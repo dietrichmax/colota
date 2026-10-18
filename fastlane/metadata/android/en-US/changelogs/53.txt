@@ -2,3 +2,4 @@
 - Less memory used when opening a day with many points and when sending a large upload backlog
 - Fixed a trip's average speed and its speed and elevation charts being skewed towards stretches recorded with more points
 - Positioning accuracy setting in Tracking & sync: High accuracy (default) or Lower accuracy to save battery
+- Fixed tracking recording nothing for hours after Android recreated it

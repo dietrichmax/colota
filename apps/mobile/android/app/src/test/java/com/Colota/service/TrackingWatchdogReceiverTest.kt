@@ -87,10 +87,33 @@ class TrackingWatchdogReceiverTest {
         mockkObject(LocationForegroundService.Companion)
         try {
             every { LocationForegroundService.isRunning } returns true
+            every { LocationForegroundService.isStarted } returns true
 
             fire()
 
             assertNull("A healthy service must not be restarted", shadowOf(app).nextStartedService)
+            assertEquals(1, shadowOf(alarmManager).scheduledAlarms.size)
+        } finally {
+            unmockkObject(LocationForegroundService.Companion)
+        }
+    }
+
+    /** An instance Android created and never started has no stream and no sync. */
+    @Test
+    fun `starts a service that was created but never started`() {
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+
+        mockkObject(LocationForegroundService.Companion)
+        try {
+            every { LocationForegroundService.isRunning } returns true
+            every { LocationForegroundService.isStarted } returns false
+
+            fire()
+
+            val started = shadowOf(app).nextStartedService
+            assertNotNull("An instance that never started records nothing", started)
+            assertEquals(LocationForegroundService::class.java.name, started.component?.className)
+            verify { AppLogger.w(any(), "Service was created but never started - starting it") }
             assertEquals(1, shadowOf(alarmManager).scheduledAlarms.size)
         } finally {
             unmockkObject(LocationForegroundService.Companion)
@@ -118,6 +141,7 @@ class TrackingWatchdogReceiverTest {
         mockkObject(LocationForegroundService.Companion)
         try {
             every { LocationForegroundService.isRunning } returns false
+            every { LocationForegroundService.isStarted } returns false
             every {
                 LocationForegroundService.startTracking(any(), any(), any())
             } throws IllegalStateException("FGS start not allowed from background")
@@ -144,6 +168,7 @@ class TrackingWatchdogReceiverTest {
         mockkObject(LocationForegroundService.Companion)
         try {
             every { LocationForegroundService.isRunning } returns false
+            every { LocationForegroundService.isStarted } returns false
             every {
                 LocationForegroundService.startTracking(any(), any(), any())
             } throws IllegalStateException("FGS start not allowed from background")

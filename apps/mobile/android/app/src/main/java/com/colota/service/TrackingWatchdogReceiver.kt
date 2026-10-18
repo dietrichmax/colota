@@ -36,7 +36,7 @@ class TrackingWatchdogReceiver : BroadcastReceiver() {
                 return
             }
 
-            if (LocationForegroundService.isRunning) {
+            if (LocationForegroundService.isStarted) {
                 AppLogger.d(TAG, "Service is running")
                 TrackingWatchdogScheduler.schedule(context)
                 return
@@ -51,7 +51,11 @@ class TrackingWatchdogReceiver : BroadcastReceiver() {
                 return
             }
 
-            AppLogger.w(TAG, "Tracking wanted but the service is not running - restarting")
+            if (LocationForegroundService.isRunning) {
+                AppLogger.w(TAG, "Service was created but never started - starting it")
+            } else {
+                AppLogger.w(TAG, "Tracking wanted but the service is not running - restarting")
+            }
             try {
                 LocationForegroundService.startTracking(context, dbHelper, "Restarted by watchdog")
             } catch (e: Exception) {

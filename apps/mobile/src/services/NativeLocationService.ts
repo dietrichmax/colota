@@ -125,7 +125,7 @@ class NativeLocationService {
   }
 
   /**
-   * Whether a native service instance is alive right now.
+   * Whether a started native service instance is alive right now.
    * Null means the answer is unknown - callers must not read that as "dead".
    */
   static async isServiceRunning(): Promise<boolean | null> {

@@ -714,6 +714,7 @@ class LocationServiceModuleTest {
     fun `startService records that it is reviving a service which died while tracking was on`() {
         val (module, dbHelper) = createModuleWithDeps()
         every { LocationForegroundService.isRunning } returns false
+        every { LocationForegroundService.isStarted } returns false
         every { dbHelper.getSetting("tracking_enabled", "false") } returns "true"
         mockkConstructor(Intent::class)
         try {
@@ -726,9 +727,41 @@ class LocationServiceModuleTest {
     }
 
     @Test
+    fun `startService records that it is reviving a service which was created but never started`() {
+        val (module, dbHelper) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns true
+        every { LocationForegroundService.isStarted } returns false
+        every { dbHelper.getSetting("tracking_enabled", "false") } returns "true"
+        mockkConstructor(Intent::class)
+        try {
+            module.startService(JavaOnlyMap(), mockk(relaxed = true))
+
+            verify { AppLogger.w(any(), "Starting a service that died while tracking was on") }
+        } finally {
+            unmockkConstructor(Intent::class)
+        }
+    }
+
+    @Test
+    fun `startService stays quiet when restarting a started service`() {
+        val (module, dbHelper) = createModuleWithDeps()
+        every { LocationForegroundService.isStarted } returns true
+        every { dbHelper.getSetting("tracking_enabled", "false") } returns "true"
+        mockkConstructor(Intent::class)
+        try {
+            module.startService(JavaOnlyMap(), mockk(relaxed = true))
+
+            verify(exactly = 0) { AppLogger.w(any(), "Starting a service that died while tracking was on") }
+        } finally {
+            unmockkConstructor(Intent::class)
+        }
+    }
+
+    @Test
     fun `startService stays quiet on an ordinary user start`() {
         val (module, dbHelper) = createModuleWithDeps()
         every { LocationForegroundService.isRunning } returns false
+        every { LocationForegroundService.isStarted } returns false
         every { dbHelper.getSetting("tracking_enabled", "false") } returns "false"
         mockkConstructor(Intent::class)
         try {
@@ -745,14 +778,27 @@ class LocationServiceModuleTest {
     // ========================================================================
 
     @Test
-    fun `isServiceRunning resolves the service's own liveness flag`() {
+    fun `isServiceRunning resolves true for a started service`() {
         val (module, _) = createModuleWithDeps()
         val promise = mockk<com.facebook.react.bridge.Promise>(relaxed = true)
-        every { LocationForegroundService.isRunning } returns true
+        every { LocationForegroundService.isStarted } returns true
 
         module.isServiceRunning(promise)
 
         verify { promise.resolve(true) }
+    }
+
+    /** reviveIfDead restarts only a service this reports as down. */
+    @Test
+    fun `isServiceRunning resolves false for a service that was created but never started`() {
+        val (module, _) = createModuleWithDeps()
+        val promise = mockk<com.facebook.react.bridge.Promise>(relaxed = true)
+        every { LocationForegroundService.isRunning } returns true
+        every { LocationForegroundService.isStarted } returns false
+
+        module.isServiceRunning(promise)
+
+        verify { promise.resolve(false) }
     }
 
     // ========================================================================

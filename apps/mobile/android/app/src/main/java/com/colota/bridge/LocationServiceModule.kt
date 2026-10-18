@@ -323,7 +323,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         // JS logging never reaches the exported log, so record here that this start is a
         // recovery - otherwise a report of "it stopped recording" shows the restart but
         // never says the service had died while the user still wanted tracking.
-        if (!LocationForegroundService.isRunning &&
+        if (!LocationForegroundService.isStarted &&
             dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
         ) {
             AppLogger.w(TAG, "Starting a service that died while tracking was on")
@@ -907,10 +907,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         promise.resolve(deviceInfo.isLocationEnabled())
     }
 
-    /** Whether a service instance is alive. TRACKING_ENABLED is the user's intent, not this. */
+    /** Whether a started service instance is alive. TRACKING_ENABLED is the user's intent, not this. */
     @ReactMethod
     fun isServiceRunning(promise: Promise) {
-        promise.resolve(LocationForegroundService.isRunning)
+        promise.resolve(LocationForegroundService.isStarted)
     }
 
     @ReactMethod

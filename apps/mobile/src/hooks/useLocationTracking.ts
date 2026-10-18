@@ -256,7 +256,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
   )
 
   /**
-   * Restarts the service when the user wants tracking but no service is alive.
+   * Restarts the service when the user wants tracking but no started service is alive.
    *
    * Deliberately skips ensurePermissions: the disclosure is already gated on the location
    * grants, but the notification request and the battery-exemption dialog are not, so

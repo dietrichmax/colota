@@ -137,6 +137,12 @@ class LocationForegroundService : Service() {
         var isRunning: Boolean = false
             private set
 
+        /** True from the action dispatch in onStartCommand until onDestroy. */
+        @Volatile
+        @JvmStatic
+        var isStarted: Boolean = false
+            private set
+
         /** Multiplier applied to the tracking interval for the geofence entry delay. */
         private const val ENTRY_DELAY_MULTIPLIER = 3.5
         /** Debounce before resuming GPS after unmetered network is lost (ms). */
@@ -388,6 +394,8 @@ class LocationForegroundService : Service() {
             batteryMonitor.start()
         }
 
+        isStarted = true
+
         when (action) {
             ACTION_REFRESH_NOTIFICATION -> handleRefreshNotification()
             ACTION_RECHECK_ZONE -> handleZoneRecheckAction()
@@ -484,6 +492,7 @@ class LocationForegroundService : Service() {
         serviceScope = null
 
         notificationManager.cancel(NotificationHelper.NOTIFICATION_ID)
+        isStarted = false
         isRunning = false
         super.onDestroy()
     }
@@ -500,6 +509,11 @@ class LocationForegroundService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        AppLogger.d(TAG, "Task removed (started=$isStarted)")
+        super.onTaskRemoved(rootIntent)
+    }
 
     private fun setupLocationUpdates(skipEntryDelay: Boolean = false) {
         if (isWifiPaused || isMotionlessPaused) return  // GPS intentionally stopped by a zone pause hold
