@@ -12,7 +12,8 @@ import com.Colota.location.LocationAccuracy
 import com.Colota.location.LocationProvider
 import com.Colota.location.LocationUpdateCallback
 import com.Colota.sync.PayloadBuilder
-import com.Colota.sync.NetworkManager
+import com.Colota.sync.http.NetworkManager
+import com.Colota.network.NetworkMonitor
 import com.Colota.sync.SyncManager
 import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
@@ -50,6 +51,7 @@ class LocationForegroundServiceTest {
     private lateinit var batteryMonitor: BatteryMonitor
     private lateinit var secureStorage: SecureStorageHelper
     private lateinit var networkManager: NetworkManager
+    private lateinit var networkMonitor: NetworkMonitor
     private lateinit var androidNotificationManager: NotificationManager
 
     private lateinit var testDispatcher: TestDispatcher
@@ -70,6 +72,7 @@ class LocationForegroundServiceTest {
         batteryMonitor = mockk(relaxed = true)
         secureStorage = mockk(relaxed = true)
         networkManager = mockk(relaxed = true)
+        networkMonitor = mockk(relaxed = true)
         androidNotificationManager = mockk(relaxed = true)
 
         testDispatcher = UnconfinedTestDispatcher()
@@ -160,6 +163,7 @@ class LocationForegroundServiceTest {
         setField("batteryMonitor", batteryMonitor)
         setField("secureStorage", secureStorage)
         setField("networkManager", networkManager)
+        setField("networkMonitor", networkMonitor)
         setField("notificationManager", androidNotificationManager)
         setField("serviceScope", defaultServiceScope)
         setField("config", ServiceConfig(
@@ -820,15 +824,15 @@ class LocationForegroundServiceTest {
         // Reading the SSID is attributed as location access, so it must follow the condition needing it.
         setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "wifi_ssid"))
         invokePushConfigToSyncManager()
-        verify(exactly = 1) { networkManager.setSsidTracking(true) }
+        verify(exactly = 1) { networkMonitor.setSsidTracking(true) }
 
         setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "any"))
         invokePushConfigToSyncManager()
-        verify(exactly = 1) { networkManager.setSsidTracking(false) }
+        verify(exactly = 1) { networkMonitor.setSsidTracking(false) }
 
         setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "wifi_ssid"))
         invokePushConfigToSyncManager()
-        verify(exactly = 2) { networkManager.setSsidTracking(true) }
+        verify(exactly = 2) { networkMonitor.setSsidTracking(true) }
     }
 
     /** Holding the flagged callback would keep the location indicator lit. */
@@ -839,7 +843,7 @@ class LocationForegroundServiceTest {
 
         invokePushConfigToSyncManager()
 
-        verify(exactly = 0) { networkManager.setSsidTracking(true) }
+        verify(exactly = 0) { networkMonitor.setSsidTracking(true) }
     }
 
     @Test

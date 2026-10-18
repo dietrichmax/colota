@@ -1,4 +1,4 @@
-package com.Colota.sync.tls
+package com.Colota.sync.http.tls
 
 import com.Colota.util.AppLogger
 import io.mockk.*

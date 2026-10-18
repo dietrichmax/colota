@@ -856,4 +856,59 @@ class PayloadBuilderTest {
         every { hasBearing() } returns hasBearing
         every { this@mockk.bearing } returns bearing
     }
+
+    // --- buildQueryString ---
+
+    @Test
+    fun `buildQueryString builds correct query for simple payload`() {
+        val payload = JSONObject().apply {
+            put("lat", 52.52)
+            put("lon", 13.405)
+            put("tst", 1700000000)
+        }
+
+        val result = PayloadBuilder.buildQueryString(payload)
+
+        // Verify each key=value pair is present (order may vary)
+        assertTrue(result.contains("lat=52.52"))
+        assertTrue(result.contains("lon=13.405"))
+        assertTrue(result.contains("tst=1700000000"))
+        assertEquals(2, result.count { it == '&' }) // 3 params = 2 ampersands
+    }
+
+    @Test
+    fun `buildQueryString renders whole-number doubles as integers`() {
+        // JS numbers cross the RN bridge as doubles, so a Test Connection unix
+        // timestamp serializes as 1.780257432E9. Traccar's OsmAnd endpoint rejects
+        // a scientific-notation timestamp and drops the connection without
+        // replying (okhttp surfaces this as "unexpected end of stream").
+        val payload = JSONObject().apply {
+            put("tst", 1780257432.0)
+            put("acc", 5.0)
+            put("lat", 48.0685105)
+        }
+
+        val result = PayloadBuilder.buildQueryString(payload)
+
+        assertTrue(result.contains("tst=1780257432"))
+        assertFalse("scientific notation breaks Traccar's parser", result.contains("1.780257432E9"))
+        assertFalse("whole-number doubles must drop the .0", result.contains("acc=5.0"))
+        assertTrue("fractional values keep their decimals", result.contains("lat=48.0685105"))
+    }
+
+    @Test
+    fun `buildQueryString URL-encodes special characters`() {
+        val payload = JSONObject().put("name", "hello world&more")
+
+        val result = PayloadBuilder.buildQueryString(payload)
+
+        assertTrue(result.contains("name=hello+world%26more") || result.contains("name=hello%20world%26more"))
+    }
+
+    @Test
+    fun `buildQueryString returns empty string for empty payload`() {
+        val payload = JSONObject()
+        val result = PayloadBuilder.buildQueryString(payload)
+        assertEquals("", result)
+    }
 }

@@ -1,4 +1,4 @@
-package com.Colota.sync.tls
+package com.Colota.sync.http.tls
 
 import io.mockk.*
 import org.junit.Assert.*

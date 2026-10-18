@@ -16,6 +16,9 @@ import kotlinx.coroutines.sync.withLock
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
+import com.Colota.sync.http.NetworkManager
+import com.Colota.sync.http.BatchResult
+import com.Colota.network.NetworkMonitor
 
 /**
  * Two sync modes: instant (syncInterval=0) sends each location on arrival,
@@ -24,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
 class SyncManager(
     private val dbHelper: DatabaseHelper,
     private val networkManager: NetworkManager,
+    private val networkMonitor: NetworkMonitor,
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis
 ) {
@@ -239,11 +243,11 @@ class SyncManager(
     }
 
     fun isSyncAllowed(): Boolean {
-        if (isOfflineMode || !networkManager.isNetworkAvailable()) return false
+        if (isOfflineMode || !networkMonitor.isNetworkAvailable()) return false
         val allowed = when (syncCondition) {
-            "wifi_any" -> networkManager.isUnmeteredConnection()
-            "wifi_ssid" -> networkManager.isConnectedToSsid(syncSsid)
-            "vpn" -> networkManager.isVpnConnected()
+            "wifi_any" -> networkMonitor.isUnmeteredConnection()
+            "wifi_ssid" -> networkMonitor.isConnectedToSsid(syncSsid)
+            "vpn" -> networkMonitor.isVpnConnected()
             else -> true // "any"
         }
         if (!allowed && syncCondition != "any") {

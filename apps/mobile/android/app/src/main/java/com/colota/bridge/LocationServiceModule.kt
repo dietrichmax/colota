@@ -27,8 +27,8 @@ import com.Colota.service.getIntOrNull
 import com.Colota.service.getStringOrNull
 import com.Colota.service.getBooleanOrNull
 import com.Colota.sync.SyncState
-import com.Colota.sync.NetworkManager
-import com.Colota.sync.UrlSafety
+import com.Colota.network.NetworkMonitor
+import com.Colota.sync.http.UrlSafety
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.export.AutoExportConfig
 import com.Colota.export.AutoExportScheduler
@@ -77,7 +77,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val geofenceHelper = GeofenceHelper(reactContext)
     private val profileHelper = ProfileHelper(reactContext)
     private val secureStorage = SecureStorageHelper.getInstance(reactContext)
-    private val networkManager = NetworkManager(reactContext)
+    private val networkMonitor = NetworkMonitor(reactContext)
 
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -860,17 +860,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun isNetworkAvailable(promise: Promise) {
-        promise.resolve(networkManager.isNetworkAvailable())
+        promise.resolve(networkMonitor.isNetworkAvailable())
     }
 
     @ReactMethod
     fun isUnmeteredConnection(promise: Promise) {
-        promise.resolve(networkManager.isUnmeteredConnection())
+        promise.resolve(networkMonitor.isUnmeteredConnection())
     }
 
     @ReactMethod
     fun getCurrentSsid(promise: Promise) {
-        networkManager.readSsidOnce { promise.resolve(it) }
+        networkMonitor.readSsidOnce { promise.resolve(it) }
     }
 
     @ReactMethod

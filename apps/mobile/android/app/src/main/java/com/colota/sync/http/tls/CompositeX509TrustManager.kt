@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota.sync.tls
+package com.Colota.sync.http.tls
 
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate

@@ -22,7 +22,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.car.app.connection.CarConnection
 import androidx.lifecycle.Observer
-import com.Colota.sync.NetworkManager
+import com.Colota.network.NetworkMonitor
 import com.Colota.util.AppLogger
 
 /**
@@ -31,7 +31,7 @@ import com.Colota.util.AppLogger
  *
  * Android Auto is detected via the [CarConnection] API, which reliably
  * reports projection and native car connections. Wi-Fi transport changes come
- * from the service's [NetworkManager], which tracks connected Wi-Fi networks
+ * from the service's [NetworkMonitor], which tracks connected Wi-Fi networks
  * with a plain (unflagged) callback; a named-network profile reads the name
  * through a one-shot location-flagged probe when that transport changes.
  * Bluetooth devices are tracked by their ACL connection broadcasts.
@@ -41,7 +41,7 @@ import com.Colota.util.AppLogger
  */
 class ConditionMonitor(
     private val context: Context,
-    private val networkManager: NetworkManager,
+    private val networkMonitor: NetworkMonitor,
     private val profileManager: ProfileManager
 ) {
     companion object {
@@ -90,7 +90,7 @@ class ConditionMonitor(
     fun stop() {
         chargingReceiver = unregisterSafely(chargingReceiver)
         stopCarConnectionMonitor()
-        networkManager.setWifiStateListener(null)
+        networkMonitor.setWifiStateListener(null)
         wifiMonitorActive = false
         bluetoothReceiver = unregisterSafely(bluetoothReceiver)
         bluetoothGeneration++
@@ -169,7 +169,7 @@ class ConditionMonitor(
      * first read, so a change landing in that window still arrives instead of being missed.
      */
     private fun startWifiMonitor() {
-        networkManager.setWifiStateListener {
+        networkMonitor.setWifiStateListener {
             mainHandler.post { pushWifiState() }
         }
         wifiMonitorActive = true
@@ -190,12 +190,12 @@ class ConditionMonitor(
      */
     private fun pushWifiState() {
         val generation = ++wifiPushGeneration
-        val connected = networkManager.isWifiConnected()
+        val connected = networkMonitor.isWifiConnected()
         if (connected && ProfileConstants.CONDITION_WIFI_SSID in profileManager.getNeededConditionTypes()) {
-            networkManager.readSsidOnce { ssid ->
+            networkMonitor.readSsidOnce { ssid ->
                 mainHandler.post {
                     if (generation == wifiPushGeneration) {
-                        profileManager.onWifiStateChanged(networkManager.isWifiConnected(), ssid)
+                        profileManager.onWifiStateChanged(networkMonitor.isWifiConnected(), ssid)
                     }
                 }
             }

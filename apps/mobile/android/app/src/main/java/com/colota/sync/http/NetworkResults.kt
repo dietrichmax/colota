@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota.sync
+package com.Colota.sync.http
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter

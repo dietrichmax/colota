@@ -48,7 +48,7 @@ The mobile app has a **React Native** UI layer and **native Kotlin** modules for
 
 All native code lives in `apps/mobile/android/app/src/`, organized by build flavor:
 
-- `src/main/java/com/colota/` - Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface + `LocationAccuracy`), `backup/`, `export/`
+- `src/main/java/com/colota/` - Shared code: `bridge/`, `service/`, `data/`, `sync/` (with `sync/http/` for the request code), `network/`, `util/`, `location/` (interface + `LocationAccuracy`), `backup/`, `export/`
 - `src/gms/java/com/colota/location/` - Google Play Services location provider
 - `src/foss/java/com/colota/location/` - Native Android location provider
 
@@ -214,11 +214,15 @@ Orchestrates batch location uploads with:
 
 ### NetworkManager
 
-HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections and VPN status for sync condition filtering. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the sync `wifi_ssid` condition is active; profile conditions read the name through a one-shot probe when the network changes. Connected Wi-Fi is tracked separately with a plain (unflagged) Wi-Fi-transport callback, so the profile conditions also see the network under a VPN. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
+HTTP client. Sends each request and maps failures to a result; it asks `NetworkMonitor` whether a network is available first. `RequestBuilder` opens the connection and sets headers and body, `ResponseReader` turns the reply into a result, and `EndpointUrl` resolves URL variables. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
 
 Every request uses its own connection: it sends `Connection: close` and closes the response before disconnecting, so Android releases the connection at once instead of keeping it in its pool.
 
 For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSLSocketFactory` supplied by `ClientCertSslContextProvider` (per-instance, never `setDefaultSSLSocketFactory()` - the override is scoped to outbound location sync, not the whole process).
+
+### NetworkMonitor
+
+Network state for the sync conditions and the profile Wi-Fi conditions. Caches connectivity checks and detects unmetered connections and VPN status. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the sync `wifi_ssid` condition is active; profile conditions read the name through a one-shot probe when the network changes. Connected Wi-Fi is tracked separately with a plain (unflagged) Wi-Fi-transport callback, so the profile conditions also see the network under a VPN.
 
 ### UrlSafety
 
@@ -264,7 +268,7 @@ Database access layer for tracking profiles and trip events. Maintains a `TimedC
 
 ### ConditionMonitor
 
-Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, Bluetooth device connections via the ACL `BroadcastReceiver` (seeded from the A2DP and headset profile proxies on every monitor start, since ACL broadcasts report changes only; a device on neither profile is seen at its next connect), and Wi-Fi transport changes from `NetworkManager`, reading the network name one-shot when a named-network profile needs it: on every Wi-Fi network that comes or goes and when Location comes back on, because a name read while Location was off is blank. Forwards state changes to `ProfileManager` for condition evaluation.
+Monitors charging state via `BroadcastReceiver`, Android Auto connection via the `CarConnection` API, Bluetooth device connections via the ACL `BroadcastReceiver` (seeded from the A2DP and headset profile proxies on every monitor start, since ACL broadcasts report changes only; a device on neither profile is seen at its next connect), and Wi-Fi transport changes from `NetworkMonitor`, reading the network name one-shot when a named-network profile needs it: on every Wi-Fi network that comes or goes and when Location comes back on, because a name read while Location was off is blank. Forwards state changes to `ProfileManager` for condition evaluation.
 
 ### ProfileConstants
 

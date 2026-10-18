@@ -9,6 +9,7 @@ import android.location.Location
 import com.Colota.util.AppLogger
 import com.Colota.util.BatteryStatus
 import org.json.JSONObject
+import java.net.URLEncoder
 import java.time.Instant
 import kotlin.math.roundToInt
 
@@ -206,4 +207,20 @@ object PayloadBuilder {
         }
     }
 
+    fun buildQueryString(payload: JSONObject): String {
+        val params = mutableListOf<String>()
+        val keys = payload.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val raw = payload.opt(key) ?: continue
+            val value = formatQueryValue(raw)
+            params.add("${URLEncoder.encode(key, "UTF-8")}=${URLEncoder.encode(value, "UTF-8")}")
+        }
+        return params.joinToString("&")
+    }
+
+    private fun formatQueryValue(raw: Any): String = when {
+        raw is Double && raw == raw.toLong().toDouble() -> raw.toLong().toString()
+        else -> raw.toString()
+    }
 }

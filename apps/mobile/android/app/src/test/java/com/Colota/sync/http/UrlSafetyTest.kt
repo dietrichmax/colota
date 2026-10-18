@@ -1,4 +1,4 @@
-package com.Colota.sync
+package com.Colota.sync.http
 
 import java.net.InetAddress
 import java.net.UnknownHostException

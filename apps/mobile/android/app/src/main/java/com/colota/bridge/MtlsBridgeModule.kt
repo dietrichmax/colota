@@ -8,8 +8,9 @@ package com.Colota.bridge
 import android.app.Activity
 import android.content.Intent
 import com.Colota.sync.ApiFormat
-import com.Colota.sync.NetworkManager
-import com.Colota.sync.tls.ClientCertSslContextProvider
+import com.Colota.sync.http.NetworkManager
+import com.Colota.network.NetworkMonitor
+import com.Colota.sync.http.tls.ClientCertSslContextProvider
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
 import com.facebook.react.bridge.Arguments
@@ -44,7 +45,7 @@ class MtlsBridgeModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
     private val secureStorage = SecureStorageHelper.getInstance(reactContext)
-    private val networkManager = NetworkManager(reactContext)
+    private val networkManager = NetworkManager(reactContext, NetworkMonitor(reactContext))
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // @ReactMethod writes, onActivityResult reads on the main thread - CAS prevents double-pick races.

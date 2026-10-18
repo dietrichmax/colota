@@ -72,7 +72,7 @@ class LogExportMergerTest {
         val recorded = segment(
             "seg1.log",
             "2026-09-09 09:00:00.000 ERROR/Sync: network error",
-            "\tat com.Colota.sync.NetworkManager.run(NetworkManager.kt:88)",
+            "\tat com.Colota.sync.http.NetworkManager.run(NetworkManager.kt:88)",
             "\tat com.Colota.sync.SyncManager.flush(SyncManager.kt:214)",
             "2026-09-09 09:00:20.000 INFO/Service: recovered"
         )
@@ -81,7 +81,7 @@ class LogExportMergerTest {
         val out = merged(listOf(recorded), appLog)
 
         assertEquals("2026-09-09 09:00:00.000 ERROR/Sync: network error", out[0])
-        assertEquals("\tat com.Colota.sync.NetworkManager.run(NetworkManager.kt:88)", out[1])
+        assertEquals("\tat com.Colota.sync.http.NetworkManager.run(NetworkManager.kt:88)", out[1])
         assertEquals("\tat com.Colota.sync.SyncManager.flush(SyncManager.kt:214)", out[2])
         assertEquals("2026-09-09 09:00:10.000 WARN/JS: retry scheduled", out[3])
     }

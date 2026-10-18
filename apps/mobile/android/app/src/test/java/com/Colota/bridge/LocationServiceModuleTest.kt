@@ -68,7 +68,7 @@ class LocationServiceModuleTest {
         // an assertion about what one event carries silently reads what a later one wrote.
         every { Arguments.createMap() } answers { JavaOnlyMap() }
 
-        // NetworkManager casts this in a field initialiser, and a relaxed mock hands back an Object.
+        // NetworkMonitor casts this in a field initialiser, and a relaxed mock hands back an Object.
         every { mockContext.getSystemService(Context.CONNECTIVITY_SERVICE) } returns mockk<ConnectivityManager>(relaxed = true)
 
         mockkObject(DatabaseHelper.Companion)

@@ -14,12 +14,16 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import kotlin.coroutines.Continuation
+import com.Colota.sync.http.NetworkManager
+import com.Colota.sync.http.BatchResult
+import com.Colota.network.NetworkMonitor
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncManagerTest {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var networkManager: NetworkManager
+    private lateinit var networkMonitor: NetworkMonitor
     private lateinit var scope: TestScope
     private lateinit var syncManager: SyncManager
 
@@ -27,9 +31,10 @@ class SyncManagerTest {
     fun setUp() {
         dbHelper = mockk(relaxed = true)
         networkManager = mockk(relaxed = true)
+        networkMonitor = mockk(relaxed = true)
         scope = TestScope(UnconfinedTestDispatcher())
         SyncState.reset()
-        syncManager = SyncManager(dbHelper, networkManager, scope)
+        syncManager = SyncManager(dbHelper, networkManager, networkMonitor, scope)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
 
         mockkObject(AppLogger)
@@ -100,7 +105,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
@@ -124,7 +129,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.ServerError(500)
 
         val payload = JSONObject().put("lat", 52.0)
@@ -146,7 +151,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns false
+        coEvery { networkMonitor.isNetworkAvailable() } returns false
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -169,8 +174,8 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
-        every { networkManager.isUnmeteredConnection() } returns false
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
+        every { networkMonitor.isUnmeteredConnection() } returns false
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -190,8 +195,8 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
-        every { networkManager.isUnmeteredConnection() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
+        every { networkMonitor.isUnmeteredConnection() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
@@ -214,8 +219,8 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
-        every { networkManager.isConnectedToSsid("HomeNetwork") } returns false
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
+        every { networkMonitor.isConnectedToSsid("HomeNetwork") } returns false
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -235,8 +240,8 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
-        every { networkManager.isConnectedToSsid("HomeNetwork") } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
+        every { networkMonitor.isConnectedToSsid("HomeNetwork") } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
@@ -259,8 +264,8 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
-        every { networkManager.isVpnConnected() } returns false
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
+        every { networkMonitor.isVpnConnected() } returns false
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -280,8 +285,8 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
-        every { networkManager.isVpnConnected() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
+        every { networkMonitor.isVpnConnected() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
@@ -304,7 +309,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -328,7 +333,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
@@ -351,8 +356,8 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
-        every { networkManager.isConnectedToSsid("HomeNetwork") } returns false
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
+        every { networkMonitor.isConnectedToSsid("HomeNetwork") } returns false
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload, bypassInterval = true)
@@ -375,7 +380,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.ClientError(400)
 
         val payload = JSONObject().put("lat", 52.0)
@@ -401,7 +406,7 @@ class SyncManagerTest {
             httpMethod = "GET"
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
@@ -423,7 +428,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         assertEquals(0L, syncManager.lastSuccessfulSyncTime)
@@ -446,7 +451,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap()
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
@@ -646,7 +651,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns 5
         // getQueuedLocations returns empty → performSyncAndCheckSuccess sees
         // countBefore=5, countAfter=5 → failure
@@ -679,7 +684,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns 5
         every { dbHelper.getQueuedLocations(50) } returns emptyList()
 
@@ -714,7 +719,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns 5
         every { dbHelper.getQueuedLocations(50) } returns emptyList()
 
@@ -742,7 +747,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         // Simulate successful sync: queue count drops to 0 after processing
         var queuedCount = 3
         every { dbHelper.getQueuedCount() } answers { queuedCount }
@@ -776,7 +781,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         var queuedCount = 3
         every { dbHelper.getQueuedCount() } answers { queuedCount }
         every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
@@ -831,7 +836,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns false
+        coEvery { networkMonitor.isNetworkAvailable() } returns false
         every { dbHelper.getQueuedCount() } returns 5
 
         syncManager.startPeriodicSync()
@@ -853,7 +858,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns false
+        coEvery { networkMonitor.isNetworkAvailable() } returns false
         every { dbHelper.getQueuedCount() } returns 5
 
         syncManager.startPeriodicSync()
@@ -875,7 +880,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns 0
 
         syncManager.startPeriodicSync()
@@ -897,7 +902,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns 0
 
         syncManager.startPeriodicSync()
@@ -919,7 +924,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns 5
         every { dbHelper.getQueuedLocations(50) } returns emptyList()
 
@@ -939,9 +944,9 @@ class SyncManagerTest {
     private var ticks = 0
 
     private fun startPeriodicSyncOnVirtualClock(intervalSeconds: Int, queuedCount: Int = 0): SyncManager {
-        val manager = SyncManager(dbHelper, networkManager, scope, clock = { scope.testScheduler.currentTime })
+        val manager = SyncManager(dbHelper, networkManager, networkMonitor, scope, clock = { scope.testScheduler.currentTime })
         manager.switchInterval(intervalSeconds)
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns queuedCount
         every { dbHelper.getQueuedLocations(50) } returns emptyList()
         every { AppLogger.d("SyncManager", match { it.startsWith("Sync tick:") }) } answers { ticks += 1 }
@@ -1077,7 +1082,7 @@ class SyncManagerTest {
             apiFormat = ApiFormat.TRACCAR_JSON
         )
 
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
@@ -1385,7 +1390,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap()
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         fakeQueue(20)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); BatchResult.Success }
 
@@ -1410,7 +1415,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap()
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         fakeQueue(10)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); BatchResult.Success }
 
@@ -1491,7 +1496,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap()
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         fakeQueue(20)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); BatchResult.Success }
 
@@ -1520,7 +1525,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap()
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         fakeQueue(0)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(5_000); BatchResult.Success }
 
@@ -1546,7 +1551,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap()
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         fakeQueue(0)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); BatchResult.Success }
 
@@ -1600,7 +1605,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap()
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         fakeQueue(0)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(3_000); BatchResult.Success }
 
@@ -1761,7 +1766,7 @@ class SyncManagerTest {
     fun `an instant send that cannot connect keeps its place in the queue`() = scope.runTest {
         configurePerItem()
         every { dbHelper.addToQueue(any(), any()) } returns 42L
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
@@ -1831,7 +1836,7 @@ class SyncManagerTest {
     private var now = 0L
 
     private fun rateLimitedManager(apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED): SyncManager {
-        val manager = SyncManager(dbHelper, networkManager, scope, clock = { now })
+        val manager = SyncManager(dbHelper, networkManager, networkMonitor, scope, clock = { now })
         manager.updateConfig(
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
@@ -1842,7 +1847,7 @@ class SyncManagerTest {
             authHeaders = emptyMap(),
             apiFormat = apiFormat
         )
-        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkMonitor.isNetworkAvailable() } returns true
         return manager
     }
 

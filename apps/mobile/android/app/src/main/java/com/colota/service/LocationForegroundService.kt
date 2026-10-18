@@ -24,7 +24,8 @@ import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
 import com.Colota.data.SettingsKeys
 import com.Colota.sync.ApiFormat
-import com.Colota.sync.NetworkManager
+import com.Colota.sync.http.NetworkManager
+import com.Colota.network.NetworkMonitor
 import com.Colota.sync.PayloadBuilder
 import com.Colota.sync.SyncManager
 import com.Colota.util.DeviceInfoHelper
@@ -51,6 +52,7 @@ class LocationForegroundService : Service() {
     @Volatile private var payloadCustomFields: Map<String, String> = emptyMap()
     private lateinit var deviceInfoHelper: DeviceInfoHelper
     private lateinit var networkManager: NetworkManager
+    private lateinit var networkMonitor: NetworkMonitor
     private lateinit var geofenceHelper: GeofenceHelper
     private lateinit var secureStorage: SecureStorageHelper
     private lateinit var syncManager: SyncManager
@@ -230,10 +232,11 @@ class LocationForegroundService : Service() {
         deviceInfoHelper = DeviceInfoHelper(this)
         batteryMonitor = BatteryMonitor(this, deviceInfoHelper) { onBatteryCritical() }
         lastBroadcastLocationEnabled = deviceInfoHelper.isLocationEnabled()
-        networkManager = NetworkManager(this)
+        networkMonitor = NetworkMonitor(this)
+        networkManager = NetworkManager(this, networkMonitor)
         geofenceHelper = GeofenceHelper(this)
         secureStorage = SecureStorageHelper.getInstance(this)
-        syncManager = SyncManager(dbHelper, networkManager, serviceScope!!)
+        syncManager = SyncManager(dbHelper, networkManager, networkMonitor, serviceScope!!)
         profileHelper = ProfileHelper(this)
         profileManager = ProfileManager(
             profileHelper, serviceScope!!,
@@ -242,7 +245,7 @@ class LocationForegroundService : Service() {
             },
             onStationaryChanged = ::handleStationaryChanged
         )
-        conditionMonitor = ConditionMonitor(this, networkManager, profileManager)
+        conditionMonitor = ConditionMonitor(this, networkMonitor, profileManager)
 
         notificationHelper = NotificationHelper(this, notificationManager)
         notificationHelper.createChannel()
@@ -485,7 +488,7 @@ class LocationForegroundService : Service() {
         teardownStep("locationUpdates") { stopLocationUpdates() }
         teardownStep("trackingHeartbeatLogger") { cancelTrackingHeartbeatLogger() }
         teardownStep("periodicSync") { syncManager.stopPeriodicSync() }
-        teardownStep("networkManager") { networkManager.destroy() }
+        teardownStep("networkMonitor") { networkMonitor.destroy() }
 
         // Critical teardown: must run so pauseAllDbWriters' poll loop sees isRunning=false.
         serviceScope?.cancel()
@@ -1657,7 +1660,7 @@ class LocationForegroundService : Service() {
 
     private fun pushConfigToSyncManager() {
         // Only wifi_ssid reads the SSID, and reading it is attributed as location access.
-        networkManager.setSsidTracking(config.syncCondition == "wifi_ssid")
+        networkMonitor.setSsidTracking(config.syncCondition == "wifi_ssid")
 
         // Instant mode bypasses the queue and posts one flat payload, which 4xxs
         // forever against /api/v1/overland/batches. Defensive net under the UI guard.
