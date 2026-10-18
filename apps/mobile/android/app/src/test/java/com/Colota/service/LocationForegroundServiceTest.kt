@@ -1,8 +1,13 @@
 package com.Colota.service
 
 import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.hardware.SensorManager
+import android.hardware.TriggerEventListener
 import android.location.Location
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.SystemClock
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
@@ -3061,6 +3066,60 @@ class LocationForegroundServiceTest {
 
         assertFalse(getField("isMotionlessPaused"))
         verify { dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false") }
+    }
+
+    @Test
+    fun `motion after a restart under a motionless hold turns GPS back on`() = runServiceTest {
+        val sensorManager = mockk<SensorManager>(relaxed = true)
+        val sigMotion = slot<TriggerEventListener>()
+        every { sensorManager.getDefaultSensor(any()) } returns mockk()
+        every { sensorManager.requestTriggerSensor(capture(sigMotion), any()) } returns true
+        val sensorContext = mockk<Context> { every { getSystemService(Context.SENSOR_SERVICE) } returns sensorManager }
+        mockkConstructor(Handler::class, HandlerThread::class)
+        every { anyConstructed<Handler>().post(any()) } answers { firstArg<Runnable>().run(); true }
+        every { anyConstructed<HandlerThread>().start() } just Runs
+        every { anyConstructed<HandlerThread>().looper } returns mockk(relaxed = true)
+        try {
+            makeCold()
+            setField("motionDetector", RawSensorMotionDetector(sensorContext))
+            every { dbHelper.getAllSettings() } returns mapOf(
+                SettingsKeys.TRACKING_ENABLED to "true",
+                SettingsKeys.PAUSE_ZONE_NAME to "Home",
+                SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE to "true"
+            )
+            every { geofenceHelper.getGeofenceByName("Home") } returns geofence("Home", pauseOnMotionless = true)
+
+            service.onStartCommand(intentFor(null), 0, 1)
+            advanceUntilIdle()
+            verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
+
+            sigMotion.captured.onTrigger(mockk(relaxed = true))
+            advanceUntilIdle()
+
+            assertFalse(getField("isMotionlessPaused"))
+            verify { locationProvider.requestLocationUpdates(any(), any(), any(), any(), any()) }
+        } finally {
+            unmockkConstructor(Handler::class, HandlerThread::class)
+        }
+    }
+
+    @Test
+    fun `a restart in a motionless zone without a hold leaves the detector to find stillness`() = runServiceTest {
+        // Starting from still would hide the change to still that engages the hold
+        makeCold()
+        val detector = mockk<RawSensorMotionDetector>(relaxed = true)
+        setField("motionDetector", detector)
+        every { dbHelper.getAllSettings() } returns mapOf(
+            SettingsKeys.TRACKING_ENABLED to "true",
+            SettingsKeys.PAUSE_ZONE_NAME to "Home"
+        )
+        every { geofenceHelper.getGeofenceByName("Home") } returns geofence("Home", pauseOnMotionless = true)
+
+        service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+
+        verify { detector.start(any()) }
+        verify(exactly = 0) { detector.resyncStationaryBaseline() }
     }
 
     @Test

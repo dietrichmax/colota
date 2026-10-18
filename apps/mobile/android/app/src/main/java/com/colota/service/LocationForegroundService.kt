@@ -345,6 +345,8 @@ class LocationForegroundService : Service() {
                     AppLogger.d(TAG, "Restored heartbeat: ${restoredGeofence.heartbeatIntervalMinutes}min")
                 }
                 ensureMotionDetectorRunning()
+                // The detector starts out moving and releases the hold only on a change to moving
+                if (isMotionlessPaused) (motionDetector as? RawSensorMotionDetector)?.resyncStationaryBaseline()
             }
         }
 
