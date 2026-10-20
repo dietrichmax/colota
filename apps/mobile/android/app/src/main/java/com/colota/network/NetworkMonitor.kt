@@ -10,14 +10,9 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.net.wifi.WifiInfo
-import android.net.wifi.WifiManager
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import com.Colota.util.AppLogger
 import com.Colota.util.TimedCache
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -28,9 +23,6 @@ class NetworkMonitor(context: Context) {
     companion object {
         private const val TAG = "NetworkMonitor"
         private const val NETWORK_CHECK_CACHE_MS = 5000L
-        private const val SSID_PROBE_TIMEOUT_MS = 3000L
-        /** What Android returns instead of the SSID without location permission or with Location off. */
-        private const val UNKNOWN_SSID = "<unknown ssid>"
     }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -48,7 +40,7 @@ class NetworkMonitor(context: Context) {
     private var notifiedSsid = ""
     /** Connected Wi-Fi networks, counted so losing one of several does not clear the state. */
     private val availableWifiNetworks = AtomicInteger(0)
-    private val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+    private val wifiNames = WifiNameReader(context, connectivityManager)
 
     private var networkCallback = createNetworkCallback(withSsid = false)
 
@@ -124,51 +116,12 @@ class NetworkMonitor(context: Context) {
             return
         }
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            // Below S the SSID comes from WifiManager, not the callback, so waiting on one would
-            // only stall. WifiManager reports the connected network regardless of the VPN.
-            onResult(readSsid(null))
-            return
-        }
-
-        val request = wifiRequest
-        if (request == null) {
-            onResult("")
-            return
-        }
-
-        val done = AtomicBoolean(false)
-        var probe: ConnectivityManager.NetworkCallback? = null
-        fun finish(ssid: String) {
-            if (!done.compareAndSet(false, true)) return
-            probe?.let {
-                try {
-                    connectivityManager.unregisterNetworkCallback(it)
-                } catch (e: Exception) {
-                    AppLogger.e(TAG, "Failed to unregister SSID probe", e)
-                }
-            }
-            onResult(ssid)
-        }
-
-        probe = object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
-            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = finish(readSsid(caps))
-        }
-
-        try {
-            connectivityManager.registerNetworkCallback(request, probe)
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "Failed to register SSID probe", e)
-            probe = null
-            finish("")
-            return
-        }
-        Handler(Looper.getMainLooper()).postDelayed({ finish("") }, SSID_PROBE_TIMEOUT_MS)
+        wifiNames.probe(wifiRequest, onResult)
     }
 
     private fun createNetworkCallback(withSsid: Boolean): ConnectivityManager.NetworkCallback {
         fun update(caps: NetworkCapabilities) {
-            if (withSsid) currentSsid = readSsid(caps)
+            if (withSsid) currentSsid = wifiNames.read(caps)
             isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
             notifyWifiStateIfChanged()
         }
@@ -189,19 +142,6 @@ class NetworkMonitor(context: Context) {
                 override fun onLost(network: Network) = clear()
             }
         }
-    }
-
-    private fun readSsid(caps: NetworkCapabilities?): String {
-        val raw = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            (caps?.transportInfo as? WifiInfo)?.ssid
-        } else {
-            @Suppress("DEPRECATION")
-            wifiManager?.connectionInfo?.ssid
-        }
-        val ssid = raw?.removeSurrounding("\"") ?: ""
-        // Android reports the placeholder without location permission or with Location off; treat
-        // it as no name so the condition simply does not match (and the picker cannot offer it).
-        return if (ssid == UNKNOWN_SSID) "" else ssid
     }
 
     private fun refreshWifiTransport(force: Boolean) {

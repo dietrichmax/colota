@@ -208,7 +208,7 @@ Orchestrates batch location uploads with:
 - Configurable batch size (50 items per batch, 10 concurrent HTTP requests)
 - Exponential backoff on failure
 - A pass stops on a 429, and nothing is sent until its `Retry-After` wait is over (60 s without one, capped at 15 min): the periodic tick, a manual or zone-entry flush and an instant send all hold. In the per-point format a pass also stops on a 5xx or a network error once a group of 10 requests got nothing through, so an unreachable server costs one group of requests. A batch upload stops on its first 429, 5xx or network error
-- Overland batch uploads go through `OverlandBatchSender`, which halves a batch the server rejects with a 4xx until the refused row is alone. The rate-limit wait lives in `SyncState`, so it outlives the service that met the 429
+- Overland batch uploads go through `OverlandBatchSender`, which halves a batch the server rejects with a 4xx until the refused row is alone. The per-point format goes through `PointSender`, 10 requests at a time, and `SyncSchedule` times the periodic tick and the backoff. The rate-limit wait lives in `SyncState`, so it outlives the service that met the 429
 - Periodic sync scheduling. A new interval (a profile switch) applies to the wait already running, measured from when it began; a send or a backoff in progress finishes first
 - Manual flush support
 - One pass at a time: a periodic tick and a manual flush wait for the running pass. An instant send leaves its row queued while a pass runs, and a pass skips rows an instant send is still posting
@@ -223,7 +223,7 @@ For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSL
 
 ### NetworkMonitor
 
-Network state for the sync conditions and the profile Wi-Fi conditions. Caches connectivity checks and detects unmetered connections and VPN status. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the sync `wifi_ssid` condition is active; profile conditions read the name through a one-shot probe when the network changes. Connected Wi-Fi is tracked separately with a plain (unflagged) Wi-Fi-transport callback, so the profile conditions also see the network under a VPN.
+Network state for the sync conditions and the profile Wi-Fi conditions. Caches connectivity checks and detects unmetered connections and VPN status. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the sync `wifi_ssid` condition is active; profile conditions read the name through a one-shot probe (`WifiNameReader`) when the network changes. Connected Wi-Fi is tracked separately with a plain (unflagged) Wi-Fi-transport callback, so the profile conditions also see the network under a VPN.
 
 ### UrlSafety
 
@@ -305,7 +305,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |
 | `AutoExportScheduler` | Arms `AlarmManager.setAndAllowWhileIdle` for the next configured wall-clock time. Called on enable, by the alarm receiver on every fire, after each worker run, after schedule edits and on boot |
 | `AutoExportConfig` | Typed data class wrapping auto-export settings (interval, time-of-day, weekday, day-of-month, enabledAt) from the SQLite settings table with validation, `isExportDue()` and `nextExportTimestamp()` |
-| `ExportConverters` | Native CSV/GeoJSON/GPX/KML serialization for both "Export all" (flat, streamed via `exportToFile`) and per-trip / multi-select export (trip-segmented via `convertTrips`, reached through the `exportTripsToFile` bridge). In-memory, streaming, and file-based interfaces |
+| `ExportConverters` | Native CSV/GeoJSON/GPX/KML serialization for "Export all" (flat, streamed via `exportToFile`). In-memory, streaming, and file-based interfaces. `TripConverters` writes the per-trip / multi-select export (`convertTrips`, reached through the `exportTripsToFile` bridge), and `ExportFilenames` names auto-export files and picks the ones retention deletes |
 | `ShortcutHandlerActivity` | Transparent activity handling app shortcut intents (start/stop tracking) without UI. Delegates to the shared `TrackingControl` helper |
 | `TrackingControlReceiver` | Exported broadcast receiver for automation apps - `com.Colota.action.START_TRACKING` / `STOP_TRACKING` start or stop tracking from saved settings. Delegates to `TrackingControl` |
 | `TrackingControl` | Shared start/stop tracking actions used by both triggers above: reads config from DB via `ServiceConfig.fromDatabase()`, starts the foreground service and fires the started event; stop is routed through the service so `stopForegroundServiceWithReason` runs |

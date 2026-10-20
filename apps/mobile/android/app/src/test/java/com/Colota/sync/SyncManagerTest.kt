@@ -13,7 +13,6 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import kotlin.coroutines.Continuation
 import com.Colota.sync.http.NetworkManager
 import com.Colota.sync.http.BatchResult
 import com.Colota.network.NetworkMonitor
@@ -544,40 +543,6 @@ class SyncManagerTest {
         syncManager.invalidateQueueCache()
         val second = syncManager.getCachedQueuedCount()
         assertEquals(20, second)
-    }
-
-    // --- Backoff ---
-
-    @Test
-    fun `applyBackoffDelay waits 30s after 1 failure`() = scope.runTest {
-        setField("consecutiveFailures", 1)
-        val start = currentTime
-        callApplyBackoffDelay()
-        assertEquals(30_000L, currentTime - start)
-    }
-
-    @Test
-    fun `applyBackoffDelay waits 60s after 2 failures`() = scope.runTest {
-        setField("consecutiveFailures", 2)
-        val start = currentTime
-        callApplyBackoffDelay()
-        assertEquals(60_000L, currentTime - start)
-    }
-
-    @Test
-    fun `applyBackoffDelay waits 5min after 3 failures`() = scope.runTest {
-        setField("consecutiveFailures", 3)
-        val start = currentTime
-        callApplyBackoffDelay()
-        assertEquals(300_000L, currentTime - start)
-    }
-
-    @Test
-    fun `applyBackoffDelay waits 15min after 4 or more failures`() = scope.runTest {
-        setField("consecutiveFailures", 10)
-        val start = currentTime
-        callApplyBackoffDelay()
-        assertEquals(900_000L, currentTime - start)
     }
 
     // --- Batch limit and chunks ---
@@ -1365,20 +1330,6 @@ class SyncManagerTest {
 
         assertEquals(0, getField("consecutiveFailures"))
         coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
-    }
-
-    // --- Helpers ---
-
-    @Suppress("UNCHECKED_CAST")
-    private suspend fun callApplyBackoffDelay() {
-        val method = SyncManager::class.java.getDeclaredMethod(
-            "applyBackoffDelay",
-            Continuation::class.java
-        )
-        method.isAccessible = true
-        kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn<Unit> { cont ->
-            method.invoke(syncManager, cont)
-        }
     }
 
     // --- What a failed send tells the pass ---

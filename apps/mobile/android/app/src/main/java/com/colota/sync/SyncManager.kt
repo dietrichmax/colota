@@ -13,7 +13,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import com.Colota.sync.http.NetworkManager
@@ -37,6 +36,8 @@ class SyncManager(
     }
 
     private val batchSender = OverlandBatchSender(dbHelper, networkManager, ::noteRateLimit)
+    private val pointSender = PointSender(dbHelper, networkManager, ::noteRateLimit)
+    private val schedule = SyncSchedule(clock)
 
     @Volatile private var endpoint: String = ""
     @Volatile private var syncIntervalSeconds: Int = 0
@@ -50,7 +51,6 @@ class SyncManager(
     @Volatile private var overlandBatchSize: Int = 50
 
     private var syncJob: Job? = null
-    @Volatile private var lastSyncTime: Long = 0
     @Volatile var lastSuccessfulSyncTime: Long = 0
         private set
 
@@ -59,7 +59,6 @@ class SyncManager(
         lastSuccessfulSyncTime = now
         SyncState.recordSuccess(now)
     }
-    @Volatile private var syncInitialized = false
     @Volatile private var consecutiveFailures = 0
 
     private val queueCountCache = TimedCache(5000L) { dbHelper.getQueuedCount() }
@@ -284,12 +283,7 @@ class SyncManager(
     }
 
     private suspend fun applyBackoffDelay() {
-        val backoffSeconds = when (consecutiveFailures) {
-            1 -> 30L
-            2 -> 60L
-            3 -> 300L
-            else -> 900L
-        }
+        val backoffSeconds = SyncSchedule.backoffSeconds(consecutiveFailures)
 
         AppLogger.w(TAG, "Backoff: ${backoffSeconds}s")
 
@@ -350,58 +344,15 @@ class SyncManager(
             } else {
                 var stopped: String? = null
                 for (chunk in queued.chunked(10)) {
-                    val successfulIds = mutableListOf<Long>()
-
-                    val results = chunk.map { item ->
-                        async {
-                            val result = try {
-                                networkManager.sendToEndpoint(
-                                    JSONObject(item.payload),
-                                    currentEndpoint,
-                                    currentAuthHeaders,
-                                    currentHttpMethod,
-                                    currentApiFormat
-                                )
-                            } catch (e: JSONException) {
-                                AppLogger.e(TAG, "Corrupt queue row ${item.queueId}", e)
-                                null
-                            } catch (e: Exception) {
-                                AppLogger.e(TAG, "Failed to send item ${item.queueId}", e)
-                                BatchResult.NetworkError
-                            }
-                            item.queueId to result
-                        }
-                    }.awaitAll()
-
-                    results.forEach { (queueId, result) ->
-                        if (result == BatchResult.Success) {
-                            successfulIds.add(queueId)
-                        } else {
-                            val reason = if (result == null) "Corrupt payload" else retryReason(result)
-                            if (reason != null) {
-                                dbHelper.incrementRetryCount(queueId, reason)
-                            } else {
-                                keptInPlace.add(queueId)
-                            }
-                            totalFailed++
-                        }
-                    }
-
-                    if (successfulIds.isNotEmpty()) {
-                        val sentLocationIds = chunk.filter { it.queueId in successfulIds }.map { it.locationId }
-                        dbHelper.markLocationsSent(sentLocationIds)
-                        dbHelper.removeBatchFromQueue(successfulIds)
-
-                        totalProcessed += successfulIds.size
-                        totalSucceeded += successfulIds.size
-                    }
+                    val result = pointSender.sendChunk(
+                        chunk, currentEndpoint, currentAuthHeaders, currentHttpMethod, currentApiFormat, keptInPlace
+                    )
+                    totalProcessed += result.sent
+                    totalSucceeded += result.sent
+                    totalFailed += result.failed
                     reportProgress()
 
-                    val limited = results.mapNotNull { it.second as? BatchResult.RateLimited }
-                    if (limited.isNotEmpty()) {
-                        noteRateLimit(limited.maxOf { it.retryAfterSeconds ?: SyncState.DEFAULT_RATE_LIMIT_WAIT_SECONDS })
-                    }
-                    stopped = stopReason(results.map { it.second }, anySent = successfulIds.isNotEmpty())
+                    stopped = result.stopReason
                     if (stopped != null) break
                     yield()
                 }
@@ -441,23 +392,6 @@ class SyncManager(
             }
         }
 
-        val now = clock()
-        if (!syncInitialized) {
-            lastSyncTime = now
-            syncInitialized = true
-            return syncIntervalSeconds.toLong()
-        }
-
-        val elapsedSeconds = (now - lastSyncTime) / 1000
-        val remaining = syncIntervalSeconds - elapsedSeconds
-
-        return when {
-            remaining > 0 -> remaining
-            resumingWait -> 0L
-            else -> {
-                lastSyncTime = now
-                syncIntervalSeconds.toLong()
-            }
-        }
+        return schedule.nextPeriodicDelaySeconds(syncIntervalSeconds, resumingWait)
     }
 }

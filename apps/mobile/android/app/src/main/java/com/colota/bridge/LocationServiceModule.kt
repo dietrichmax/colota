@@ -34,6 +34,9 @@ import com.Colota.export.AutoExportConfig
 import com.Colota.export.AutoExportScheduler
 import com.Colota.export.AutoExportWorker
 import com.Colota.export.ExportConverters
+import com.Colota.export.ExportFilenames
+import com.Colota.export.TripConverters
+import com.Colota.export.TripExport
 import com.Colota.util.AppFileLogger
 import com.Colota.util.FileOperations
 import com.Colota.util.LogExportMerger
@@ -1187,7 +1190,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun exportToFile(format: String, promise: Promise) = executeAsync(promise) {
         val ext = ExportConverters.extensionFor(format)
-        val tempFile = java.io.File(reactApplicationContext.cacheDir, "manual_export_${ExportConverters.exportFilenameStamp()}$ext")
+        val tempFile = java.io.File(reactApplicationContext.cacheDir, "manual_export_${ExportFilenames.exportFilenameStamp()}$ext")
 
         val totalRows = ExportConverters.exportToFile(dbHelper, format, tempFile)
 
@@ -1210,13 +1213,13 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
      */
     @ReactMethod
     fun exportTripsToFile(trips: ReadableArray, format: String, fileName: String, promise: Promise) = executeAsync(promise) {
-        val tripExports = ArrayList<ExportConverters.TripExport>(trips.size())
+        val tripExports = ArrayList<TripExport>(trips.size())
         for (i in 0 until trips.size()) {
             val t = trips.getMap(i) ?: continue
             val rows = dbHelper.getLocationsByDateRange(t.getDouble("startTs").toLong(), t.getDouble("endTs").toLong())
-            tripExports.add(ExportConverters.TripExport(t.getInt("index"), t.getString("color") ?: "#3B82F6", rows))
+            tripExports.add(TripExport(t.getInt("index"), t.getString("color") ?: "#3B82F6", rows))
         }
-        fileOps.writeFile(fileName, ExportConverters.convertTrips(format, tripExports))
+        fileOps.writeFile(fileName, TripConverters.convertTrips(format, tripExports))
     }
 
     @ReactMethod
@@ -1227,7 +1230,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         } else {
             val dirUri = android.net.Uri.parse(config.uri)
             val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(reactApplicationContext, dirUri)
-            val matchers = ExportConverters.exportFileMatchers(config.filenameTemplate, android.os.Build.MODEL)
+            val matchers = ExportFilenames.exportFileMatchers(config.filenameTemplate, android.os.Build.MODEL)
             // Every DocumentFile getter is a separate query, so read each file once up front
             // rather than once per sort comparison. Ordering uses the stamp in the name, since a
             // device prefix would break plain name order.
@@ -1238,7 +1241,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     else ExportFileInfo(name, file.length(), file.lastModified(), file.uri.toString())
                 }
                 ?.sortedWith(
-                    compareByDescending<ExportFileInfo> { ExportConverters.stampOf(it.name, matchers) }
+                    compareByDescending<ExportFileInfo> { ExportFilenames.stampOf(it.name, matchers) }
                         .thenByDescending { it.lastModified }
                         .thenByDescending { it.name }
                 )
@@ -1282,7 +1285,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         return try {
             val dirUri = android.net.Uri.parse(config.uri)
             val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(reactApplicationContext, dirUri)
-            val matchers = ExportConverters.exportFileMatchers(config.filenameTemplate, android.os.Build.MODEL)
+            val matchers = ExportFilenames.exportFileMatchers(config.filenameTemplate, android.os.Build.MODEL)
             dir?.listFiles()?.count { file ->
                 matchers.any { it.matches(file.name.orEmpty()) }
             } ?: 0

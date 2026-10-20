@@ -136,7 +136,7 @@ class AutoExportWorker(
         // points written mid-export aren't dropped and the name matches the range it covers.
         val exportStartSec = System.currentTimeMillis() / 1000
 
-        val fileName = ExportConverters.renderExportFilename(
+        val fileName = ExportFilenames.renderExportFilename(
             config.filenameTemplate,
             config.format,
             Build.MODEL,
@@ -184,7 +184,7 @@ class AutoExportWorker(
             val savedName = destDocFile.name ?: fileName
             // A name cleanup cannot match would sit in the directory forever; say so rather than
             // leaving the retention limit quietly broken.
-            if (ExportConverters.exportFileMatchers(config.filenameTemplate, Build.MODEL).none { it.matches(savedName) }) {
+            if (ExportFilenames.exportFileMatchers(config.filenameTemplate, Build.MODEL).none { it.matches(savedName) }) {
                 AppLogger.w(TAG, "Saved as '$savedName', which retention will not recognise")
             }
             AppLogger.i(TAG, "Auto-export complete: $savedName ($rowCount locations)")
@@ -300,7 +300,7 @@ class AutoExportWorker(
 
     /**
      * Deletes only files the configured template could have produced, so subfolders and sync
-     * artifacts are left alone. Selection lives in [ExportConverters.selectForDeletion] so it is
+     * artifacts are left alone. Selection lives in [ExportFilenames.selectForDeletion] so it is
      * testable without SAF.
      */
     private fun cleanupOldExports(dirUri: Uri, config: AutoExportConfig) {
@@ -311,7 +311,7 @@ class AutoExportWorker(
 
         try {
             val dir = DocumentFile.fromTreeUri(appContext, dirUri) ?: return
-            val matchers = ExportConverters.exportFileMatchers(config.filenameTemplate, Build.MODEL)
+            val matchers = ExportFilenames.exportFileMatchers(config.filenameTemplate, Build.MODEL)
 
             // Each DocumentFile getter is its own query, so only the names that already match pay
             // for lastModified and isFile. A shared folder can hold far more files than ours.
@@ -320,9 +320,9 @@ class AutoExportWorker(
                 .map { it to it.name.orEmpty() }
                 .filter { (_, name) -> matchers.any { it.matches(name) } }
                 .map { (file, name) ->
-                    file to ExportConverters.ExportEntry(name, file.lastModified(), file.isFile)
+                    file to ExportFilenames.ExportEntry(name, file.lastModified(), file.isFile)
                 }
-            val selected = ExportConverters
+            val selected = ExportFilenames
                 .selectForDeletion(candidates.map { it.second }, config.retentionCount, matchers)
                 .map { it.name }
             val doomed = selected.toMutableList()

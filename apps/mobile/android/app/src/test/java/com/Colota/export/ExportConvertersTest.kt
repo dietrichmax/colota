@@ -162,7 +162,7 @@ class ExportConvertersTest {
 
     @Test
     fun `convertTrips GeoJSON conforms to RFC 7946`() {
-        assertRfc7946(ExportConverters.convertTrips("geojson", tripFixture), 4)
+        assertRfc7946(TripConverters.convertTrips("geojson", tripFixture), 4)
     }
 
     @Test
@@ -525,11 +525,11 @@ class ExportConvertersTest {
 
     /** Mirrors the original JS golden-capture fixture, plus battery_status. */
     private val tripFixture = listOf(
-        ExportConverters.TripExport(1, "#3B82F6", listOf(
+        TripExport(1, "#3B82F6", listOf(
             mapOf("latitude" to 48.137154, "longitude" to 11.576124, "timestamp" to 1700000000L, "accuracy" to 8.5, "altitude" to 520.2, "speed" to 1.4, "bearing" to 270.5, "battery" to 91L, "battery_status" to 2L),
             mapOf("latitude" to 48.138001, "longitude" to 11.577003, "timestamp" to 1700000060L, "accuracy" to 12.0, "altitude" to 525.0, "speed" to 2.0, "bearing" to 275.0, "battery" to 90L, "battery_status" to 3L)
         )),
-        ExportConverters.TripExport(2, "#10B981", listOf(
+        TripExport(2, "#10B981", listOf(
             mapOf("latitude" to 48.14, "longitude" to 11.58, "timestamp" to 1700001000L, "accuracy" to 5.0, "altitude" to 530.0, "speed" to 3.0, "bearing" to 10.0, "battery" to 88L, "battery_status" to 1L),
             mapOf("latitude" to 48.1405, "longitude" to 11.5811, "timestamp" to 1700001060L, "accuracy" to 6.2, "altitude" to 0.0, "speed" to 0.0, "bearing" to 0.0, "battery" to 87L, "battery_status" to 0L)
         ))
@@ -544,42 +544,42 @@ class ExportConvertersTest {
 
     @Test
     fun `convertTrips csv matches JS golden`() {
-        assertEquals(norm(golden("trip.csv")), norm(ExportConverters.convertTrips("csv", tripFixture)))
+        assertEquals(norm(golden("trip.csv")), norm(TripConverters.convertTrips("csv", tripFixture)))
     }
 
     @Test
     fun `convertTrips geojson matches JS golden`() {
-        assertEquals(norm(golden("trip.geojson")), norm(ExportConverters.convertTrips("geojson", tripFixture)))
+        assertEquals(norm(golden("trip.geojson")), norm(TripConverters.convertTrips("geojson", tripFixture)))
     }
 
     @Test
     fun `convertTrips gpx matches JS golden`() {
-        assertEquals(norm(golden("trip.gpx")), norm(ExportConverters.convertTrips("gpx", tripFixture)))
+        assertEquals(norm(golden("trip.gpx")), norm(TripConverters.convertTrips("gpx", tripFixture)))
     }
 
     @Test
     fun `convertTrips kml matches JS golden`() {
-        assertEquals(norm(golden("trip.kml")), norm(ExportConverters.convertTrips("kml", tripFixture)))
+        assertEquals(norm(golden("trip.kml")), norm(TripConverters.convertTrips("kml", tripFixture)))
     }
 
     @Test
     fun `convertTrips writes the note in every format and escapes per format`() {
         // Trip serializers are separate from the flat writers and the golden fixture is note-free,
         // so cover note placement and per-format escaping here.
-        val trips = listOf(ExportConverters.TripExport(1, "#3B82F6", listOf(
+        val trips = listOf(TripExport(1, "#3B82F6", listOf(
             mapOf("latitude" to 52.52, "longitude" to 13.405, "timestamp" to 1700000000L, "note" to "deer, \"big\" <antlers>"),
             mapOf("latitude" to 48.8566, "longitude" to 2.3522, "timestamp" to 1700003600L)
         )))
-        val csv = ExportConverters.convertTrips("csv", trips)
+        val csv = TripConverters.convertTrips("csv", trips)
         assertTrue(csv.contains("\"deer, \"\"big\"\" <antlers>\""))
-        val gj = ExportConverters.convertTrips("geojson", trips)
+        val gj = TripConverters.convertTrips("geojson", trips)
         assertTrue(gj.contains("\\\"big\\\""))
         assertEquals(1, Regex("\"note\":").findAll(gj).count())
-        val gpx = ExportConverters.convertTrips("gpx", trips)
+        val gpx = TripConverters.convertTrips("gpx", trips)
         assertTrue(gpx.contains("<note>deer, &quot;big&quot; &lt;antlers&gt;</note>"))
         assertTrue(gpx.contains("<note></note>"))
         assertEquals(2, Regex("<note>").findAll(gpx).count())
-        val kml = ExportConverters.convertTrips("kml", trips)
+        val kml = TripConverters.convertTrips("kml", trips)
         assertTrue(kml.contains("&lt;antlers&gt;"))
         assertEquals(2, Regex("<Data name=\"note\">").findAll(kml).count())
     }
@@ -590,23 +590,23 @@ class ExportConvertersTest {
     fun `convertTrips with no trips produces valid empty output`() {
         assertEquals(
             "trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status,note",
-            ExportConverters.convertTrips("csv", emptyList()).trim()
+            TripConverters.convertTrips("csv", emptyList()).trim()
         )
-        assertTrue(ExportConverters.convertTrips("geojson", emptyList()).contains("\"features\": []"))
-        val gpx = ExportConverters.convertTrips("gpx", emptyList())
+        assertTrue(TripConverters.convertTrips("geojson", emptyList()).contains("\"features\": []"))
+        val gpx = TripConverters.convertTrips("gpx", emptyList())
         assertTrue(gpx.startsWith("<?xml") && gpx.trimEnd().endsWith("</gpx>"))
-        assertTrue(ExportConverters.convertTrips("kml", emptyList()).trimEnd().endsWith("</kml>"))
+        assertTrue(TripConverters.convertTrips("kml", emptyList()).trimEnd().endsWith("</kml>"))
     }
 
     @Test
     fun `convertTrips with an empty trip emits no points and stays well-formed`() {
-        val trips = listOf(ExportConverters.TripExport(1, "#3B82F6", emptyList()))
-        assertEquals(1, ExportConverters.convertTrips("csv", trips).lines().filter { it.isNotBlank() }.size)
-        assertTrue(ExportConverters.convertTrips("geojson", trips).contains("\"features\": []"))
+        val trips = listOf(TripExport(1, "#3B82F6", emptyList()))
+        assertEquals(1, TripConverters.convertTrips("csv", trips).lines().filter { it.isNotBlank() }.size)
+        assertTrue(TripConverters.convertTrips("geojson", trips).contains("\"features\": []"))
         // GPX/KML still open the trip's track/folder with no points inside; just verify it stays well-formed
-        val gpx = ExportConverters.convertTrips("gpx", trips)
+        val gpx = TripConverters.convertTrips("gpx", trips)
         assertTrue(gpx.contains("<name>Trip 1</name>") && gpx.trimEnd().endsWith("</gpx>"))
-        val kml = ExportConverters.convertTrips("kml", trips)
+        val kml = TripConverters.convertTrips("kml", trips)
         assertTrue(kml.contains("<name>Trip 1</name>") && kml.trimEnd().endsWith("</kml>"))
     }
 }

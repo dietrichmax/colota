@@ -30,7 +30,7 @@ data class AutoExportConfig(
     val weeklyDow: Int = 1,
     val monthlyDom: Int = 1,
     val enabledAt: Long = 0L,
-    val filenameTemplate: String = ExportConverters.DEFAULT_FILENAME_TEMPLATE
+    val filenameTemplate: String = ExportFilenames.DEFAULT_FILENAME_TEMPLATE
 ) {
     companion object {
         private const val TAG = "AutoExportConfig"
@@ -84,8 +84,8 @@ data class AutoExportConfig(
             // rejected; write the correction back so the UI stops showing one the exporter never
             // uses. Best-effort, since saveSetting throws mid-restore.
             val rawTemplate = db.getSetting(KEY_FILENAME_TEMPLATE)
-            val filenameTemplate = rawTemplate?.takeIf { ExportConverters.isValidFilenameTemplate(it) }
-                ?: ExportConverters.DEFAULT_FILENAME_TEMPLATE.also {
+            val filenameTemplate = rawTemplate?.takeIf { ExportFilenames.isValidFilenameTemplate(it) }
+                ?: ExportFilenames.DEFAULT_FILENAME_TEMPLATE.also {
                     if (rawTemplate != null) {
                         AppLogger.w(TAG, "Filename template '$rawTemplate' is not usable, reset to default")
                         try {

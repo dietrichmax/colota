@@ -1,6 +1,6 @@
 package com.Colota.export
 
-import com.Colota.export.ExportConverters.ExportEntry
+import com.Colota.export.ExportFilenames.ExportEntry
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.Calendar
@@ -20,7 +20,7 @@ class ExportFilenameTest {
     private val may20 = dateAt(2026, 5, 20, 8, 15)
 
     private fun render(template: String, format: String = "geojson", device: String = "Pixel 7") =
-        ExportConverters.renderExportFilename(template, format, device, may20)
+        ExportFilenames.renderExportFilename(template, format, device, may20)
 
     // --- renderExportFilename ---
 
@@ -29,7 +29,7 @@ class ExportFilenameTest {
         // Existing installs must keep byte-identical names, otherwise this is a silent migration.
         assertEquals(
             "colota_export_2026-05-20_0815.geojson",
-            render(ExportConverters.DEFAULT_FILENAME_TEMPLATE)
+            render(ExportFilenames.DEFAULT_FILENAME_TEMPLATE)
         )
     }
 
@@ -85,32 +85,32 @@ class ExportFilenameTest {
 
     @Test
     fun `template validation requires the marker and both time tokens`() {
-        assertTrue(ExportConverters.isValidFilenameTemplate(ExportConverters.DEFAULT_FILENAME_TEMPLATE))
-        assertTrue(ExportConverters.isValidFilenameTemplate("{device}_colota_export-{date}_{time}"))
-        assertFalse(ExportConverters.isValidFilenameTemplate("backup_{date}_{time}"))
-        assertFalse(ExportConverters.isValidFilenameTemplate("colota_export_{time}"))
-        assertFalse(ExportConverters.isValidFilenameTemplate("colota_export_{date}"))
+        assertTrue(ExportFilenames.isValidFilenameTemplate(ExportFilenames.DEFAULT_FILENAME_TEMPLATE))
+        assertTrue(ExportFilenames.isValidFilenameTemplate("{device}_colota_export-{date}_{time}"))
+        assertFalse(ExportFilenames.isValidFilenameTemplate("backup_{date}_{time}"))
+        assertFalse(ExportFilenames.isValidFilenameTemplate("colota_export_{time}"))
+        assertFalse(ExportFilenames.isValidFilenameTemplate("colota_export_{date}"))
         // Case-sensitive: the marker is what cleanup keys off.
-        assertFalse(ExportConverters.isValidFilenameTemplate("Colota_Export_{date}_{time}"))
+        assertFalse(ExportFilenames.isValidFilenameTemplate("Colota_Export_{date}_{time}"))
     }
 
     @Test
     fun `template validation rejects a template that would overrun the filename limit`() {
         // Rejected rather than truncated, because a truncated name would no longer match its own
         // template and retention would never see it again.
-        assertFalse(ExportConverters.isValidFilenameTemplate("x".repeat(120) + "colota_export_{date}_{time}"))
+        assertFalse(ExportFilenames.isValidFilenameTemplate("x".repeat(120) + "colota_export_{date}_{time}"))
     }
 
     // --- exportFileMatcher ---
 
-    private val defaultMatcher = ExportConverters.exportFileMatcher(
-        ExportConverters.DEFAULT_FILENAME_TEMPLATE,
+    private val defaultMatcher = ExportFilenames.exportFileMatcher(
+        ExportFilenames.DEFAULT_FILENAME_TEMPLATE,
         "Pixel 7"
     )
 
     /** Every template a user can save, paired with device names that stress the boundaries. */
     private val roundTripTemplates = listOf(
-        ExportConverters.DEFAULT_FILENAME_TEMPLATE,
+        ExportFilenames.DEFAULT_FILENAME_TEMPLATE,
         "{device}_colota_export-{date}_{time}",
         "colota_export_{date}_{time}_{device}",
         "colota_export_{device}_{date}_{time}",
@@ -128,8 +128,8 @@ class ExportFilenameTest {
         for (template in roundTripTemplates) {
             for (device in listOf("Pixel 7", "", "Moto G.", "X".repeat(80))) {
                 for (format in listOf("csv", "geojson", "gpx", "kml")) {
-                    val name = ExportConverters.renderExportFilename(template, format, device, may20)
-                    val matcher = ExportConverters.exportFileMatcher(template, device)
+                    val name = ExportFilenames.renderExportFilename(template, format, device, may20)
+                    val matcher = ExportFilenames.exportFileMatcher(template, device)
                     assertTrue(
                         "template='$template' device='$device' rendered '$name' but the matcher rejected it",
                         matcher.matches(name)
@@ -180,14 +180,14 @@ class ExportFilenameTest {
 
     @Test
     fun `device token scopes the matcher to this device`() {
-        val matcher = ExportConverters.exportFileMatcher("{device}_colota_export-{date}_{time}", "Pixel 7")
+        val matcher = ExportFilenames.exportFileMatcher("{device}_colota_export-{date}_{time}", "Pixel 7")
         assertTrue(matcher.matches("Pixel7_colota_export-2026-05-20_0815.gpx"))
         assertFalse(matcher.matches("S23_colota_export-2026-05-20_0815.gpx"))
     }
 
     @Test
     fun `a repeated date token reads the stamp from the first occurrence`() {
-        val matcher = ExportConverters.exportFileMatcher("colota_export_{date}_{time}_{date}", "Pixel 7")
+        val matcher = ExportFilenames.exportFileMatcher("colota_export_{date}_{time}_{date}", "Pixel 7")
         assertEquals(
             "2026-05-200815",
             matcher.stamp("colota_export_2026-05-20_0815_1999-01-01.geojson")
@@ -197,17 +197,17 @@ class ExportFilenameTest {
     @Test
     fun `stamp is chronologically sortable`() {
         assertTrue(
-            ExportConverters.stampOf("colota_export_2026-05-19_2359.gpx", listOf(defaultMatcher)) <
-                ExportConverters.stampOf("colota_export_2026-05-20_0000.gpx", listOf(defaultMatcher))
+            ExportFilenames.stampOf("colota_export_2026-05-19_2359.gpx", listOf(defaultMatcher)) <
+                ExportFilenames.stampOf("colota_export_2026-05-20_0000.gpx", listOf(defaultMatcher))
         )
-        assertEquals("", ExportConverters.stampOf("unrelated.txt", listOf(defaultMatcher)))
+        assertEquals("", ExportFilenames.stampOf("unrelated.txt", listOf(defaultMatcher)))
     }
 
     // --- exportFileMatchers: which files a template claims ---
 
     @Test
     fun `a custom template still claims legacy default-named files`() {
-        val matchers = ExportConverters.exportFileMatchers("backup_colota_export-{date}_{time}", "Pixel 7")
+        val matchers = ExportFilenames.exportFileMatchers("backup_colota_export-{date}_{time}", "Pixel 7")
         assertTrue(matchers.any { it.matches("backup_colota_export-2026-05-20_0815.gpx") })
         assertTrue(matchers.any { it.matches("colota_export_2026-01-01_0000.geojson") })
     }
@@ -216,7 +216,7 @@ class ExportFilenameTest {
     fun `a device template does not claim legacy default-named files`() {
         // A plain colota_export_* file could have been written by any phone sharing the folder.
         // Leaving a few of our own behind beats deleting someone else's.
-        val matchers = ExportConverters.exportFileMatchers("{device}_colota_export-{date}_{time}", "Pixel 7")
+        val matchers = ExportFilenames.exportFileMatchers("{device}_colota_export-{date}_{time}", "Pixel 7")
         assertTrue(matchers.any { it.matches("Pixel7_colota_export-2026-05-20_0815.gpx") })
         assertFalse(matchers.any { it.matches("colota_export_2026-01-01_0000.geojson") })
     }
@@ -231,20 +231,20 @@ class ExportFilenameTest {
     @Test
     fun `retention of zero keeps everything`() {
         val entries = (1..5).map { entry("colota_export_2026-05-0${it}_0800.gpx", it * 1000L) }
-        assertTrue(ExportConverters.selectForDeletion(entries, 0, defaultMatchers).isEmpty())
+        assertTrue(ExportFilenames.selectForDeletion(entries, 0, defaultMatchers).isEmpty())
     }
 
     @Test
     fun `ordering follows the stamp even when it disagrees with alphabetical order`() {
         // A user who moved from the default template to a prefixed one has both shapes in the
         // folder, and there alphabetical order puts the newest file first.
-        val matchers = ExportConverters.exportFileMatchers("backup_colota_export-{date}_{time}", "Pixel 7")
+        val matchers = ExportFilenames.exportFileMatchers("backup_colota_export-{date}_{time}", "Pixel 7")
         val entries = listOf(
             entry("backup_colota_export-2026-05-20_0800.gpx"),
             entry("colota_export_2026-05-18_0800.gpx"),
             entry("colota_export_2026-05-19_0800.gpx")
         )
-        val doomed = ExportConverters.selectForDeletion(entries, 2, matchers)
+        val doomed = ExportFilenames.selectForDeletion(entries, 2, matchers)
         assertEquals(listOf("colota_export_2026-05-18_0800.gpx"), doomed.map { it.name })
     }
 
@@ -257,7 +257,7 @@ class ExportFilenameTest {
             entry("colota_export_2026-05-18_0800.gpx"),
             entry("colota_export_2026-05-19_0800.gpx")
         )
-        val doomed = ExportConverters.selectForDeletion(entries, 2, defaultMatchers)
+        val doomed = ExportFilenames.selectForDeletion(entries, 2, defaultMatchers)
         assertEquals(listOf("colota_export_2026-05-18_0800.gpx"), doomed.map { it.name })
     }
 
@@ -269,7 +269,7 @@ class ExportFilenameTest {
             entry("colota_export_2026-05-19_0800.gpx", lastModified = 2_000L),
             entry("colota_export_2026-05-20_0800.gpx", lastModified = 1_000L)
         )
-        val doomed = ExportConverters.selectForDeletion(entries, 2, defaultMatchers)
+        val doomed = ExportFilenames.selectForDeletion(entries, 2, defaultMatchers)
         assertEquals(listOf("colota_export_2026-05-18_0800.gpx"), doomed.map { it.name })
     }
 
@@ -283,14 +283,14 @@ class ExportFilenameTest {
             entry("colota_export_2026-05-19_0800.gpx"),
             entry("colota_export_2026-05-20_0800.gpx")
         )
-        val doomed = ExportConverters.selectForDeletion(entries, 2, defaultMatchers)
+        val doomed = ExportFilenames.selectForDeletion(entries, 2, defaultMatchers)
         assertEquals(listOf("colota_export_2026-05-18_0800.gpx"), doomed.map { it.name })
     }
 
     @Test
     fun `a device-scoped template leaves other devices' exports alone`() {
         // Several devices exporting into one shared folder.
-        val matchers = ExportConverters.exportFileMatchers("{device}_colota_export-{date}_{time}", "Pixel 7")
+        val matchers = ExportFilenames.exportFileMatchers("{device}_colota_export-{date}_{time}", "Pixel 7")
         val entries = listOf(
             entry("Pixel7_colota_export-2026-05-18_0800.gpx"),
             entry("Pixel7_colota_export-2026-05-19_0800.gpx"),
@@ -299,7 +299,7 @@ class ExportFilenameTest {
             entry("S23_colota_export-2026-05-02_0800.gpx"),
             entry("colota_export_2026-01-01_0000.geojson")
         )
-        val doomed = ExportConverters.selectForDeletion(entries, 2, matchers)
+        val doomed = ExportFilenames.selectForDeletion(entries, 2, matchers)
         assertEquals(listOf("Pixel7_colota_export-2026-05-18_0800.gpx"), doomed.map { it.name })
     }
 
@@ -311,7 +311,7 @@ class ExportFilenameTest {
             entry("colota_export_2026-05-18_0800.gpx"),
             entry("colota_export_2026-05-19_0800.gpx")
         )
-        val doomed = ExportConverters.selectForDeletion(entries, 1, defaultMatchers)
+        val doomed = ExportFilenames.selectForDeletion(entries, 1, defaultMatchers)
         assertEquals(listOf("colota_export_2026-05-18_0800.gpx"), doomed.map { it.name })
     }
 }
