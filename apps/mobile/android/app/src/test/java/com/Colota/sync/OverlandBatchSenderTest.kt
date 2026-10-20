@@ -100,6 +100,33 @@ class OverlandBatchSenderTest {
         assertEquals(OverlandBatchSender.BatchSendResult(processed = 3, failed = 1, stop = false), result)
     }
 
+    /** A fully rejected batch costs about two requests per row, so the caller must hear from the split before it ends. */
+    @Test
+    fun `every finished piece of a bisect reports what it sent and failed`() = runTest {
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
+            val containsPoison = arg<List<JSONObject>>(0).any { it.optInt("id", -1) == 4 }
+            if (containsPoison) BatchResult.ClientError(400) else BatchResult.Success
+        }
+        val reports = mutableListOf<Pair<Int, Int>>()
+
+        val result = sender.sendBatchRecursive(rows(4), endpoint, emptyMap()) { sent, failed -> reports.add(sent to failed) }
+
+        assertEquals(listOf(2 to 0, 1 to 0, 0 to 1), reports)
+        assertEquals(result.processed to result.failed, reports.sumOf { it.first } to reports.sumOf { it.second })
+    }
+
+    @Test
+    fun `a corrupt row is reported once, beside the rows that went out`() = runTest {
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
+        val reports = mutableListOf<Pair<Int, Int>>()
+
+        sender.sendBatchRecursive(listOf(QueuedLocation(9L, 109L, "NOT_VALID_JSON{{{", 0)) + rows(2), endpoint, emptyMap()) { sent, failed ->
+            reports.add(sent to failed)
+        }
+
+        assertEquals(listOf(0 to 1, 2 to 0), reports)
+    }
+
     /** Overland carries custom fields once on the envelope, never as location keys. */
     @Test
     fun `custom fields lift to the envelope and location keys stay out of it`() = runTest {

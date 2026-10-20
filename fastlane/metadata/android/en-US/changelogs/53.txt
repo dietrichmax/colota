@@ -4,3 +4,4 @@
 - Positioning accuracy setting in Tracking & sync: High accuracy (default) or Lower accuracy to save battery
 - Fixed tracking recording nothing for hours after Android recreated it
 - Fixed GPS staying off when leaving a zone with motionless pause after the app was updated or restarted
+- Fixed Sync now saying the app did not answer while the server was rejecting an Overland batch and Colota was retrying it in smaller parts

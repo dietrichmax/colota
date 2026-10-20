@@ -332,11 +332,12 @@ class SyncManager(
             val processedBefore = totalProcessed
 
             if (currentApiFormat == ApiFormat.OVERLAND_BATCH) {
-                val result = batchSender.sendBatchRecursive(queued, currentEndpoint, currentAuthHeaders)
-                totalProcessed += result.processed
-                totalSucceeded += result.processed
-                totalFailed += result.failed
-                reportProgress()
+                val result = batchSender.sendBatchRecursive(queued, currentEndpoint, currentAuthHeaders) { sent, failed ->
+                    totalProcessed += sent
+                    totalSucceeded += sent
+                    totalFailed += failed
+                    reportProgress()
+                }
                 if (result.stop) {
                     AppLogger.d(TAG, "Sync pass stopped: the server is unreachable, failing or rate limiting")
                     break

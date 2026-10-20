@@ -1069,6 +1069,43 @@ class SyncManagerTest {
         verify { dbHelper.getQueuedLocations(200) }
     }
 
+    /** Sync Now gives up after a silence, and a fully rejected batch of 50 takes about 100 requests to bisect. */
+    @Test
+    fun `a bisect reports each finished piece, so Sync Now hears from a long split`() = scope.runTest {
+        mockkObject(LocationServiceModule.Companion)
+        every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any(), any()) } returns true
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+        val items = (1L..4L).map { QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0) }
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(items, emptyList())
+        every { dbHelper.getQueuedCount() } returns 4
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
+            if (firstArg<List<JSONObject>>().size > 1) BatchResult.ClientError(400) else BatchResult.Success
+        }
+
+        try {
+            syncManager.manualFlush()
+
+            verifyOrder {
+                LocationServiceModule.sendSyncProgressEvent(1, 0, 4)
+                LocationServiceModule.sendSyncProgressEvent(2, 0, 4)
+                LocationServiceModule.sendSyncProgressEvent(3, 0, 4)
+                LocationServiceModule.sendSyncProgressEvent(4, 0, 4)
+            }
+        } finally {
+            unmockkObject(LocationServiceModule.Companion)
+        }
+    }
+
     // --- One sender at a time ---
 
     @Test
