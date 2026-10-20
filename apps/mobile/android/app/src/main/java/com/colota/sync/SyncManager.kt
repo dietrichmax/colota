@@ -34,9 +34,9 @@ class SyncManager(
     companion object {
         private const val TAG = "SyncManager"
         private const val MAX_BATCHES_PER_SYNC = 10
-        private const val DEFAULT_RATE_LIMIT_WAIT_SECONDS = 60L
-        private const val MAX_RATE_LIMIT_WAIT_SECONDS = 900L
     }
+
+    private val batchSender = OverlandBatchSender(dbHelper, networkManager, ::noteRateLimit)
 
     @Volatile private var endpoint: String = ""
     @Volatile private var syncIntervalSeconds: Int = 0
@@ -276,16 +276,10 @@ class SyncManager(
         return success
     }
 
-    /** Clamped to the cap, because the wall clock can be set back. */
-    fun rateLimitWaitSeconds(): Long {
-        val left = (SyncState.rateLimitedUntil - clock()).coerceAtMost(MAX_RATE_LIMIT_WAIT_SECONDS * 1000)
-        return if (left > 0) (left + 999) / 1000 else 0
-    }
+    fun rateLimitWaitSeconds(): Long = SyncState.rateLimitWaitSeconds(clock())
 
-    /** Capped so a bad `Retry-After` cannot hold the queue for a day. */
     private fun noteRateLimit(retryAfterSeconds: Long?) {
-        val wait = (retryAfterSeconds ?: DEFAULT_RATE_LIMIT_WAIT_SECONDS).coerceIn(1, MAX_RATE_LIMIT_WAIT_SECONDS)
-        SyncState.holdUntil(clock() + wait * 1000)
+        val wait = SyncState.holdFor(retryAfterSeconds, clock())
         AppLogger.w(TAG, "Rate limited: holding uploads for ${wait}s")
     }
 
@@ -344,7 +338,7 @@ class SyncManager(
             val processedBefore = totalProcessed
 
             if (currentApiFormat == ApiFormat.OVERLAND_BATCH) {
-                val result = sendBatchRecursive(queued, currentEndpoint, currentAuthHeaders)
+                val result = batchSender.sendBatchRecursive(queued, currentEndpoint, currentAuthHeaders)
                 totalProcessed += result.processed
                 totalSucceeded += result.processed
                 totalFailed += result.failed
@@ -405,7 +399,7 @@ class SyncManager(
 
                     val limited = results.mapNotNull { it.second as? BatchResult.RateLimited }
                     if (limited.isNotEmpty()) {
-                        noteRateLimit(limited.maxOf { it.retryAfterSeconds ?: DEFAULT_RATE_LIMIT_WAIT_SECONDS })
+                        noteRateLimit(limited.maxOf { it.retryAfterSeconds ?: SyncState.DEFAULT_RATE_LIMIT_WAIT_SECONDS })
                     }
                     stopped = stopReason(results.map { it.second }, anySent = successfulIds.isNotEmpty())
                     if (stopped != null) break
@@ -436,101 +430,6 @@ class SyncManager(
         }
 
         SyncPass(totalSucceeded, totalFailed, skippedInFlight)
-    }
-
-    /** Only a verdict about the row moves it back in the queue; an outage or a rate limit is the server's. */
-    private fun retryReason(result: BatchResult): String? = when (result) {
-        is BatchResult.ClientError -> "4xx: ${result.code}"
-        is BatchResult.ServerError -> if (result.code in 502..504) null else "5xx: ${result.code}"
-        BatchResult.Success, BatchResult.NetworkError, is BatchResult.RateLimited -> null
-    }
-
-    /** A 429 ends the pass outright; an outage or a 5xx does once a whole chunk got nothing through. */
-    private fun stopReason(results: List<BatchResult?>, anySent: Boolean): String? {
-        results.filterIsInstance<BatchResult.RateLimited>().firstOrNull()?.let { limited ->
-            return "rate limited" + (limited.retryAfterSeconds?.let { ", retry after ${it}s" } ?: "")
-        }
-        if (anySent) return null
-        results.filterIsInstance<BatchResult.ServerError>().firstOrNull()?.let { return "server error ${it.code}" }
-        if (BatchResult.NetworkError in results) return "server unreachable"
-        return null
-    }
-
-    private data class BatchSendResult(val processed: Int, val failed: Int, val stop: Boolean)
-
-    /**
-     * Endpoint and auth headers are passed by parameter (not read from volatiles)
-     * so a settings change mid-pass cannot mix them across recursive calls.
-     */
-    private suspend fun sendBatchRecursive(
-        items: List<com.Colota.data.QueuedLocation>,
-        endpoint: String,
-        authHeaders: Map<String, String>,
-    ): BatchSendResult {
-        if (items.isEmpty()) return BatchSendResult(0, 0, false)
-
-        // One corrupt payload must not fail the whole batch
-        val parsed = items.mapNotNull { item ->
-            try {
-                item to JSONObject(item.payload)
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Corrupt queue row ${item.queueId}, bumping retry counter", e)
-                dbHelper.incrementRetryCount(item.queueId, "Corrupt payload")
-                null
-            }
-        }
-        val corruptedFailed = items.size - parsed.size
-        if (parsed.isEmpty()) {
-            return BatchSendResult(processed = 0, failed = corruptedFailed, stop = false)
-        }
-
-        val parseableItems = parsed.map { it.first }
-        val payloads = parsed.map { it.second }
-        val customFields = PayloadBuilder.extractEnvelopeCustomFields(payloads.first())
-
-        val result = networkManager.sendBatchToEndpoint(
-            items = payloads,
-            customFields = customFields,
-            endpoint = endpoint,
-            extraHeaders = authHeaders,
-        )
-
-        return when (result) {
-            BatchResult.Success -> {
-                dbHelper.markLocationsSent(parseableItems.map { it.locationId })
-                dbHelper.removeBatchFromQueue(parseableItems.map { it.queueId })
-                BatchSendResult(processed = parseableItems.size, failed = corruptedFailed, stop = false)
-            }
-            is BatchResult.ClientError -> {
-                if (parseableItems.size == 1) {
-                    dbHelper.incrementRetryCount(parseableItems[0].queueId, "4xx: ${result.code}")
-                    BatchSendResult(processed = 0, failed = 1 + corruptedFailed, stop = false)
-                } else {
-                    val mid = parseableItems.size / 2
-                    val left = sendBatchRecursive(parseableItems.take(mid), endpoint, authHeaders)
-                    if (left.stop) return BatchSendResult(left.processed, left.failed + corruptedFailed, stop = true)
-                    yield()
-                    val right = sendBatchRecursive(parseableItems.drop(mid), endpoint, authHeaders)
-                    BatchSendResult(
-                        processed = left.processed + right.processed,
-                        failed = left.failed + right.failed + corruptedFailed,
-                        stop = left.stop || right.stop,
-                    )
-                }
-            }
-            is BatchResult.ServerError -> {
-                retryReason(result)?.let { reason ->
-                    parseableItems.forEach { dbHelper.incrementRetryCount(it.queueId, reason) }
-                }
-                BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
-            }
-            is BatchResult.RateLimited -> {
-                noteRateLimit(result.retryAfterSeconds)
-                BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
-            }
-            BatchResult.NetworkError ->
-                BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
-        }
     }
 
     private fun calculateNextSyncDelay(resumingWait: Boolean): Long {

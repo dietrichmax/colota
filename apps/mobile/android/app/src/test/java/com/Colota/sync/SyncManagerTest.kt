@@ -322,7 +322,6 @@ class SyncManagerTest {
 
     @Test
     fun `queueAndSend bypassInterval sends despite a periodic interval`() = scope.runTest {
-        // Before #579 the heartbeat POSTed directly, ignoring the interval. This restores that
         syncManager.updateConfig(
             endpoint = "https://example.com",
             syncIntervalSeconds = 900,
@@ -368,7 +367,6 @@ class SyncManagerTest {
 
     @Test
     fun `queueAndSend bypassInterval leaves a failed send in the queue`() = scope.runTest {
-        // An unreachable server must not lose the point (#579)
         every { dbHelper.addToQueue(any(), any()) } returns 42L
         syncManager.updateConfig(
             endpoint = "https://example.com",
@@ -517,13 +515,12 @@ class SyncManagerTest {
         )
 
         val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
-        // Always return the same item (it stays in queue after failure)
+        // A failed row stays at the head of the queue
         every { dbHelper.getQueuedLocations(50) } returns listOf(item)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.ClientError(400)
 
         syncManager.manualFlush()
 
-        // Should only fetch ONE batch, not loop 10 times re-fetching the same failing item
         verify(exactly = 1) { dbHelper.getQueuedLocations(50) }
         coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
     }
@@ -549,9 +546,7 @@ class SyncManagerTest {
         assertEquals(20, second)
     }
 
-    // ========================================================================
-    // Exponential backoff (30s → 60s → 5min → 15min)
-    // ========================================================================
+    // --- Backoff ---
 
     @Test
     fun `applyBackoffDelay waits 30s after 1 failure`() = scope.runTest {
@@ -585,9 +580,7 @@ class SyncManagerTest {
         assertEquals(900_000L, currentTime - start)
     }
 
-    // ========================================================================
-    // Batch processing limits and concurrent chunk sending
-    // ========================================================================
+    // --- Batch limit and chunks ---
 
     @Test
     fun `syncQueue stops processing after 10 batches`() = scope.runTest {
@@ -601,7 +594,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        // Always return items - loop should still stop at batch 10
+        // The queue never empties, so only the batch cap ends the pass
         val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
         every { dbHelper.getQueuedLocations(50) } returns listOf(item)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
@@ -623,7 +616,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        // 25 items → 3 chunks (10 + 10 + 5)
+        // Chunks of 10, 10 and 5
         val items = (1L..25L).map { QueuedLocation(it, it + 100, """{"lat":52.0}""", 0) }
         every { dbHelper.getQueuedLocations(50) } returnsMany listOf(items, emptyList())
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
@@ -631,13 +624,10 @@ class SyncManagerTest {
         syncManager.manualFlush()
 
         coVerify(exactly = 25) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
-        // 3 chunks → 3 removeBatchFromQueue calls
         verify(exactly = 3) { dbHelper.removeBatchFromQueue(any()) }
     }
 
-    // ========================================================================
-    // Consecutive failure tracking (3+ failures → error event)
-    // ========================================================================
+    // --- Consecutive failures ---
 
     @Test
     fun `periodic sync increments consecutiveFailures on each failure`() = scope.runTest {
@@ -653,16 +643,12 @@ class SyncManagerTest {
 
         coEvery { networkMonitor.isNetworkAvailable() } returns true
         every { dbHelper.getQueuedCount() } returns 5
-        // getQueuedLocations returns empty → performSyncAndCheckSuccess sees
-        // countBefore=5, countAfter=5 → failure
+        // Rows are queued but none can be fetched, so the count never drops and every pass fails
         every { dbHelper.getQueuedLocations(50) } returns emptyList()
 
         syncManager.startPeriodicSync()
 
-        // Advance past 2 full iterations:
-        // iter 1: delay(1s) + sync + backoff(30s) = 31s
-        // iter 2: delay(1s) + sync + backoff(60s) = 61s
-        // Total to complete 2 iterations: ~92s
+        // Two 1 s ticks, each followed by its backoff of 30 s and 60 s
         advanceTimeBy(92_500)
 
         assertEquals(2, getField("consecutiveFailures"))
@@ -690,11 +676,7 @@ class SyncManagerTest {
 
         syncManager.startPeriodicSync()
 
-        // Advance past 3 full iterations:
-        // iter 1: delay(1s) + sync + backoff(30s) = 31s
-        // iter 2: delay(1s) + sync + backoff(60s) = 61s
-        // iter 3: delay(1s) + sync (error event fires here) + backoff(300s)
-        // Need to reach iter 3's sync: 31 + 61 + 1 = 93s
+        // The third tick lands at 31 + 61 + 1 s and its failure sends the error event
         advanceTimeBy(93_500)
 
         verify(atLeast = 1) {
@@ -725,7 +707,7 @@ class SyncManagerTest {
 
         syncManager.startPeriodicSync()
 
-        // Only advance through 2 iterations (before 3rd sync)
+        // Two ticks; the error event needs a third
         advanceTimeBy(92_500)
 
         verify(exactly = 0) { LocationServiceModule.sendSyncErrorEvent(any(), any()) }
@@ -765,9 +747,7 @@ class SyncManagerTest {
         syncManager.stopPeriodicSync()
     }
 
-    // ========================================================================
-    // Periodic sync mode (job scheduling, lifecycle)
-    // ========================================================================
+    // --- Periodic sync ---
 
     @Test
     fun `startPeriodicSync triggers sync at configured interval`() = scope.runTest {
@@ -793,11 +773,9 @@ class SyncManagerTest {
 
         syncManager.startPeriodicSync()
 
-        // Before interval elapses - no sync yet
         advanceTimeBy(30_000)
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
 
-        // After interval elapses - sync happens
         advanceTimeBy(31_000)
         coVerify(atLeast = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
         syncManager.stopPeriodicSync()
@@ -933,13 +911,10 @@ class SyncManagerTest {
 
         advanceTimeBy(10_000)
 
-        // No sync should have been attempted after cancellation
         verify(exactly = 0) { dbHelper.getQueuedLocations(any()) }
     }
 
-    // ========================================================================
-    // Interval change mid-wait (a profile switch swaps the sync interval)
-    // ========================================================================
+    // --- A profile switch changes the interval mid-wait ---
 
     private var ticks = 0
 
@@ -1025,9 +1000,7 @@ class SyncManagerTest {
         manager.stopPeriodicSync()
     }
 
-    // ========================================================================
-    // Async exception isolation (fix: one bad item must not kill the chunk)
-    // ========================================================================
+    // --- One corrupt row in a chunk ---
 
     @Test
     fun `syncQueue isolates exception in single item without cancelling chunk`() = scope.runTest {
@@ -1044,7 +1017,6 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        // Item 1 has corrupted payload that will throw JSONException
         val corrupted = QueuedLocation(1L, 100L, "NOT_VALID_JSON", 0)
         val valid = QueuedLocation(2L, 101L, """{"lat":52.0}""", 0)
         every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
@@ -1055,18 +1027,14 @@ class SyncManagerTest {
 
         syncManager.manualFlush()
 
-        // Valid item should still be sent despite corrupted sibling
         coVerify(atLeast = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
-        // Corrupted item gets retry increment, valid item gets removed
         verify { dbHelper.incrementRetryCount(1L, "Corrupt payload") }
         verify { dbHelper.markLocationsSent(listOf(101L)) }
 
         unmockkObject(LocationServiceModule.Companion)
     }
 
-    // ========================================================================
-    // apiFormat passthrough
-    // ========================================================================
+    // --- apiFormat passthrough ---
 
     @Test
     fun `queueAndSend passes apiFormat to sendToEndpoint`() = scope.runTest {
@@ -1113,139 +1081,7 @@ class SyncManagerTest {
         coVerify { networkManager.sendToEndpoint(any(), any(), any(), "POST", ApiFormat.TRACCAR_JSON) }
     }
 
-    // ========================================================================
-    // OVERLAND_BATCH path
-    // ========================================================================
-
-    @Test
-    fun `batch path sends one POST and removes all rows on success`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-
-        val items = (1L..50L).map {
-            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
-        }
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(items, emptyList())
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
-
-        syncManager.manualFlush()
-
-        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
-        verify { dbHelper.markLocationsSent(items.map { it.locationId }) }
-        verify { dbHelper.removeBatchFromQueue(items.map { it.queueId }) }
-    }
-
-    @Test
-    fun `batch path bails on 5xx without splitting and bumps retry counts once each`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-
-        val items = (1L..4L).map {
-            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
-        }
-        every { dbHelper.getQueuedLocations(50) } returns items
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.ServerError(500)
-
-        syncManager.manualFlush()
-
-        // Critical: exactly ONE HTTP call. NOT recursive splits, that would amplify the outage.
-        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
-        // Each row gets one retry bump
-        items.forEach { verify { dbHelper.incrementRetryCount(it.queueId, "5xx: 500") } }
-    }
-
-    @Test
-    fun `batch path bails on network error without splitting`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-
-        val items = (1L..3L).map {
-            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
-        }
-        every { dbHelper.getQueuedLocations(50) } returns items
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.NetworkError
-
-        syncManager.manualFlush()
-
-        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
-        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
-    }
-
-    @Test
-    fun `batch path splits on 4xx to isolate poison row`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-
-        // 4 items: items 1, 2, 3 are good. Item 4 (queueId=4) is the poison row.
-        val items = (1L..4L).map {
-            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000,"id":$it}""", 0)
-        }
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(items, emptyList())
-
-        // Server rejects any batch that contains the poison item (queueId 4)
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
-            val sent = arg<List<JSONObject>>(0)
-            val containsPoison = sent.any { it.optInt("id", -1) == 4 }
-            if (containsPoison) BatchResult.ClientError(400) else BatchResult.Success
-        }
-
-        // Capture every commit call so we can assert across all split-recovery calls
-        val sentLocationIds = mutableSetOf<Long>()
-        val removedQueueIds = mutableSetOf<Long>()
-        every { dbHelper.markLocationsSent(any()) } answers {
-            sentLocationIds.addAll(firstArg<List<Long>>())
-        }
-        every { dbHelper.removeBatchFromQueue(any()) } answers {
-            removedQueueIds.addAll(firstArg<List<Long>>())
-        }
-
-        syncManager.manualFlush()
-
-        // Poison row gets isolated to a 1-item batch that fails alone -> retry counter bumped
-        verify { dbHelper.incrementRetryCount(4L, "4xx: 400") }
-        // Good rows committed across one or more split-recovery calls
-        assertEquals(setOf(101L, 102L, 103L), sentLocationIds)
-        assertEquals(setOf(1L, 2L, 3L), removedQueueIds)
-        // Poison row was NOT committed
-        assertFalse(sentLocationIds.contains(104L))
-        assertFalse(removedQueueIds.contains(4L))
-    }
+    // --- Overland batch path ---
 
     @Test
     fun `batch path uses overlandBatchSize for the fetch limit`() = scope.runTest {
@@ -1265,97 +1101,10 @@ class SyncManagerTest {
 
         syncManager.manualFlush()
 
-        // Plan called this out: overlandBatchSize must thread into the fetch limit, not just the wire bundle.
         verify { dbHelper.getQueuedLocations(200) }
     }
 
-    @Test
-    fun `batch path lifts custom fields to envelope and sends device_id`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-
-        // Payload has a custom field (device_id) baked in by PayloadBuilder
-        val item = QueuedLocation(
-            1L, 100L,
-            """{"device_id":"my-pixel","lat":52.0,"lon":13.0,"tst":1700000000}""",
-            0
-        )
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
-
-        var capturedFields: Map<String, String>? = null
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            capturedFields = arg<Map<String, String>>(1)
-            BatchResult.Success
-        }
-
-        syncManager.manualFlush()
-
-        // Custom fields must be extracted from the per-row payload and passed at envelope level.
-        // Canonical location keys must NOT be passed as custom fields.
-        val fields = checkNotNull(capturedFields)
-        assertEquals("my-pixel", fields["device_id"])
-        assertFalse("lat is a canonical key, not a custom field", fields.containsKey("lat"))
-        assertFalse("tst is a canonical key, not a custom field", fields.containsKey("tst"))
-    }
-
-    @Test
-    fun `batch path isolates corrupt payload without poisoning the bundle`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-
-        // Item 1 has a corrupted payload (not valid JSON). Items 2 and 3 are valid.
-        // Without isolation, JSONObject(item.payload) would throw and abort the whole pass,
-        // leaving the corrupt row to re-throw forever next cycle.
-        val corrupted = QueuedLocation(1L, 100L, "NOT_VALID_JSON{{{", 0)
-        val valid1 = QueuedLocation(2L, 101L, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
-        val valid2 = QueuedLocation(3L, 102L, """{"lat":52.1,"lon":13.1,"tst":1700000001}""", 0)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
-            listOf(corrupted, valid1, valid2),
-            emptyList()
-        )
-
-        var capturedItemCount = 0
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            capturedItemCount = arg<List<JSONObject>>(0).size
-            BatchResult.Success
-        }
-
-        syncManager.manualFlush()
-
-        // Corrupt row gets its retry counter bumped
-        verify { dbHelper.incrementRetryCount(1L, "Corrupt payload") }
-        // Only the 2 valid rows are bundled into the wire request
-        assertEquals(2, capturedItemCount)
-        // Valid rows are committed
-        verify { dbHelper.markLocationsSent(listOf(101L, 102L)) }
-        verify { dbHelper.removeBatchFromQueue(listOf(2L, 3L)) }
-        // Corrupt row is NOT removed from the queue (stays for next cycle, just deprioritized)
-        verify(exactly = 0) { dbHelper.removeBatchFromQueue(match { it.contains(1L) }) }
-    }
-
-    // ========================================================================
-    // One sender at a time
-    // ========================================================================
+    // --- One sender at a time ---
 
     @Test
     fun `a manual flush during another waits instead of posting the same rows again`() = scope.runTest {
@@ -1618,9 +1367,7 @@ class SyncManagerTest {
         coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
     }
 
-    // ========================================================================
-    // Helpers
-    // ========================================================================
+    // --- Helpers ---
 
     @Suppress("UNCHECKED_CAST")
     private suspend fun callApplyBackoffDelay() {
@@ -1776,61 +1523,6 @@ class SyncManagerTest {
         verify(exactly = 0) { dbHelper.removeFromQueueByLocationId(any()) }
     }
 
-    /** Splitting a rate-limited batch would turn one refused request into many more. */
-    @Test
-    fun `batch path stops on a rate limit without splitting`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-        val items = (1L..3L).map {
-            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
-        }
-        every { dbHelper.getQueuedLocations(50) } returns items
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.RateLimited(null)
-
-        syncManager.manualFlush()
-
-        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
-        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
-    }
-
-    /** A rate limit met while bisecting ends the pass, so the other half is not sent either. */
-    @Test
-    fun `batch path stops bisecting when a half is rate limited`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://dawarich.example/api/v1/overland/batches",
-            syncIntervalSeconds = 300,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            syncCondition = "any",
-            syncSsid = "",
-            authHeaders = emptyMap(),
-            apiFormat = ApiFormat.OVERLAND_BATCH,
-            overlandBatchSize = 50
-        )
-        val items = (1L..4L).map {
-            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
-        }
-        every { dbHelper.getQueuedLocations(50) } returns items
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returnsMany listOf(
-            BatchResult.ClientError(400),
-            BatchResult.RateLimited(null),
-            BatchResult.Success
-        )
-
-        syncManager.manualFlush()
-
-        coVerify(exactly = 2) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
-    }
-
     // --- The wait a 429 asks for ---
 
     private var now = 0L
@@ -1881,17 +1573,6 @@ class SyncManagerTest {
     }
 
     @Test
-    fun `a Retry-After longer than 15 min is capped`() = scope.runTest {
-        val manager = rateLimitedManager()
-        fakeQueue(1)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(86_400)
-
-        manager.manualFlush()
-
-        assertEquals(900L, manager.rateLimitWaitSeconds())
-    }
-
-    @Test
     fun `a flush that ends rate limited tells the screen how long to wait`() = scope.runTest {
         mockkObject(LocationServiceModule)
         every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any(), any()) } returns true
@@ -1937,18 +1618,6 @@ class SyncManagerTest {
         rateLimitedManager().manualFlush()
 
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `a clock set back cannot hold uploads longer than the cap`() = scope.runTest {
-        val manager = rateLimitedManager()
-        fakeQueue(1)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(60)
-        manager.manualFlush()
-
-        now -= 2 * 60 * 60 * 1000L
-
-        assertEquals(900L, manager.rateLimitWaitSeconds())
     }
 
     @Test

@@ -29,9 +29,38 @@ class SyncStateTest {
     /** Two senders can meet a 429 at once. */
     @Test
     fun `a shorter rate-limit wait never replaces a longer one`() {
-        SyncState.holdUntil(600_000L)
-        SyncState.holdUntil(60_000L)
+        SyncState.holdFor(600, nowMs = 0L)
+        SyncState.holdFor(60, nowMs = 0L)
 
-        assertEquals(600_000L, SyncState.rateLimitedUntil)
+        assertEquals(600L, SyncState.rateLimitWaitSeconds(0L))
+    }
+
+    @Test
+    fun `a 429 without Retry-After holds uploads for 60 s`() {
+        assertEquals(60L, SyncState.holdFor(null, nowMs = 0L))
+        assertEquals(60L, SyncState.rateLimitWaitSeconds(0L))
+    }
+
+    /** A bad Retry-After must not hold the queue for a day. */
+    @Test
+    fun `a Retry-After longer than 15 min is capped`() {
+        assertEquals(900L, SyncState.holdFor(86_400, nowMs = 0L))
+        assertEquals(900L, SyncState.rateLimitWaitSeconds(0L))
+    }
+
+    @Test
+    fun `a clock set back cannot hold uploads longer than the cap`() {
+        SyncState.holdFor(60, nowMs = 0L)
+
+        assertEquals(900L, SyncState.rateLimitWaitSeconds(-2 * 60 * 60 * 1000L))
+    }
+
+    /** The screen shows the wait in whole seconds, so the last part-second still reads as one. */
+    @Test
+    fun `the wait rounds up and ends when its time has passed`() {
+        SyncState.holdFor(30, nowMs = 0L)
+
+        assertEquals(1L, SyncState.rateLimitWaitSeconds(29_001L))
+        assertEquals(0L, SyncState.rateLimitWaitSeconds(30_000L))
     }
 }

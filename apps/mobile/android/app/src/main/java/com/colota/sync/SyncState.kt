@@ -12,6 +12,9 @@ package com.Colota.sync
  * too, because a Sync now while tracking is off runs on a service that stops after the pass.
  */
 object SyncState {
+    const val DEFAULT_RATE_LIMIT_WAIT_SECONDS = 60L
+    const val MAX_RATE_LIMIT_WAIT_SECONDS = 900L
+
     @Volatile var lastSuccessTime: Long = 0L
         private set
 
@@ -21,10 +24,19 @@ object SyncState {
     @Volatile var rateLimitedUntil: Long = 0L
         private set
 
-    /** A later, shorter Retry-After must not cut a longer wait. */
+    /** Capped so a bad `Retry-After` cannot hold the queue for a day; a later, shorter one must not cut a longer wait. */
     @Synchronized
-    fun holdUntil(untilMs: Long) {
+    fun holdFor(retryAfterSeconds: Long?, nowMs: Long): Long {
+        val wait = (retryAfterSeconds ?: DEFAULT_RATE_LIMIT_WAIT_SECONDS).coerceIn(1, MAX_RATE_LIMIT_WAIT_SECONDS)
+        val untilMs = nowMs + wait * 1000
         if (untilMs > rateLimitedUntil) rateLimitedUntil = untilMs
+        return wait
+    }
+
+    /** Clamped to the cap, because the wall clock can be set back. */
+    fun rateLimitWaitSeconds(nowMs: Long): Long {
+        val left = (rateLimitedUntil - nowMs).coerceAtMost(MAX_RATE_LIMIT_WAIT_SECONDS * 1000)
+        return if (left > 0) (left + 999) / 1000 else 0
     }
 
     fun recordSuccess(timeMs: Long) {
