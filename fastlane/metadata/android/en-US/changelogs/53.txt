@@ -1,7 +1,7 @@
-- Tracking profiles can switch on a paired Bluetooth device, such as your car or headphones
-- Less memory used when opening a day with many points and when sending a large upload backlog
-- Fixed a trip's average speed and its speed and elevation charts being skewed towards stretches recorded with more points
-- Positioning accuracy setting in Tracking & sync: High accuracy (default) or Lower accuracy to save battery
+- Tracking profiles can switch on a Bluetooth device, like your car or headphones
+- Lower positioning accuracy option to save battery
+- Less memory used on busy days and large upload backlogs
 - Fixed tracking recording nothing for hours after Android recreated it
-- Fixed GPS staying off when leaving a zone with motionless pause after the app was updated or restarted
-- Fixed Sync now saying the app did not answer while the server was rejecting an Overland batch and Colota was retrying it in smaller parts
+- Fixed GPS not resuming on the move after a restart during a motionless pause
+- Fixed trip average speed and charts skewed by densely recorded stretches
+- Fixed Sync now giving up while retrying an Overland batch in smaller parts
