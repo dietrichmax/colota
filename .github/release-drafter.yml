@@ -56,19 +56,8 @@ categories:
 change-template: '- $TITLE (#$NUMBER)'
 no-changes-template: '- No changes'
 category-template: '### $TITLE'
-exclude-contributors:
-  - mxdcodes-bot
-  - dependabot
-new-contributor-template: '- $AUTHOR_MENTION made their first contribution in #$NUMBER'
-no-new-contributor-template: ''
 
 template: |
-  ## Contributors
-
-  $CONTRIBUTORS
-
-  $NEW_CONTRIBUTORS
-
   ## Which APK should I download?
 
   Pick the build that matches your device:
