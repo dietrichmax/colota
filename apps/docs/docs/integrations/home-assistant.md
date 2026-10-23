@@ -6,7 +6,7 @@ sidebar_position: 3
 
 [Home Assistant](https://www.home-assistant.io/) is an open-source home automation platform.
 
-Colota has a dedicated Home Assistant integration that receives location updates via webhook and creates `device_tracker` entities. The integration source code is available on [GitHub](https://github.com/dietrichmax/colota-home-assistant).
+Colota has a dedicated Home Assistant integration that receives location updates via webhook and creates a location tracker, a battery sensor and a charging sensor per device. The integration source code is available on [GitHub](https://github.com/dietrichmax/colota-home-assistant).
 
 ## Setup
 
@@ -14,12 +14,11 @@ Colota has a dedicated Home Assistant integration that receives location updates
 
 **Via HACS (recommended):**
 
+Colota is in the HACS default store, so no custom repository is needed.
+
 1. Open HACS in Home Assistant
-2. Go to **Integrations**
-3. Click the three dots menu and select **Custom repositories**
-4. Add `https://github.com/dietrichmax/colota-home-assistant` as an **Integration**
-5. Search for **Colota** and install it
-6. Restart Home Assistant
+2. Search for **Colota** and install it
+3. Restart Home Assistant
 
 **Manual:**
 
@@ -34,17 +33,25 @@ Colota has a dedicated Home Assistant integration that receives location updates
 
 ### 3. Configure the Colota app
 
-1. Go to **Settings > Connection > Request format**
-2. Paste the webhook URL as the endpoint
+1. Go to **Settings > Connection**
+2. Paste the webhook URL as the **Server endpoint**
 3. No authentication is needed - the webhook URL acts as the secret
 
-The integration works with the default API format out of the box. To distinguish multiple devices, add a custom field `tid` with a unique value per device (e.g. `colota-phone`, `colota-tablet`).
+The integration works with the default API format out of the box. Without a `tid` field all updates go to one device named `colota`. To distinguish multiple devices, add a custom field `tid` with a unique value per device (e.g. `phone`, `tablet`).
 
-Your device will appear as a `device_tracker` entity in Home Assistant that you can use for automations, zones and the map.
+## Entities
+
+Each device creates three entities:
+
+| Entity           | Source field | Description                                             |
+| ---------------- | ------------ | ------------------------------------------------------- |
+| `device_tracker` | `lat`, `lon` | Location, for automations, zones and the map            |
+| `sensor`         | `batt`       | Battery level in percent                                |
+| `binary_sensor`  | `bs`         | Charging, on while `bs` is `2` (charging) or `3` (full) |
 
 ## Payload
 
-Colota sends the following payload:
+The integration reads the following payload. `tid` is only sent once you add it as a custom field:
 
 ```json
 {
@@ -56,7 +63,7 @@ Colota sends the following payload:
   "batt": 85,
   "bs": 2,
   "bear": 180,
-  "tid": "colota",
+  "tid": "phone",
   "tst": 1704067200
 }
 ```
@@ -66,7 +73,7 @@ The `tid` field is used as the device identifier in Home Assistant. You can cust
 ## Notes
 
 - If you use Nabu Casa, the integration will automatically generate a cloud webhook URL for external access
-- The integration supports multiple devices - each unique `tid` value creates a separate `device_tracker` entity
+- The integration is added once per Home Assistant instance and all devices share its webhook URL - each unique `tid` value creates a separate device
 
 ## Alternative: OwnTracks integration
 
