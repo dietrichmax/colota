@@ -5,6 +5,7 @@
 
 package com.Colota
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
@@ -12,11 +13,19 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import com.facebook.react.uimanager.DisplayMetricsHolder
 
 class MainActivity : ReactActivity() {
 
+  // RN reads display metrics from the app context (the phone's screen); refill them from this activity's display.
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
+    DisplayMetricsHolder.initDisplayMetrics(this)
+  }
+
+  override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    DisplayMetricsHolder.initDisplayMetrics(this)
   }
 
   // RN ScrollView pointerIndex race: getY() on an invalidated pointer mid-gesture.

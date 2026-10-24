@@ -1,0 +1,1 @@
+- Fixed text showing only its top edge on Samsung DeX and other external displays
