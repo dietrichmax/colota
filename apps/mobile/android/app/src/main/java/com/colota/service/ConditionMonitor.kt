@@ -5,13 +5,6 @@
 
 package com.Colota.service
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
-import android.content.pm.PackageManager
 import android.os.Build
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -34,7 +27,7 @@ import com.Colota.util.AppLogger
  * from the service's [NetworkMonitor], which tracks connected Wi-Fi networks
  * with a plain (unflagged) callback; a named-network profile reads the name
  * through a one-shot location-flagged probe when that transport changes.
- * Bluetooth devices are tracked by their ACL connection broadcasts.
+ * Bluetooth devices come from [BluetoothDeviceMonitor].
  *
  * All observers are registered programmatically so they only run while
  * the foreground service is active.
@@ -55,10 +48,7 @@ class ConditionMonitor(
     // Main thread only: invalidates in-flight SSID probes when a newer network change arrives.
     private var wifiPushGeneration = 0
     private var wifiMonitorActive = false
-    private var bluetoothReceiver: BroadcastReceiver? = null
-    // Main thread only: the receiver and the profile proxy callbacks both land there.
-    private val connectedBluetoothAddresses = mutableSetOf<String>()
-    private var bluetoothGeneration = 0
+    private val bluetoothMonitor = BluetoothDeviceMonitor(context) { profileManager.onBluetoothDevicesChanged(it) }
 
     fun start() {
         // Unregister first to prevent duplicate observers on repeated start() calls
@@ -81,7 +71,7 @@ class ConditionMonitor(
         }
 
         if (ProfileConstants.CONDITION_BLUETOOTH_DEVICE in needed) {
-            startBluetoothMonitor()
+            bluetoothMonitor.start()
         }
 
         AppLogger.d(TAG, "Condition monitors started for: ${needed.ifEmpty { setOf("none") }}")
@@ -92,8 +82,7 @@ class ConditionMonitor(
         stopCarConnectionMonitor()
         networkMonitor.setWifiStateListener(null)
         wifiMonitorActive = false
-        bluetoothReceiver = unregisterSafely(bluetoothReceiver)
-        bluetoothGeneration++
+        bluetoothMonitor.stop()
 
         AppLogger.d(TAG, "Condition monitors stopped")
     }
@@ -203,135 +192,6 @@ class ConditionMonitor(
             profileManager.onWifiStateChanged(connected, "")
         }
     }
-
-    /**
-     * ACL broadcasts carry changes only, so the devices already connected when tracking starts are
-     * read once from the A2DP and headset proxies, the two profiles a car head unit connects with.
-     * The generation drops proxy results that arrive after stop().
-     */
-    private fun startBluetoothMonitor() {
-        connectedBluetoothAddresses.clear()
-        if (!hasBluetoothPermission()) {
-            AppLogger.w(TAG, "Bluetooth condition needs the Nearby devices permission")
-            profileManager.onBluetoothDevicesChanged(emptySet())
-            return
-        }
-        val adapter = bluetoothAdapter()
-        if (adapter == null) {
-            AppLogger.w(TAG, "Bluetooth unavailable on this device")
-            profileManager.onBluetoothDevicesChanged(emptySet())
-            return
-        }
-
-        registerBluetoothReceiver()
-        seedConnectedBluetoothDevices(adapter)
-    }
-
-    private fun registerBluetoothReceiver() {
-        bluetoothReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                when (intent.action) {
-                    BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                        val address = deviceAddressOf(intent) ?: return
-                        AppLogger.d(TAG, "Bluetooth device connected")
-                        connectedBluetoothAddresses.add(address)
-                        pushBluetoothState()
-                    }
-                    BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                        val address = deviceAddressOf(intent) ?: return
-                        AppLogger.d(TAG, "Bluetooth device disconnected")
-                        connectedBluetoothAddresses.remove(address)
-                        pushBluetoothState()
-                    }
-                    BluetoothAdapter.ACTION_STATE_CHANGED -> {
-                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
-                        if (state == BluetoothAdapter.STATE_TURNING_OFF || state == BluetoothAdapter.STATE_OFF) {
-                            AppLogger.d(TAG, "Bluetooth turned off")
-                            connectedBluetoothAddresses.clear()
-                            pushBluetoothState()
-                        }
-                    }
-                }
-            }
-        }
-
-        val filter = IntentFilter().apply {
-            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
-            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
-            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
-        }
-        // Exported on purpose: the Bluetooth module sends these as its own uid, not as system, so a
-        // not-exported receiver never gets them. They are protected broadcasts no other app can send.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(bluetoothReceiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(bluetoothReceiver, filter)
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun seedConnectedBluetoothDevices(adapter: BluetoothAdapter) {
-        if (!adapter.isEnabled) {
-            pushBluetoothState()
-            return
-        }
-
-        val generation = bluetoothGeneration
-        val profiles = listOf(BluetoothProfile.A2DP, BluetoothProfile.HEADSET)
-        var pending = profiles.size
-        fun settle() {
-            if (--pending == 0 && generation == bluetoothGeneration) pushBluetoothState()
-        }
-
-        val listener = object : BluetoothProfile.ServiceListener {
-            @SuppressLint("MissingPermission")
-            override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
-                try {
-                    if (generation == bluetoothGeneration) {
-                        proxy.connectedDevices.forEach { connectedBluetoothAddresses.add(it.address.uppercase()) }
-                    }
-                } catch (e: SecurityException) {
-                    AppLogger.w(TAG, "Reading connected Bluetooth devices denied: ${e.message}")
-                } finally {
-                    try { adapter.closeProfileProxy(profile, proxy) } catch (_: Exception) {}
-                }
-                settle()
-            }
-
-            override fun onServiceDisconnected(profile: Int) {}
-        }
-
-        profiles.forEach { profile ->
-            val requested = try {
-                adapter.getProfileProxy(context, listener, profile)
-            } catch (e: Exception) {
-                AppLogger.w(TAG, "Bluetooth profile $profile proxy unavailable: ${e.message}")
-                false
-            }
-            if (!requested) settle()
-        }
-    }
-
-    private fun pushBluetoothState() {
-        profileManager.onBluetoothDevicesChanged(connectedBluetoothAddresses.toSet())
-    }
-
-    private fun deviceAddressOf(intent: Intent): String? {
-        val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-        }
-        return device?.address?.uppercase()
-    }
-
-    private fun bluetoothAdapter(): BluetoothAdapter? =
-        (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
-
-    private fun hasBluetoothPermission(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 
     private fun readCurrentChargingState(): Boolean {
         val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))

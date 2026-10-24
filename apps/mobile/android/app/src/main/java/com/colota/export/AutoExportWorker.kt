@@ -16,7 +16,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import androidx.core.app.NotificationCompat
-import androidx.documentfile.provider.DocumentFile
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
@@ -39,9 +38,6 @@ class AutoExportWorker(
     private val appContext: Context,
     params: WorkerParameters
 ) : CoroutineWorker(appContext, params) {
-
-    // Only the SAF copy raises this, so a directory verdict can never be reached from a database read
-    private class DirectoryAccessException(message: String) : Exception(message)
 
     companion object {
         private const val TAG = "AutoExportWorker"
@@ -131,6 +127,7 @@ class AutoExportWorker(
 
         val ext = ExportConverters.extensionFor(config.format)
         val dirUri = Uri.parse(config.uri)
+        val folder = ExportFolder(appContext, dirUri)
 
         // Used for the incremental upper bound, the saved lastExport and the filename stamp, so
         // points written mid-export aren't dropped and the name matches the range it covers.
@@ -167,18 +164,18 @@ class AutoExportWorker(
                 tempFile.delete()
                 AppLogger.i(TAG, "No locations to export")
                 showNotification(strings.getString(R.string.auto_export_title), strings.getString(R.string.auto_export_nothing_new))
-                cleanupOldExports(dirUri, config)
+                folder.cleanup(config)
                 if (isManualRun) LocationServiceModule.sendAutoExportEvent(true, null, 0, null)
                 return Result.success()
             }
 
-            val destDocFile = copyToSafDirectory(dirUri, fileName, tempFile, config.format)
+            val destDocFile = folder.copyIn(fileName, tempFile, config.format)
 
             tempFile.delete()
 
             config.saveLastExportTimestamp(db, exportStartSec)
 
-            cleanupOldExports(dirUri, config)
+            folder.cleanup(config)
 
             // SAF renames on collision (foo.gpx -> "foo (1).gpx"), so report what it created.
             val savedName = destDocFile.name ?: fileName
@@ -214,7 +211,7 @@ class AutoExportWorker(
                 userMessage = strings.getString(R.string.auto_export_invalid_config, e.message.orEmpty()),
                 retry = false
             )
-        } catch (e: DirectoryAccessException) {
+        } catch (e: ExportFolder.DirectoryAccessException) {
             handleExportFailure(
                 tempFile, config, db, e,
                 error = "Directory access failed: ${e.message}",
@@ -265,90 +262,6 @@ class AutoExportWorker(
         showNotification(strings.getString(R.string.auto_export_failed), userMessage)
         LocationServiceModule.sendAutoExportEvent(false, null, 0, error)
         return if (retry) Result.retry() else Result.failure()
-    }
-
-    private fun copyToSafDirectory(
-        dirUri: Uri,
-        fileName: String,
-        sourceFile: File,
-        format: String
-    ): DocumentFile {
-        val resolver = appContext.contentResolver
-        val mimeType = ExportConverters.mimeTypeFor(format)
-
-        val docFile = DocumentFile.fromTreeUri(appContext, dirUri)
-            ?.createFile(mimeType, fileName)
-            ?: throw DirectoryAccessException("Failed to create file in selected directory")
-
-        val expected = sourceFile.length()
-        try {
-            val copied = resolver.openOutputStream(docFile.uri)?.use { outStream ->
-                sourceFile.inputStream().use { inStream ->
-                    inStream.copyTo(outStream)
-                }
-            } ?: throw DirectoryAccessException("Failed to open output stream")
-            // Verified by what was written, never by querying the document back: cloud providers report size 0 until synced
-            if (copied != expected) {
-                throw IOException("Export verification failed: copied $copied of $expected bytes")
-            }
-        } catch (e: Exception) {
-            docFile.delete()
-            throw e
-        }
-        return docFile
-    }
-
-    /**
-     * Deletes only files the configured template could have produced, so subfolders and sync
-     * artifacts are left alone. Selection lives in [ExportFilenames.selectForDeletion] so it is
-     * testable without SAF.
-     */
-    private fun cleanupOldExports(dirUri: Uri, config: AutoExportConfig) {
-        if (config.retentionCount <= 0) {
-            AppLogger.d(TAG, "Export cleanup skipped - retention is unlimited")
-            return
-        }
-
-        try {
-            val dir = DocumentFile.fromTreeUri(appContext, dirUri) ?: return
-            val matchers = ExportFilenames.exportFileMatchers(config.filenameTemplate, Build.MODEL)
-
-            // Each DocumentFile getter is its own query, so only the names that already match pay
-            // for lastModified and isFile. A shared folder can hold far more files than ours.
-            val listed = dir.listFiles()
-            val candidates = listed
-                .map { it to it.name.orEmpty() }
-                .filter { (_, name) -> matchers.any { it.matches(name) } }
-                .map { (file, name) ->
-                    file to ExportFilenames.ExportEntry(name, file.lastModified(), file.isFile)
-                }
-            val selected = ExportFilenames
-                .selectForDeletion(candidates.map { it.second }, config.retentionCount, matchers)
-                .map { it.name }
-            val doomed = selected.toMutableList()
-
-            var deleted = 0
-            candidates.forEach { (file, entry) ->
-                // Re-checked here because the match is by display name: a directory sharing a name
-                // with a selected file would otherwise be deleted, recursively.
-                // remove() rather than contains() so duplicate display names delete one apiece.
-                if (entry.isFile && doomed.remove(entry.name)) {
-                    file.delete()
-                    deleted++
-                    AppLogger.d(TAG, "Cleaned up old export: ${entry.name}")
-                }
-            }
-
-            // Logged on every run, zeros included: a cleanup that recognised none of its own files
-            // is otherwise indistinguishable from one that found nothing to delete.
-            AppLogger.i(
-                TAG,
-                "Export cleanup: ${listed.size} in folder, ${candidates.size} matched, " +
-                    "${selected.size} selected, $deleted deleted (keeping ${config.retentionCount})"
-            )
-        } catch (e: Exception) {
-            AppLogger.w(TAG, "Export cleanup failed (non-critical): ${e.message}")
-        }
     }
 
     private fun ensureNotificationChannel() {
