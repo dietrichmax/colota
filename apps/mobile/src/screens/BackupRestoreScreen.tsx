@@ -134,6 +134,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
     setBackupMessage(null)
     try {
       await BackupService.createBackup(uri, password)
+      await BackupService.commitAutofill().catch(() => {})
       const now = Date.now()
       await NativeLocationService.saveSetting("last_backup_at", String(now)).catch(() => {})
       setLastBackupAt(now)
@@ -263,6 +264,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
                   value={password}
                   onChangeText={scoreDraft}
                   autoCapitalize="none"
+                  autoComplete="new-password"
                   autoCorrect={false}
                   disabled={busy !== null}
                 />
@@ -276,6 +278,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
                   value={confirm}
                   onChangeText={setConfirm}
                   autoCapitalize="none"
+                  autoComplete="new-password"
                   autoCorrect={false}
                   error={confirm.length > 0 && confirm !== password ? t("backup.blocked.mismatch") : undefined}
                   disabled={busy !== null}
@@ -340,6 +343,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
                     value={restorePassword}
                     onChangeText={setRestorePassword}
                     autoCapitalize="none"
+                    autoComplete="current-password"
                     autoCorrect={false}
                     error={restoreMessage?.tone === "error" ? restoreMessage.text : undefined}
                     disabled={busy !== null}

@@ -72,6 +72,12 @@ class BackupService {
     }
   }
 
+  /** Call before clearing the password fields: a password manager saves what they hold at this moment. */
+  static async commitAutofill(): Promise<void> {
+    BackupService.ensureModule()
+    await BackupServiceModule.commitAutofill()
+  }
+
   /** Reads the archive's manifest and nothing else, so a wrong password costs only a retry. */
   static async describeBackup(uri: string, password: string): Promise<BackupManifest> {
     BackupService.ensureModule()
