@@ -31,6 +31,15 @@ class GeofenceHelper(private val context: Context) {
         val heartbeatIntervalMinutes: Int = 15,
     )
 
+    /** Runtime view of any enabled geofence row, for the enter and leave report. */
+    data class Region(
+        val id: Int,
+        val name: String,
+        val lat: Double,
+        val lon: Double,
+        val radius: Double,
+    )
+
     companion object {
         private const val TAG = "GeofenceHelper"
     }
@@ -91,6 +100,40 @@ class GeofenceHelper(private val context: Context) {
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to load geofences from DB", e)
             emptyList()
+        }
+    }
+
+    /** Every enabled geofence, pausing or not, in id order. Null when the read fails, so a caller keeps its state. */
+    fun getEnabledRegions(): List<Region>? {
+        return try {
+            val regions = mutableListOf<Region>()
+            dbHelper.readableDatabase.query(
+                DatabaseHelper.TABLE_GEOFENCES,
+                arrayOf("id", "name", "latitude", "longitude", "radius"),
+                "enabled = 1",
+                null, null, null,
+                "id ASC"
+            ).use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow("id")
+                val nameIdx = cursor.getColumnIndexOrThrow("name")
+                val latIdx = cursor.getColumnIndexOrThrow("latitude")
+                val lonIdx = cursor.getColumnIndexOrThrow("longitude")
+                val radIdx = cursor.getColumnIndexOrThrow("radius")
+
+                while (cursor.moveToNext()) {
+                    regions.add(Region(
+                        id = cursor.getInt(idIdx),
+                        name = cursor.getString(nameIdx),
+                        lat = cursor.getDouble(latIdx),
+                        lon = cursor.getDouble(lonIdx),
+                        radius = cursor.getDouble(radIdx),
+                    ))
+                }
+            }
+            regions
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to load enabled geofences", e)
+            null
         }
     }
 

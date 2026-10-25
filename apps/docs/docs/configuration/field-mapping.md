@@ -53,4 +53,12 @@ Add arbitrary key-value pairs that are included in every API payload. For exampl
 
 Configure in **Settings → Connection → Request format → Custom fields**.
 
+## Current Geofences
+
+Turn on **Send current geofences** to add `inregions` to every point: the names of the enabled geofences the point is in. The field keeps its name whatever the mapping says. It needs the POST method or an Overland batch, so the switch is unavailable for GET and the Traccar JSON format.
+
+Configure in **Settings → Connection → Request format → Geofences**.
+
+See [API Reference](/docs/api-reference#geofences) for the format.
+
 **Note:** Custom field values are always sent as strings. Custom fields are added to the payload before location fields - if a custom field key matches a location field key, the location field takes precedence.

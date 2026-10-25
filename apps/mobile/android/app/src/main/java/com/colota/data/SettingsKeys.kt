@@ -20,4 +20,8 @@ object SettingsKeys {
     /** Epoch ms of the last geofence heartbeat, so a service restart resumes the interval
      *  instead of restarting it and starving a device that respawns often. */
     const val HEARTBEAT_LAST_AT = "heartbeat_last_at"
+
+    /** JSON of geofence id to inside, so a restart neither repeats an enter nor misses a leave.
+     *  Empty while geofences are not reported; an id missing from it is unknown. */
+    const val GEOFENCE_STATE = "geofence_state"
 }

@@ -261,6 +261,54 @@ class ServiceConfigTest {
         assertEquals(LocationAccuracy.BALANCED, ServiceConfig.fromIntent(intent, db).accuracyMode)
     }
 
+    // --- sendInRegions ---
+
+    @Test
+    fun `fromDatabase keeps current geofences off on an install that never stored the key`() {
+        assertFalse(ServiceConfig.fromDatabase(mockDbHelper(baseSettings)).sendInRegions)
+    }
+
+    @Test
+    fun `fromDatabase reads sendInRegions`() {
+        val db = mockDbHelper(baseSettings + ("sendInRegions" to "true"))
+        assertTrue(ServiceConfig.fromDatabase(db).sendInRegions)
+    }
+
+    @Test
+    fun `fromReadableMap reads sendInRegions and falls back to db when the key is absent`() {
+        val stored = mockDbHelper(baseSettings + ("sendInRegions" to "true"))
+        val map = JavaOnlyMap().apply { putBoolean("sendInRegions", false) }
+
+        assertFalse(ServiceConfig.fromReadableMap(map, stored).sendInRegions)
+        assertTrue(ServiceConfig.fromReadableMap(JavaOnlyMap(), stored).sendInRegions)
+    }
+
+    @Test
+    fun `sendInRegions survives the intent a restart is sent with`() {
+        val out = mockk<Intent>(relaxed = true)
+        ServiceConfig(sendInRegions = true).toIntent(out)
+        verify { out.putExtra("sendInRegions", true) }
+
+        val bundle = mockk<Bundle> {
+            every { getString("endpoint") } returns null
+            every { containsKey(any()) } returns false
+            every { containsKey("sendInRegions") } returns true
+            every { getBoolean("sendInRegions") } returns true
+        }
+        val intent = mockk<Intent> { every { extras } returns bundle }
+
+        assertTrue(ServiceConfig.fromIntent(intent, mockDbHelper(baseSettings)).sendInRegions)
+    }
+
+    @Test
+    fun `geofences are reported only in a wire format that has a shape for them`() {
+        assertTrue(ServiceConfig(sendInRegions = true, apiFormat = ApiFormat.FIELD_MAPPED, httpMethod = "POST").reportsGeofences)
+        assertTrue(ServiceConfig(sendInRegions = true, apiFormat = ApiFormat.OVERLAND_BATCH).reportsGeofences)
+        assertFalse(ServiceConfig(sendInRegions = true, apiFormat = ApiFormat.FIELD_MAPPED, httpMethod = "GET").reportsGeofences)
+        assertFalse(ServiceConfig(sendInRegions = true, apiFormat = ApiFormat.TRACCAR_JSON).reportsGeofences)
+        assertFalse(ServiceConfig(sendInRegions = false, apiFormat = ApiFormat.OVERLAND_BATCH).reportsGeofences)
+    }
+
     // --- data class defaults ---
 
     @Test
@@ -361,6 +409,7 @@ class ServiceConfigTest {
             every { getString("httpMethod") } returns "GET"
             every { getString("apiFormat") } returns "traccar_json"
             every { getInt("overlandBatchSize") } returns 50
+            every { getBoolean("sendInRegions") } returns true
         }
         val intent = mockk<Intent> {
             every { extras } returns bundle
@@ -381,6 +430,7 @@ class ServiceConfigTest {
         assertEquals("""{"lat":"latitude"}""", config.fieldMap)
         assertEquals("GET", config.httpMethod)
         assertEquals(ApiFormat.TRACCAR_JSON, config.apiFormat)
+        assertTrue(config.sendInRegions)
     }
 
     // --- toIntent ---

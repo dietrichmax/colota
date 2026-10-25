@@ -1,1 +1,2 @@
+- Option to tell your server which geofences each point is in
 - Password managers can now fill in the backup password

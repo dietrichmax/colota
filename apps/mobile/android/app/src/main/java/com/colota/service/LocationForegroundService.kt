@@ -54,6 +54,7 @@ class LocationForegroundService : Service() {
     private lateinit var networkManager: NetworkManager
     private lateinit var networkMonitor: NetworkMonitor
     private lateinit var geofenceHelper: GeofenceHelper
+    private lateinit var geofenceTransitions: GeofenceTransitions
     private lateinit var secureStorage: SecureStorageHelper
     private lateinit var syncManager: SyncManager
     private lateinit var profileHelper: ProfileHelper
@@ -235,6 +236,7 @@ class LocationForegroundService : Service() {
         networkMonitor = NetworkMonitor(this)
         networkManager = NetworkManager(this, networkMonitor)
         geofenceHelper = GeofenceHelper(this)
+        geofenceTransitions = GeofenceTransitions(geofenceHelper, dbHelper)
         secureStorage = SecureStorageHelper.getInstance(this)
         syncManager = SyncManager(dbHelper, networkManager, networkMonitor, serviceScope!!)
         profileHelper = ProfileHelper(this)
@@ -999,6 +1001,9 @@ class LocationForegroundService : Service() {
 
         lastKnownLocation = location
 
+        if (config.reportsGeofences) geofenceTransitions.evaluate(location)
+        val inRegions = geofenceTransitions.insideNames
+
         val zone = geofenceHelper.getPauseZone(location)
         if (zone != null && insidePauseZone && zone.name == currentZoneName) {
             AppLogger.d(TAG, "Location dropped: inside active pause zone '$currentZoneName'")
@@ -1030,7 +1035,7 @@ class LocationForegroundService : Service() {
 
             LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
 
-            val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
+            val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat, inRegions)
 
             syncManager.queueAndSend(locationId, payload)
 
@@ -1384,7 +1389,7 @@ class LocationForegroundService : Service() {
 
         dbHelper.saveSetting(SettingsKeys.HEARTBEAT_LAST_AT, location.time.toString())
 
-        val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
+        val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat, geofenceTransitions.insideNames)
         syncManager.queueAndSend(locationId, payload, bypassInterval = true)
 
         AppLogger.i(TAG, "Heartbeat recorded for zone '${zone.name}'")
@@ -1441,7 +1446,7 @@ class LocationForegroundService : Service() {
                 endpoint = config.endpoint
             )
 
-            val payload = PayloadBuilder.buildLocationPayload(syntheticLocation, anchorTimeSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
+            val payload = PayloadBuilder.buildLocationPayload(syntheticLocation, anchorTimeSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat, geofenceTransitions.insideNames)
 
             syncManager.queueAndSend(locationId, payload)
 
@@ -1706,6 +1711,8 @@ class LocationForegroundService : Service() {
         val parsedCustomFields = PayloadBuilder.parseCustomFields(config.customFields) ?: emptyMap()
         payloadFieldMap = parsedFieldMap
         payloadCustomFields = parsedCustomFields
+
+        if (config.reportsGeofences) geofenceTransitions.restore() else geofenceTransitions.clear()
 
         AppLogger.d(TAG, buildString {
             append("Config loaded: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, accuracy=${config.accuracyThreshold}m, accuracyMode=${config.accuracyMode.wireName}")

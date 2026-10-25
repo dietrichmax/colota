@@ -81,6 +81,7 @@ class NativeLocationService {
       apiTemplate: settings.apiTemplate,
       dawarichMode: settings.dawarichMode,
       overlandBatchSize: settings.overlandBatchSize,
+      sendInRegions: settings.sendInRegions,
       customFields: Object.fromEntries(settings.customFields.filter((f) => f.key).map((f) => [f.key, f.value]))
     }
 

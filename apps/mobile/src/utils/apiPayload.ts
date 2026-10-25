@@ -8,6 +8,12 @@ export function isOverlandFormat(apiTemplate: string, dawarichMode: string): boo
   return apiTemplate === "overland" || (apiTemplate === "dawarich" && dawarichMode === "batch")
 }
 
+/** Mirrors ServiceConfig.reportsGeofences: geofence data has a place only in a POST body or an Overland batch. */
+export function supportsGeofenceReporting(apiTemplate: string, httpMethod: string, dawarichMode: string): boolean {
+  if (isOverlandFormat(apiTemplate, dawarichMode)) return true
+  return httpMethod === "POST" && !isTraccarJsonFormat(apiTemplate, httpMethod)
+}
+
 /**
  * Builds a Dawarich/Overland batch envelope for the example payload preview.
  * Custom fields land at envelope level (matches the Overland iOS client).
@@ -23,6 +29,7 @@ export function buildOverlandBatchPayload(params: {
   batteryState: "unknown" | "unplugged" | "charging" | "full"
   deviceId: string
   timestamp?: string
+  inregions?: string[]
 }): object {
   return {
     locations: [
@@ -39,7 +46,8 @@ export function buildOverlandBatchPayload(params: {
           speed: params.speed,
           course: params.course,
           battery_level: params.batteryLevel,
-          battery_state: params.batteryState
+          battery_state: params.batteryState,
+          ...(params.inregions?.length ? { inregions: params.inregions } : {})
         }
       }
     ],

@@ -283,6 +283,16 @@ export function validateConfig(raw: unknown): ValidationResult {
     })
   }
 
+  if ("sendInRegions" in obj && typeof obj.sendInRegions === "boolean") {
+    settings.sendInRegions = obj.sendInRegions
+    entries.push({
+      field: "sendInRegions",
+      label: t("setup.field.sendInRegions"),
+      value: obj.sendInRegions ? t("common.yes") : t("common.no"),
+      category: "api"
+    })
+  }
+
   if ("fieldMap" in obj && typeof obj.fieldMap === "object" && obj.fieldMap !== null) {
     const fm = obj.fieldMap as Record<string, unknown>
     const validFieldMap: Partial<FieldMap> = {}

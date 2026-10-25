@@ -22,6 +22,7 @@ const settings = {
   httpMethod: "POST",
   dawarichMode: "single",
   overlandBatchSize: 50,
+  sendInRegions: true,
   syncInterval: 0,
   retryInterval: 30,
   isOfflineMode: false,
@@ -109,6 +110,7 @@ describe("setupLink", () => {
     expect(result.entries.find((e) => e.field === "endpoint")?.value).toBe("https://example.com/api")
     expect(result.config.settings.apiTemplate).toBe("custom")
     expect(result.config.settings.fieldMap).toEqual({ lat: "latitude" })
+    expect(result.config.settings.sendInRegions).toBe(true)
     // credentials map authType -> type and keep secrets + headers
     expect(result.config.auth?.authType).toBe("basic")
     expect(result.config.auth?.password).toBe("secret")
@@ -140,6 +142,14 @@ describe("setupLink", () => {
 
     // An invalid mode alone is not a setting, so the link carries nothing to apply.
     expect(validateConfig({ accuracyMode: "turbo" }).valid).toBe(false)
+  })
+
+  it("takes current geofences only as a boolean, so a stray string cannot switch them on", () => {
+    expect(validateConfig({ interval: 10, sendInRegions: false }).config.settings.sendInRegions).toBe(false)
+    expect(validateConfig({ interval: 10, sendInRegions: "true" }).config.settings.sendInRegions).toBeUndefined()
+
+    const entry = validateConfig({ interval: 10, sendInRegions: true }).entries.find((e) => e.field === "sendInRegions")
+    expect(entry).toMatchObject({ value: "Yes", category: "api" })
   })
 
   it("omits credentials entirely when that category is unchecked", () => {

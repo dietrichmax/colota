@@ -183,6 +183,29 @@ class GeofenceHelperTest {
     }
 
     // =========================================================================
+    // getEnabledRegions
+    // =========================================================================
+
+    @Test
+    fun `getEnabledRegions reports zones that do not pause too, in id order`() {
+        val home = helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+        val office = helper.insertGeofence("Office", 52.6, 13.5, 80.0, pause = false)
+
+        val regions = helper.getEnabledRegions()!!
+
+        assertEquals(listOf(home, office), regions.map { it.id })
+        assertEquals(GeofenceHelper.Region(office, "Office", 52.6, 13.5, 80.0), regions[1])
+    }
+
+    @Test
+    fun `getEnabledRegions leaves out a disabled zone`() {
+        val id = helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = false)
+        helper.updateGeofence(id, enabled = false)
+
+        assertEquals(emptyList<GeofenceHelper.Region>(), helper.getEnabledRegions())
+    }
+
+    // =========================================================================
     // WiFi/motionless field defaults
     // =========================================================================
 

@@ -62,6 +62,7 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `httpMethod` | string | `POST` or `GET` |
 | `dawarichMode` | string | `single` (OwnTracks endpoint) or `batch` (Overland endpoint). Only applies to `apiTemplate: dawarich`. |
 | `overlandBatchSize` | number | Points per batch POST for Overland format (1-500, default 50). Used by `apiTemplate: overland` and `dawarich` + `batch`. |
+| `sendInRegions` | boolean | Add `inregions`, the geofences a point is in, to every point. Needs `POST` or an Overland batch. |
 | `fieldMap` | object | Custom field name mapping for the JSON payload |
 | `customFields` | array | Static key-value pairs added to every payload |
 | `auth.type` | string | `none`, `basic`, or `bearer` |
