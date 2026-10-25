@@ -54,6 +54,7 @@ export function buildSetupConfig(parts: SetupShareParts, sel: SetupShareSelectio
     config.httpMethod = settings.httpMethod
     config.dawarichMode = settings.dawarichMode
     config.overlandBatchSize = settings.overlandBatchSize
+    config.sendInRegions = settings.sendInRegions
     if (settings.fieldMap && Object.keys(settings.fieldMap).length > 0) config.fieldMap = settings.fieldMap
     if (settings.customFields && settings.customFields.length > 0) config.customFields = settings.customFields
   }

@@ -2,7 +2,8 @@ import {
   buildOverlandBatchPayload,
   buildTraccarJsonPayload,
   isOverlandFormat,
-  isTraccarJsonFormat
+  isTraccarJsonFormat,
+  supportsGeofenceReporting
 } from "../apiPayload"
 
 describe("buildTraccarJsonPayload", () => {
@@ -139,5 +140,29 @@ describe("buildOverlandBatchPayload", () => {
   it("uses provided timestamp", () => {
     const result = buildOverlandBatchPayload({ ...baseParams, timestamp: "2026-05-09T12:34:56Z" }) as any
     expect(result.locations[0].properties.timestamp).toBe("2026-05-09T12:34:56Z")
+  })
+
+  it("puts inregions on the feature like native, and leaves it out when there is none", () => {
+    const named = buildOverlandBatchPayload({ ...baseParams, inregions: ["Home"] }) as any
+    expect(named.locations[0].properties.inregions).toEqual(["Home"])
+    expect(named.inregions).toBeUndefined()
+
+    const none = buildOverlandBatchPayload({ ...baseParams, inregions: [] }) as any
+    expect(none.locations[0].properties).not.toHaveProperty("inregions")
+  })
+})
+
+describe("supportsGeofenceReporting", () => {
+  it("matches the wire formats native reports geofences in", () => {
+    expect(supportsGeofenceReporting("custom", "POST", "single")).toBe(true)
+    expect(supportsGeofenceReporting("owntracks", "POST", "single")).toBe(true)
+    expect(supportsGeofenceReporting("overland", "POST", "single")).toBe(true)
+    expect(supportsGeofenceReporting("dawarich", "POST", "batch")).toBe(true)
+  })
+
+  it("is false where the request has no room for them", () => {
+    expect(supportsGeofenceReporting("custom", "GET", "single")).toBe(false)
+    expect(supportsGeofenceReporting("traccar", "POST", "single")).toBe(false)
+    expect(supportsGeofenceReporting("traccar", "GET", "single")).toBe(false)
   })
 })

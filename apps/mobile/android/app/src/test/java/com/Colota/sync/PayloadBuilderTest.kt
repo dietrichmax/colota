@@ -249,6 +249,28 @@ class PayloadBuilderTest {
         assertEquals("phone1", payload.getString("device"))
     }
 
+    @Test
+    fun `buildLocationPayload names the geofences under inregions whatever the field map renames`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f)
+
+        val payload = PayloadBuilder.buildLocationPayload(
+            location, 1700000000L, 80, 2, mapOf("lat" to "latitude"), emptyMap(), ApiFormat.FIELD_MAPPED,
+            listOf("Home", "Garden")
+        )
+
+        val regions = payload.getJSONArray("inregions")
+        assertEquals(listOf("Home", "Garden"), (0 until regions.length()).map { regions.getString(it) })
+    }
+
+    @Test
+    fun `buildLocationPayload sends no inregions when the device is in no geofence`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f)
+
+        val payload = buildPayload(location, 80, 2, emptyMap(), 1700000000L)
+
+        assertFalse(payload.has("inregions"))
+    }
+
     // --- parseFieldMap tests ---
 
     @Test
@@ -647,6 +669,19 @@ class PayloadBuilderTest {
         assertEquals(1, locations.length())
         val feature = locations.getJSONObject(0)
         assertEquals("Feature", feature.getString("type"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload carries inregions on the feature and never lifts it to the envelope`() {
+        val flat = JSONObject().apply {
+            put("lat", 51.5); put("lon", -0.04); put("tst", 1704067200L)
+            put("inregions", org.json.JSONArray(listOf("Home")))
+        }
+        val result = PayloadBuilder.buildOverlandBatchPayload(listOf(flat), PayloadBuilder.extractEnvelopeCustomFields(flat))
+
+        val properties = result.getJSONArray("locations").getJSONObject(0).getJSONObject("properties")
+        assertEquals("Home", properties.getJSONArray("inregions").getString(0))
+        assertFalse(result.has("inregions"))
     }
 
     @Test

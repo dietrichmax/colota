@@ -1,5 +1,5 @@
 import React from "react"
-import { render, fireEvent } from "@testing-library/react-native"
+import { render, fireEvent, within } from "@testing-library/react-native"
 import { DEFAULT_SETTINGS, API_TEMPLATES, Settings } from "../../types/global"
 
 // --- Mocks ---
@@ -70,15 +70,23 @@ jest.mock("../../components", () => {
         require("react").createElement(require("react-native").Text, null, props.title)
       )
     },
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
+    Toggle: ({ testID, value, onValueChange, disabled, accessibilityLabel }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        onPress: () => onValueChange(!value),
+        disabled,
+        accessibilityLabel,
+        accessibilityRole: "switch",
+        accessibilityState: { checked: value, disabled }
+      }),
+    SettingRow: ({ label, hint, children }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        children
+      ),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
@@ -335,17 +343,78 @@ describe("ApiSettingsScreen", () => {
     })
 
     it("names the other blocker when the method is the thing in the way", () => {
-      const { getByText, getByTestId } = renderWithTemplate("dawarich", { syncInterval: 300 })
+      const { getByTestId } = renderWithTemplate("dawarich", { syncInterval: 300 })
 
       fireEvent.press(getByTestId("http-method-get"))
 
-      expect(getByText("Needs the POST method, not GET")).toBeTruthy()
+      expect(within(getByTestId("dawarich-mode-batch")).getByText("Needs the POST method, not GET")).toBeTruthy()
     })
 
     it("marks the blocked option disabled instead of only dimming it", () => {
       const { getByTestId } = renderWithTemplate("dawarich", { syncInterval: 0 })
 
       expect(getByTestId("dawarich-mode-batch").props.accessibilityState.disabled).toBe(true)
+    })
+  })
+
+  describe("current geofences", () => {
+    it("is off until the user turns it on, since a server may not expect the field", () => {
+      const { getByTestId, queryByText } = renderScreen()
+
+      expect(getByTestId("inregions-toggle").props.accessibilityState.checked).toBe(false)
+      expect(queryByText(/inregions": \[/)).toBeNull()
+    })
+
+    it("saves the switch together with the rest of the request format", async () => {
+      const { getByTestId } = renderScreen()
+
+      fireEvent.press(getByTestId("inregions-toggle"))
+
+      expect(mockImmediateSaveAndRestart).toHaveBeenCalledTimes(1)
+      await mockImmediateSaveAndRestart.mock.calls[0][0]()
+      expect(mockSetSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ sendInRegions: true, fieldMap: DEFAULT_SETTINGS.fieldMap })
+      )
+    })
+
+    it("shows inregions in the example body once it is on", () => {
+      const { getByTestId, getByText } = renderScreen()
+
+      fireEvent.press(getByTestId("inregions-toggle"))
+
+      expect(getByText(/"inregions": \["Home"\]/)).toBeTruthy()
+    })
+
+    it("puts inregions on the Overland feature, where the batch carries per-point fields", () => {
+      const { getByText } = renderWithTemplate("overland", { sendInRegions: true })
+
+      expect(getByText(/"properties": \{[\s\S]*"inregions": \[\s*"Home"\s*\]/)).toBeTruthy()
+    })
+
+    it("carries the switch into later edits, so a field change does not turn it off", () => {
+      const { getByTestId, getByDisplayValue } = renderScreen({ sendInRegions: true })
+
+      fireEvent.changeText(getByDisplayValue("lat"), "latitude")
+
+      const [save] = mockDebouncedSaveAndRestart.mock.calls[0]
+      save()
+      expect(mockSetSettings).toHaveBeenCalledWith(expect.objectContaining({ sendInRegions: true }))
+      expect(getByTestId("inregions-toggle").props.accessibilityState.checked).toBe(true)
+    })
+
+    it("is blocked under GET and says why on its own row", () => {
+      const { getByTestId, getByText } = renderScreen({ httpMethod: "GET", sendInRegions: true })
+
+      expect(getByTestId("inregions-toggle").props.accessibilityState).toEqual({ checked: false, disabled: true })
+      expect(getByText("Needs the POST method, not GET")).toBeTruthy()
+    })
+
+    it("is blocked for Traccar JSON, which has no field for it", () => {
+      const { getByTestId, getByText } = renderWithTemplate("traccar")
+      fireEvent.press(getByTestId("http-method-post"))
+
+      expect(getByTestId("inregions-toggle").props.accessibilityState.disabled).toBe(true)
+      expect(getByText("The Traccar format has no field for it")).toBeTruthy()
     })
   })
 })
