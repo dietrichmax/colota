@@ -1,2 +1,3 @@
 - Fixed text showing only its top edge on Samsung DeX and other external displays
 - Fixed the Bearer token label showing as asterisks in Chinese
+- Fixed the theme not following the system after switching dark mode while Colota was closed and tracking kept running

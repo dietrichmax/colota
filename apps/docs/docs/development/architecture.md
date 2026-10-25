@@ -288,7 +288,7 @@ For backups, two `internal` methods support the export/import flow without expos
 
 | Module | Purpose |
 | --- | --- |
-| `MainActivity` | The React Native activity. Refills `DisplayMetricsHolder` from itself after create and every configuration change, because React Native reads the phone's display metrics and would measure text on an external display (DeX) at the wrong density |
+| `MainActivity` | The React Native activity. Refills `DisplayMetricsHolder` from itself after create and every configuration change, because React Native reads the phone's display metrics and would measure text on an external display (DeX) at the wrong density. On create it also passes the current dark or light theme to React Native, which keeps running with the tracking service after the activity is gone and would miss a theme switch made meanwhile |
 | `LocationBootReceiver` | Auto-restarts tracking after device reboot |
 | `AlarmScheduler` | Shared one-shot wake-up alarm used by the geofence heartbeat, the stationary heartbeat and the tracking watchdog. `setAndAllowWhileIdle` fires through Doze without `SCHEDULE_EXACT_ALARM`, at the cost of being inexact, so every interval built on it is a minimum and not a schedule. Floors the delay at 60s, and each alarm needs its own request code. Whoever handles a tick re-arms the next one |
 | `GeofenceHeartbeatScheduler` / `GeofenceHeartbeatReceiver` | Wakes the service for the zone heartbeat while paused in a geofence. Replaced a coroutine delay, which stopped counting while the phone slept |
