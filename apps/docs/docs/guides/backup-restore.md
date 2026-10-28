@@ -46,7 +46,7 @@ Both are hard limits. The line under the password field is the same verdict the 
 - **50 bits of entropy minimum**
 - Sequences like `abcd` and `1234` cap the score, as do passwords with fewer than 4 distinct characters
 
-A random 16-character password from a password manager, or a 4-5 word passphrase, both clear the bar comfortably. Common words and short tweaks of dictionary words do not.
+A random 16-character password from a password manager, or a 4-5 word passphrase, both clear the bar comfortably. Common words and short tweaks of dictionary words do not. The password fields are marked for autofill, so a password manager can offer to save the password when you create a backup and fill it in when you restore one.
 
 :::warning[No password recovery]
 

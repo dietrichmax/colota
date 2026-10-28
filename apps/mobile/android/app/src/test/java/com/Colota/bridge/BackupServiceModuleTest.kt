@@ -5,9 +5,11 @@
 
 package com.Colota.bridge
 
+import android.app.Activity
 import android.app.AlarmManager
 import android.content.Context
 import android.net.Uri
+import android.view.autofill.AutofillManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.testing.WorkManagerTestInitHelper
@@ -308,6 +310,34 @@ class BackupServiceModuleTest {
         val deadline = System.currentTimeMillis() + 10_000
         while (mutex.isLocked && System.currentTimeMillis() < deadline) Thread.sleep(10)
         assertFalse("restore never released the operation mutex", mutex.isLocked)
+    }
+
+    @Test
+    fun `committing autofill ends the session on the activity before it resolves`() {
+        val autofill = mockk<AutofillManager>(relaxed = true)
+        val activity = mockk<Activity>(relaxed = true)
+        every { activity.getSystemService(AutofillManager::class.java) } returns autofill
+        every { activity.runOnUiThread(any()) } answers { firstArg<Runnable>().run() }
+        val reactContext = BridgeReactContext(context)
+        reactContext.onHostResume(activity)
+        val promise = mockk<Promise>(relaxed = true)
+
+        BackupServiceModule(reactContext).commitAutofill(promise)
+
+        verifyOrder {
+            autofill.commit()
+            promise.resolve(null)
+        }
+    }
+
+    @Test
+    fun `committing autofill with no activity resolves without touching anything`() {
+        val promise = mockk<Promise>(relaxed = true)
+
+        module.commitAutofill(promise)
+
+        verify { promise.resolve(null) }
+        verify(exactly = 0) { promise.reject(any<String>(), any<String>()) }
     }
 
     private fun enableAutoExport() {

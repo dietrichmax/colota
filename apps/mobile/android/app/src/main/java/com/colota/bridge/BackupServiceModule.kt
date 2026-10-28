@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.StatFs
 import android.provider.DocumentsContract
+import android.view.autofill.AutofillManager
 import com.Colota.util.AppLanguage
 import com.Colota.R
 import com.Colota.backup.BackupBuilder
@@ -87,6 +88,24 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
         super.invalidate()
         pickerCoordinator.dispose()
         scope.cancel()
+    }
+
+    /** Ends the autofill session so a password manager can offer to save what the fields hold. */
+    @ReactMethod
+    fun commitAutofill(promise: Promise) {
+        val activity = reactApplicationContext.currentActivity
+        if (activity == null) {
+            promise.resolve(null)
+            return
+        }
+        activity.runOnUiThread {
+            try {
+                activity.getSystemService(AutofillManager::class.java)?.commit()
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "Autofill commit failed: ${e.message}")
+            }
+            promise.resolve(null)
+        }
     }
 
     @ReactMethod
