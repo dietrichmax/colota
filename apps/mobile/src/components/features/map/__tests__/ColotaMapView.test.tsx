@@ -65,6 +65,13 @@ function rightOf(node: any): number | undefined {
   return positionOf(node, "right")
 }
 
+/** Renders and lets the style URL read land, so no state update arrives after the test ends. */
+async function renderLoaded(ui: React.ReactElement) {
+  const view = render(ui)
+  await act(async () => {})
+  return view
+}
+
 describe("ColotaMapView camera padding", () => {
   beforeEach(() => {
     mockSetStop.mockClear()
@@ -119,8 +126,10 @@ describe("ColotaMapView camera padding", () => {
 describe("ColotaMapView control slots", () => {
   const controlsBottom = 250
 
-  it("puts the attribution disc on the base line and the compass two slots above it", () => {
-    const { getByRole, getByTestId } = render(<ColotaMapView initialCenter={center} controlsBottom={controlsBottom} />)
+  it("puts the attribution disc on the base line and the compass two slots above it", async () => {
+    const { getByRole, getByTestId } = await renderLoaded(
+      <ColotaMapView initialCenter={center} controlsBottom={controlsBottom} />
+    )
     rotateMap(getByTestId)
 
     expect(bottomOf(getByRole("button", { name: "Show map attribution" }))).toBe(controlsBottom)
@@ -129,8 +138,8 @@ describe("ColotaMapView control slots", () => {
     )
   })
 
-  it("moves both discs in from the right edge by the column end a screen gives, clear of a side navigation bar", () => {
-    const { getByRole, getByTestId } = render(
+  it("moves both discs in from the right edge by the column end a screen gives, clear of a side navigation bar", async () => {
+    const { getByRole, getByTestId } = await renderLoaded(
       <ColotaMapView initialCenter={center} controlsBottom={controlsBottom} controlsEnd={64} />
     )
     rotateMap(getByTestId)
@@ -139,13 +148,13 @@ describe("ColotaMapView control slots", () => {
     expect(rightOf(getByRole("button", { name: "Reset map to north" }))).toBe(64)
   })
 
-  it("gives the attribution disc the same touch slop as every other disc in the column", () => {
-    const { getByRole } = render(<ColotaMapView initialCenter={center} controlsBottom={controlsBottom} />)
+  it("gives the attribution disc the same touch slop as every other disc in the column", async () => {
+    const { getByRole } = await renderLoaded(<ColotaMapView initialCenter={center} controlsBottom={controlsBottom} />)
 
     expect(getByRole("button", { name: "Show map attribution" }).props.hitSlop).toEqual(HIT_SLOP_SM)
   })
 
-  it("keeps the fixed disc positions when no base line is given", () => {
+  it("keeps the fixed disc positions when no base line is given", async () => {
     const bare = render(
       <MapActionButton
         onPress={() => {}}
@@ -159,7 +168,7 @@ describe("ColotaMapView control slots", () => {
     const defaultBottom = bottomOf(bare.getByRole("button", { name: "bare" }))
     bare.unmount()
 
-    const { getByRole, getByTestId } = render(<ColotaMapView initialCenter={center} />)
+    const { getByRole, getByTestId } = await renderLoaded(<ColotaMapView initialCenter={center} />)
     rotateMap(getByTestId)
 
     expect(bottomOf(getByRole("button", { name: "Show map attribution" }))).toBe(defaultBottom)
@@ -169,8 +178,8 @@ describe("ColotaMapView control slots", () => {
     )
   })
 
-  it("names the compass for a screen reader and hides it while the map points north", () => {
-    const { queryByRole, getByRole, getByTestId } = render(<ColotaMapView initialCenter={center} />)
+  it("names the compass for a screen reader and hides it while the map points north", async () => {
+    const { queryByRole, getByRole, getByTestId } = await renderLoaded(<ColotaMapView initialCenter={center} />)
 
     expect(queryByRole("button", { name: "Reset map to north" })).toBeNull()
     rotateMap(getByTestId)
@@ -181,14 +190,14 @@ describe("ColotaMapView control slots", () => {
 })
 
 describe("ColotaMapView attribution popup", () => {
-  function openPopup() {
-    const utils = render(<ColotaMapView initialCenter={center} />)
+  async function openPopup() {
+    const utils = await renderLoaded(<ColotaMapView initialCenter={center} />)
     fireEvent.press(utils.getByRole("button", { name: "Show map attribution" }))
     return utils
   }
 
-  it("names the map data, lists every source as a link and ends with a Close button like the app's dialogs", () => {
-    const { getByText, getAllByRole, getByRole, queryByLabelText } = openPopup()
+  it("names the map data, lists every source as a link and ends with a Close button like the app's dialogs", async () => {
+    const { getByText, getAllByRole, getByRole, queryByLabelText } = await openPopup()
 
     expect(getByText("Map credits")).toBeTruthy()
     expect(getAllByRole("link")).toHaveLength(4)
@@ -201,16 +210,16 @@ describe("ColotaMapView attribution popup", () => {
     expect(queryByLabelText("Close")).toBeNull()
   })
 
-  it("holds the Close button 24 under the links like AppModal's button row, counting the 8 Button bakes in", () => {
-    const { getByRole } = openPopup()
+  it("holds the Close button 24 under the links like AppModal's button row, counting the 8 Button bakes in", async () => {
+    const { getByRole } = await openPopup()
 
     let node: any = getByRole("button", { name: "Close" }).parent
     while (node && StyleSheet.flatten(node.props.style)?.marginTop === undefined) node = node.parent
     expect(StyleSheet.flatten(node.props.style).marginTop + space.sm).toBe(space.xl)
   })
 
-  it("closes on the Close button so a reader is not left hunting for a corner glyph", () => {
-    const { getByRole, queryByText } = openPopup()
+  it("closes on the Close button so a reader is not left hunting for a corner glyph", async () => {
+    const { getByRole, queryByText } = await openPopup()
 
     fireEvent.press(getByRole("button", { name: "Close" }))
 
