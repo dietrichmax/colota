@@ -78,7 +78,7 @@ def isHermesEnabled = project.findProperty('hermesEnabled') == 'true'
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
+    ndkVersion = rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
@@ -89,7 +89,7 @@ android {
         includeInBundle = false
     }
 
-    namespace "com.Colota"
+    namespace = "com.Colota"
     defaultConfig {
         applicationId "com.Colota"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -137,14 +137,14 @@ android {
     
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
+            signingConfig = signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
-            shrinkResources false // Disabled for reproducible builds
+            shrinkResources = false // Disabled for reproducible builds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
@@ -172,8 +172,8 @@ android {
         abi {
             reset()
             // Disable ABI splits for bundle tasks (AABs handle this natively)
-            enable !gradle.startParameter.taskNames.any { it.toLowerCase().contains("bundle") }
-            universalApk false
+            enable = !gradle.startParameter.taskNames.any { it.toLowerCase().contains("bundle") }
+            universalApk = false
             include "arm64-v8a", "armeabi-v7a", "x86_64", "x86"
         }
     }
