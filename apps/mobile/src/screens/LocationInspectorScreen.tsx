@@ -271,7 +271,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     async (format: ExportFormat, tripsToExport: Trip[]) => {
       if (tripsToExport.length === 0) return
       try {
-        const dateStr = mapDate.toISOString().slice(0, 10)
+        const dateStr = dayKey(mapDate)
         const isSingle = tripsToExport.length === 1
         const label = isSingle ? t("history.trip", { index: tripsToExport[0].index }) : t("history.tripsLabel")
         const fileName = `colota_${isSingle ? `trip${tripsToExport[0].index}` : "trips"}_${dateStr}${
