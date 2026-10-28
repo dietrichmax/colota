@@ -147,7 +147,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
         private inline fun emit(event: String, build: WritableMap.() -> Unit): Boolean {
             val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
+            if (!context.hasActiveReactInstance()) return false
             return try {
                 val params = Arguments.createMap().apply(build)
                 context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
