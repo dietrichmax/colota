@@ -86,11 +86,12 @@ const settleHydration = async () => {
 const wrapper = ({ children }: { children: React.ReactNode }) => <TrackingProvider>{children}</TrackingProvider>
 
 // Nothing else shows a disclosure: without these mounts no permission is ever requested on a fresh install.
-it("mounts both permission disclosures", () => {
+it("mounts both permission disclosures", async () => {
   mockMountedDisclosures.length = 0
   renderHook(() => useTracking(), { wrapper })
 
   expect(mockMountedDisclosures).toEqual(expect.arrayContaining(["location", "localNetwork"]))
+  await settleHydration()
 })
 
 describe("useTracking", () => {
@@ -111,6 +112,7 @@ describe("useTracking", () => {
 
     expect(result.current.settings.interval).toBe(DEFAULT_SETTINGS.interval)
     expect(result.current.settings.endpoint).toBe(DEFAULT_SETTINGS.endpoint)
+    await settleHydration()
   })
 
   it("hydrates settings from native storage", async () => {
