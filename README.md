@@ -67,7 +67,7 @@ Full docs at **[colota.app](https://colota.app)** covers configuration, server i
 
 ## Build from Source
 
-> **Requirements:** Node.js 24 (see `.nvmrc`), Android SDK, JDK 17+
+> **Requirements:** Node.js 26 (see `.nvmrc`), Android SDK, JDK 17+
 
 ```bash
 git clone https://github.com/dietrichmax/colota.git
