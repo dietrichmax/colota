@@ -11,8 +11,7 @@ import com.Colota.util.AppLogger
 internal object DatabaseFileSwap {
     private const val TAG = "LocationDB"
 
-    // Drain the WAL into main, then best-effort delete sidecars before the rename. SQLite's
-    // WAL salt+checksum makes replay unlikely, but stale sidecars next to the new DB are untidy.
+    // The old file's -wal, -shm and -journal go first, so none of them sits next to the new database.
     fun replace(target: java.io.File, newDb: java.io.File) {
         target.parentFile?.mkdirs()
 
@@ -48,8 +47,7 @@ internal object DatabaseFileSwap {
         }
     }
 
-    // Sidecar deletes are non-critical; SQLite recovers fine without them. A SecurityException
-    // from a sandbox-restricted FS shouldn't abort the whole swap.
+    // A failed sidecar delete must not abort the swap; SQLite does without them.
     private fun bestEffortDelete(file: java.io.File) {
         try {
             file.delete()
@@ -58,7 +56,6 @@ internal object DatabaseFileSwap {
         }
     }
 
-    // Truncating checkpoint moves uncheckpointed WAL pages into main before sidecar delete.
     private fun drainLiveWal(target: java.io.File) {
         if (!target.exists()) return
         try {

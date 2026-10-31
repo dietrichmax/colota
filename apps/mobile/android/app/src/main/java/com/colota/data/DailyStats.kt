@@ -14,15 +14,10 @@ private const val TAG = "LocationDB"
 private const val TRIP_GAP_SECONDS = 900L // 15 min, matches JS segmentTrips
 private const val MIN_TRIP_EXTENT_METERS = 100.0 // bbox diagonal, matches JS segmentTrips
 
-/**
- * Returns per-day aggregated stats for a date range in a single query.
- * Computes distance (haversine) and trip count (15-min gap threshold) inline
- * to avoid nested cursors.
- */
+/** Per-day stats for a date range from one query; distance and trips come from the same pass, so no nested cursors. */
 fun DatabaseHelper.getDailyStats(startTimestamp: Long, endTimestamp: Long): List<Map<String, Any>> {
     val stats = mutableListOf<Map<String, Any>>()
-    // Kept out of the block below: failing to read manual edits should fall back to plain
-    // automatic segmentation, not blank the caller's whole calendar month.
+    // Outside the try below: an unreadable override table falls back to automatic segmentation, not an empty month.
     val overrides = try {
         getBoundaryOverrides().associate { (before, after, action) -> (before to after) to action }
     } catch (e: Exception) {
@@ -116,8 +111,7 @@ fun DatabaseHelper.getDailyStats(startTimestamp: Long, endTimestamp: Long): List
                     val override = overrides[prevTs to ts]
                     val forcedSplit = override == BOUNDARY_ACTION_SPLIT
                     if (forcedSplit || (override == null && ts - prevTs >= TRIP_GAP_SECONDS)) {
-                        // The segment ending here abuts the split, so it is exempt from the
-                        // extent filter too - but a lone point is still not a trip.
+                        // The segment before a manual split skips the extent filter; a lone point is still no trip.
                         if (forcedSplit && !segCounted && segPoints >= 2) countSegment()
                         startSegment(lat, lon, forcedSplit)
                     } else {
@@ -127,8 +121,7 @@ fun DatabaseHelper.getDailyStats(startTimestamp: Long, endTimestamp: Long): List
                         if (lat > segMaxLat) segMaxLat = lat
                         if (lon < segMinLon) segMinLon = lon
                         if (lon > segMaxLon) segMaxLon = lon
-                        // Counting a forced segment is deferred to here, its second point, so a
-                        // split left dangling by a later delete cannot conjure a one-point trip.
+                        // A forced segment counts on its second point, so a split left dangling by a delete is no trip.
                         if (!segCounted &&
                             (segForced ||
                                 haversineDistance(segMinLat, segMinLon, segMaxLat, segMaxLon) >= MIN_TRIP_EXTENT_METERS)

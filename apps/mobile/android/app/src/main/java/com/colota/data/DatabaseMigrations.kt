@@ -18,9 +18,7 @@ import com.Colota.util.AppLogger
 object DatabaseMigrations {
     private const val TAG = "LocationDB"
 
-    // Profiles table as introduced in v2, before activation_delay_seconds (added by the v6
-    // migration). Frozen on purpose: the < 2 migration must create this older shape so the v6
-    // ALTER adds the column without colliding. onCreate uses the latest CREATE_PROFILES_TABLE.
+    // The v2 shape, frozen: the < 2 step creates it so the v6 ALTER can add activation_delay_seconds.
     private const val CREATE_PROFILES_TABLE_V2 = """
         CREATE TABLE IF NOT EXISTS $TABLE_PROFILES (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,8 +94,7 @@ object DatabaseMigrations {
         }
         if (oldVersion < 6) {
             db.execSQL("ALTER TABLE $TABLE_PROFILES ADD COLUMN activation_delay_seconds INTEGER NOT NULL DEFAULT 0")
-            // Stationary profiles existed before this column with a fixed 60s detection window;
-            // backfill that value so they keep behaving the same now that it is a stored field.
+            // Stationary profiles used a fixed 60 s window before this column existed.
             db.execSQL("UPDATE $TABLE_PROFILES SET activation_delay_seconds = 60 WHERE condition_type = 'stationary'")
             db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN note TEXT")
         }
