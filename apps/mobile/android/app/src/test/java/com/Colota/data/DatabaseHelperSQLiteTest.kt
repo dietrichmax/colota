@@ -24,8 +24,8 @@ import java.io.File
  * Tests actual insert/query/delete, WAL mode, transaction handling, and foreign key cascades
  * against a real SQLite DB.
  *
- * Migrations are covered through `migrateCandidate`, the backup-restore entry point. `onUpgrade`
- * delegates to the same `applyMigrations`, so the SQL is covered either way.
+ * Migrations are covered through `DatabaseMigrations.migrateCandidate`, the backup-restore entry
+ * point. `onUpgrade` delegates to the same `DatabaseMigrations.migrate`, so the SQL is covered either way.
  */
 @RunWith(RobolectricTestRunner::class)
 class DatabaseHelperSQLiteTest {
@@ -154,7 +154,7 @@ class DatabaseHelperSQLiteTest {
             old.version = 8
         }
 
-        DatabaseHelper.migrateCandidate(candidate)
+        DatabaseMigrations.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             assertEquals(9, migrated.version)
@@ -209,7 +209,7 @@ class DatabaseHelperSQLiteTest {
             old.version = 7
         }
 
-        DatabaseHelper.migrateCandidate(candidate)
+        DatabaseMigrations.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
@@ -269,7 +269,7 @@ class DatabaseHelperSQLiteTest {
             old.version = 5
         }
 
-        DatabaseHelper.migrateCandidate(candidate)
+        DatabaseMigrations.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
@@ -310,7 +310,7 @@ class DatabaseHelperSQLiteTest {
         }
 
         // Must not throw (regression guard: the frozen v2 create must omit activation_delay_seconds)
-        DatabaseHelper.migrateCandidate(candidate)
+        DatabaseMigrations.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
