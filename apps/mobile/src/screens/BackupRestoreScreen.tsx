@@ -134,7 +134,6 @@ export function BackupRestoreScreen({}: ScreenProps) {
     setBackupMessage(null)
     try {
       await BackupService.createBackup(uri, password)
-      await BackupService.commitAutofill().catch(() => {})
       const now = Date.now()
       await NativeLocationService.saveSetting("last_backup_at", String(now)).catch(() => {})
       setLastBackupAt(now)

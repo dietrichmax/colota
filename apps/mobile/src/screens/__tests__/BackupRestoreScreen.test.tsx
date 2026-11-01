@@ -34,7 +34,6 @@ const mockPasswordStrength = jest.fn()
 const mockPickDestination = jest.fn()
 const mockPickSource = jest.fn()
 const mockCreateBackup = jest.fn()
-const mockCommitAutofill = jest.fn()
 const mockDescribeBackup = jest.fn()
 const mockRestoreBackup = jest.fn()
 const mockApplyRestore = jest.fn()
@@ -52,7 +51,6 @@ jest.mock("../../services/BackupService", () => {
     pickBackupDestination: onReceiver((...a) => mockPickDestination(...a)),
     pickBackupSource: onReceiver((...a) => mockPickSource(...a)),
     createBackup: onReceiver((...a) => mockCreateBackup(...a)),
-    commitAutofill: onReceiver((...a) => mockCommitAutofill(...a)),
     describeBackup: onReceiver((...a) => mockDescribeBackup(...a)),
     restoreBackup: onReceiver((...a) => mockRestoreBackup(...a)),
     applyRestore: onReceiver((...a) => mockApplyRestore(...a))
@@ -150,7 +148,6 @@ beforeEach(() => {
   mockPickDestination.mockResolvedValue("content://dest")
   mockPickSource.mockResolvedValue({ uri: "content://src", displayName: "colota_backup.colota" })
   mockCreateBackup.mockResolvedValue(undefined)
-  mockCommitAutofill.mockResolvedValue(undefined)
   mockDescribeBackup.mockResolvedValue(manifest)
   mockRestoreBackup.mockResolvedValue(undefined)
   mockApplyRestore.mockResolvedValue(undefined)
@@ -262,37 +259,6 @@ describe("BackupRestoreScreen", () => {
       expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "You cannot reset this password" }))
       expect(mockSaveSetting).toHaveBeenCalledWith("last_backup_at", expect.any(String))
       expect(await api.findByText(/^Backup written\./)).toBeTruthy()
-    })
-
-    /** A password manager saves what the fields hold when the session ends, and a backup clears them. */
-    it("ends the autofill session while the fields still hold the password", async () => {
-      const api = renderScreen()
-      await api.findByText(/^You last backed up /)
-      let heldAtCommit: string | undefined
-      mockCommitAutofill.mockImplementation(async () => {
-        heldAtCommit = api.getByTestId("backup-password").props.value
-      })
-      typeGoodPassword(api)
-      await waitFor(() => expect(api.getByTestId("create-backup-btn").props.accessibilityState.disabled).toBe(false))
-
-      fireEvent.press(api.getByTestId("create-backup-btn"))
-
-      expect(await api.findByText(/^Backup written\./)).toBeTruthy()
-      expect(heldAtCommit).toBe("correct horse battery staple")
-      expect(api.getByTestId("backup-password").props.value).toBe("")
-    })
-
-    it("does not offer to save the password of a backup that failed", async () => {
-      mockCreateBackup.mockRejectedValue({ code: "E_BACKUP_IO", message: "disk full" })
-      const api = renderScreen()
-      await api.findByText(/^You last backed up /)
-      typeGoodPassword(api)
-      await waitFor(() => expect(api.getByTestId("create-backup-btn").props.accessibilityState.disabled).toBe(false))
-
-      fireEvent.press(api.getByTestId("create-backup-btn"))
-
-      expect(await api.findByText("disk full")).toBeTruthy()
-      expect(mockCommitAutofill).not.toHaveBeenCalled()
     })
 
     it("writes nothing when the acknowledgement is dismissed", async () => {

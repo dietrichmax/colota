@@ -1,0 +1,1 @@
+- Password managers can now fill in the backup password
