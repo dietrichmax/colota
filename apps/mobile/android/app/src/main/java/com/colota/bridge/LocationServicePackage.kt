@@ -18,7 +18,10 @@ class LocationServicePackage : ReactPackage {
 
     /**
      * Registers the Native Modules provided by this package.
+     * Stays on the legacy ReactPackage path: BaseReactPackage creates modules lazily, and
+     * LocationServiceModule must hold the context before the service emits.
      */
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
         return listOf(
             LocationServiceModule(reactContext),

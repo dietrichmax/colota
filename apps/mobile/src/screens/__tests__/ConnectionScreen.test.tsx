@@ -38,7 +38,12 @@ jest.mock("../../services/NativeLocationService", () => ({
     getStats: (...a: unknown[]) => mockGetStats(...a),
     isNetworkAvailable: (...a: unknown[]) => mockIsNetworkAvailable(...a),
     getMostRecentLocation: (...a: unknown[]) => mockGetMostRecentLocation(...a),
-    getAuthConfig: (...a: unknown[]) => mockGetAuthConfig(...a),
+    getAuthConfig: (...a: unknown[]) => mockGetAuthConfig(...a)
+  }
+}))
+jest.mock("../../services/MtlsService", () => ({
+  __esModule: true,
+  default: {
     getClientCertInfo: (...a: unknown[]) => mockGetClientCertInfo(...a)
   }
 }))

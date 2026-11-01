@@ -354,7 +354,9 @@ describe("SettingsScreen", () => {
       // The five slower reads must already be in flight while getStats is still pending.
       await waitFor(() => expect(mockLoadOfflineAreas).toHaveBeenCalled())
       expect(mockGetAutoExportStatus).toHaveBeenCalled()
-      releaseStats({ queued: 0, sent: 0, total: 0, today: 0, databaseSizeMB: 0, lastSyncTime: 0, lastSyncError: "" })
+      await act(async () =>
+        releaseStats({ queued: 0, sent: 0, total: 0, today: 0, databaseSizeMB: 0, lastSyncTime: 0, lastSyncError: "" })
+      )
     })
 
     it("re-reads only the two cheap values on a sync event, not the pack walk", async () => {

@@ -21,6 +21,7 @@ import {
 import { Settings } from "../../../types/global"
 import type { ScreenProps } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
+import MtlsService from "../../../services/MtlsService"
 import { endpointCarriesKey, endpointExample, isEndpointAllowed } from "../../../utils/settingsValidation"
 import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
@@ -253,7 +254,7 @@ export function ConnectionSettings({
         if (key) customFields[key] = value
       }
 
-      const result = await NativeLocationService.testEndpoint({ endpoint, method, apiFormat, payload, customFields })
+      const result = await MtlsService.testEndpoint({ endpoint, method, apiFormat, payload, customFields })
       if (!result.ok) logger.warn("[ConnectionSettings] Test failed:", result.status, scheme)
       setTest({
         kind: "done",

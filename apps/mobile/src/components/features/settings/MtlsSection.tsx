@@ -16,7 +16,7 @@ import {
 } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { SectionTitle, Card, Divider, Button, FieldMessage, ListItem, TextField, StateLine, StatRow } from "../../index"
-import NativeLocationService from "../../../services/NativeLocationService"
+import MtlsService from "../../../services/MtlsService"
 import { showChoice, showConfirm } from "../../../services/modalService"
 import { ClientCertInfoResult } from "../../../types/global"
 import { describeCertificate, type CertificateState } from "../../../utils/certificateState"
@@ -56,10 +56,7 @@ export function MtlsSection() {
 
   const refresh = useCallback(async () => {
     try {
-      const [client, ca] = await Promise.all([
-        NativeLocationService.getClientCertInfo(),
-        NativeLocationService.getServerCaInfo()
-      ])
+      const [client, ca] = await Promise.all([MtlsService.getClientCertInfo(), MtlsService.getServerCaInfo()])
       setCertInfo(client)
       setCaInfo(ca)
     } catch (err) {
@@ -76,9 +73,9 @@ export function MtlsSection() {
   const handlePickServerCa = useCallback(async () => {
     setCaError(null)
     try {
-      const b64 = await NativeLocationService.pickServerCaFile()
+      const b64 = await MtlsService.pickServerCaFile()
       if (!b64) return
-      await NativeLocationService.importServerCa(b64)
+      await MtlsService.importServerCa(b64)
       await refresh()
     } catch (err: any) {
       logger.error("[MtlsSection] importServerCa failed:", err)
@@ -95,7 +92,7 @@ export function MtlsSection() {
     })
     if (!confirmed) return
     try {
-      await NativeLocationService.clearServerCa()
+      await MtlsService.clearServerCa()
       await refresh()
     } catch (err) {
       logger.error("[MtlsSection] clearServerCa failed:", err)
@@ -106,7 +103,7 @@ export function MtlsSection() {
     setClientPickError(null)
     setPickNote(null)
     try {
-      const result = await NativeLocationService.pickKeyChainCert()
+      const result = await MtlsService.pickKeyChainCert()
       if (!result) {
         // Android reports an empty picker and a cancelled one the same way, so the line covers both.
         setPickNote(t("mtls.noPick"))
@@ -123,7 +120,7 @@ export function MtlsSection() {
     setClientPickError(null)
     setPickNote(null)
     try {
-      const b64 = await NativeLocationService.pickClientCertFile()
+      const b64 = await MtlsService.pickClientCertFile()
       if (!b64) return
       setImportState({ kind: "picked", b64, password: "", importing: false, error: null })
     } catch (err: any) {
@@ -136,7 +133,7 @@ export function MtlsSection() {
     if (importState.kind !== "picked" || !importState.b64) return
     setImportState({ ...importState, importing: true, error: null })
     try {
-      await NativeLocationService.importClientCert(importState.b64, importState.password)
+      await MtlsService.importClientCert(importState.b64, importState.password)
       setImportState({ kind: "idle" })
       await refresh()
     } catch (err: any) {
@@ -167,7 +164,7 @@ export function MtlsSection() {
     })
     if (!confirmed) return
     try {
-      await NativeLocationService.clearClientCert()
+      await MtlsService.clearClientCert()
       await refresh()
     } catch (err) {
       logger.error("[MtlsSection] clear failed:", err)

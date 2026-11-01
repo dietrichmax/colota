@@ -33,6 +33,7 @@ import {
 } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatShortDistance, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
+import { dayKey } from "../utils/inspectorDay"
 import { size, space } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -183,7 +184,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const handleExport = useCallback(
     async (format: ExportFormat) => {
       try {
-        const dateStr = new Date(trip.startTime * 1000).toISOString().slice(0, 10)
+        const dateStr = dayKey(new Date(trip.startTime * 1000))
         const fileName = `colota_trip${trip.index}_${dateStr}${EXPORT_FORMATS[format].extension}`
         const filePath = await NativeLocationService.exportTripsToFile(
           [{ index: trip.index, color: getTripColor(trip.index), startTs: trip.startTime, endTs: trip.endTime }],

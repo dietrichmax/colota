@@ -516,6 +516,21 @@ describe("export", () => {
     expect(queryByTestId("ExportFormatDialog")).toBeNull()
   })
 
+  // Stepping, the calendar and Summary all hold a day as its local midnight, which at UTC+9:30 is the previous day in UTC.
+  it("names the file after the local day shown", async () => {
+    withDay()
+    const props = createProps({ initialDate: new Date(2026, 9, 27).getTime() })
+    const { getByTestId } = render(<LocationHistoryScreen {...props} />)
+    await settled(getByTestId)
+
+    fireEvent.press(headerRight(props).getByLabelText("Export day"))
+    await act(async () => getByTestId("ExportFormatDialog").props.onSelect("gpx"))
+
+    await waitFor(() => expect(NativeLocationService.shareFile).toHaveBeenCalled())
+    expect((NativeLocationService.exportTripsToFile as jest.Mock).mock.calls[0][2]).toBe("colota_trips_2026-10-27.gpx")
+    expect((NativeLocationService.shareFile as jest.Mock).mock.calls[0][2]).toContain("2026-10-27")
+  })
+
   it("exports nothing when the chooser is dismissed", async () => {
     withDay()
     const props = createProps()

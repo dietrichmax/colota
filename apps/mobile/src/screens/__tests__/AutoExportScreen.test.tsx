@@ -26,7 +26,13 @@ jest.mock("../../hooks/useTheme", () => ({
 }))
 
 jest.mock("@react-navigation/native", () => ({
-  useFocusEffect: jest.fn((cb) => cb())
+  useFocusEffect: (cb: () => (() => void) | void) => {
+    const R = require("react")
+    R.useEffect(() => {
+      const cleanup = cb()
+      return typeof cleanup === "function" ? cleanup : undefined
+    }, [cb])
+  }
 }))
 
 const mockGetAutoExportStatus = jest.fn().mockResolvedValue({

@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit
  * - Conditional service action dispatch (triggerProfileRecheck, refreshNotificationIfTracking)
  * - CRUD side effects (cache invalidation + recheck triggers)
  */
-@Suppress("DEPRECATION")
 class LocationServiceModuleTest {
 
     private lateinit var mockContext: ReactApplicationContext
@@ -53,7 +52,7 @@ class LocationServiceModuleTest {
     fun setUp() {
         mockEmitter = mockk(relaxed = true)
         mockContext = mockk(relaxed = true) {
-            every { hasActiveCatalystInstance() } returns true
+            every { hasActiveReactInstance() } returns true
             every { getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java) } returns mockEmitter
         }
 
@@ -123,8 +122,8 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `sendLocationEvent returns false when no active catalyst`() {
-        every { mockContext.hasActiveCatalystInstance() } returns false
+    fun `sendLocationEvent returns false when no active react instance`() {
+        every { mockContext.hasActiveReactInstance() } returns false
         assertFalse(LocationServiceModule.sendLocationEvent(mockLocation(), 85, 2))
     }
 
@@ -159,8 +158,8 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `sendTrackingStoppedEvent returns false when no catalyst`() {
-        every { mockContext.hasActiveCatalystInstance() } returns false
+    fun `sendTrackingStoppedEvent returns false when no active react instance`() {
+        every { mockContext.hasActiveReactInstance() } returns false
         assertFalse(LocationServiceModule.sendTrackingStoppedEvent("reason"))
     }
 
@@ -290,8 +289,8 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `sendAutoExportEvent returns false when no catalyst`() {
-        every { mockContext.hasActiveCatalystInstance() } returns false
+    fun `sendAutoExportEvent returns false when no active react instance`() {
+        every { mockContext.hasActiveReactInstance() } returns false
         assertFalse(LocationServiceModule.sendAutoExportEvent(true, "file.csv", 10, null))
     }
 
@@ -312,8 +311,8 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `sendPauseZoneEvent returns false when no catalyst`() {
-        every { mockContext.hasActiveCatalystInstance() } returns false
+    fun `sendPauseZoneEvent returns false when no active react instance`() {
+        every { mockContext.hasActiveReactInstance() } returns false
         assertFalse(LocationServiceModule.sendPauseZoneEvent(true, "Office"))
     }
 
@@ -340,8 +339,8 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `sendChargingStateEvent returns false when no catalyst`() {
-        every { mockContext.hasActiveCatalystInstance() } returns false
+    fun `sendChargingStateEvent returns false when no active react instance`() {
+        every { mockContext.hasActiveReactInstance() } returns false
         assertFalse(LocationServiceModule.sendChargingStateEvent(true))
     }
 

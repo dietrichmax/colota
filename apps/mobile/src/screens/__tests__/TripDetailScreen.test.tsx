@@ -373,6 +373,20 @@ describe("TripDetailScreen - header and stepper", () => {
     expect(queryByTestId("ExportFormatDialog")).toBeNull()
   })
 
+  // jest runs at UTC+9:30: a trip starting at 01:45 there began on the previous day in UTC.
+  it("names the exported file after the local day the trip started", async () => {
+    const trip = { ...makeTrip(3), startTime: new Date(2026, 9, 28, 1, 45).getTime() / 1000 }
+    const props = makeProps(trip)
+    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    await act(async () => {})
+
+    fireEvent.press(headerRight(props).getByLabelText("Export trip"))
+    await act(async () => getByTestId("ExportFormatDialog").props.onSelect("gpx"))
+
+    await waitFor(() => expect(NativeLocationService.exportTripsToFile).toHaveBeenCalled())
+    expect((NativeLocationService.exportTripsToFile as jest.Mock).mock.calls[0][2]).toBe("colota_trip1_2026-10-28.gpx")
+  })
+
   it("keeps Delete in the app bar beside Export", async () => {
     const props = makeProps(makeTrip(3))
     render(<TripDetailScreen {...props} />)

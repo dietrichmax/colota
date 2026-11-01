@@ -107,6 +107,13 @@ import { AppearanceScreen } from "../AppearanceScreen"
 
 const mockNavigation = { navigate: jest.fn() } as any
 
+/** Renders and lets the mount reads land, so no state update arrives after the test ends. */
+const renderLoaded = async () => {
+  const view = render(<AppearanceScreen navigation={mockNavigation} />)
+  await act(async () => {})
+  return view
+}
+
 describe("AppearanceScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -116,8 +123,8 @@ describe("AppearanceScreen", () => {
     mockGetSetting.mockResolvedValue(null)
   })
 
-  it("renders theme, units and time format rows", () => {
-    const { getByText, getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("renders theme, units and time format rows", async () => {
+    const { getByText, getByTestId } = await renderLoaded()
 
     expect(getByText("Theme")).toBeTruthy()
     expect(getByText("Units")).toBeTruthy()
@@ -125,22 +132,22 @@ describe("AppearanceScreen", () => {
     expect(getByTestId("theme-system")).toBeTruthy()
   })
 
-  it("shows unit system chips with Metric and Imperial", () => {
-    const { getByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("shows unit system chips with Metric and Imperial", async () => {
+    const { getByText } = await renderLoaded()
 
     expect(getByText("Metric")).toBeTruthy()
     expect(getByText("Imperial")).toBeTruthy()
   })
 
-  it("shows time format chips with 24h and 12h", () => {
-    const { getByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("shows time format chips with 24h and 12h", async () => {
+    const { getByText } = await renderLoaded()
 
     expect(getByText("24h")).toBeTruthy()
     expect(getByText("12h")).toBeTruthy()
   })
 
   it("saves unit system when chip is pressed", async () => {
-    const { getByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByText } = await renderLoaded()
 
     fireEvent.press(getByText("Imperial"))
 
@@ -150,7 +157,7 @@ describe("AppearanceScreen", () => {
   })
 
   it("saves time format when chip is pressed", async () => {
-    const { getByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByText } = await renderLoaded()
 
     fireEvent.press(getByText("12h"))
 
@@ -159,48 +166,48 @@ describe("AppearanceScreen", () => {
     })
   })
 
-  it("offers system alongside light and dark, which a toggle could not", () => {
-    const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("offers system alongside light and dark, which a toggle could not", async () => {
+    const { getByTestId } = await renderLoaded()
 
     expect(getByTestId("theme-system")).toBeTruthy()
     expect(getByTestId("theme-light")).toBeTruthy()
     expect(getByTestId("theme-dark")).toBeTruthy()
   })
 
-  it("records the picked mode rather than flipping the current one", () => {
-    const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("records the picked mode rather than flipping the current one", async () => {
+    const { getByTestId } = await renderLoaded()
 
     fireEvent.press(getByTestId("theme-dark"))
 
     expect(mockSetPreference).toHaveBeenCalledWith("dark")
   })
 
-  it("keeps the wallpaper palette out of the mode chips, which answer a different question", () => {
-    const { getByTestId, queryByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("keeps the wallpaper palette out of the mode chips, which answer a different question", async () => {
+    const { getByTestId, queryByTestId } = await renderLoaded()
 
     expect(getByTestId("wallpaper-colors-toggle")).toBeTruthy()
     expect(queryByTestId("theme-wallpaper")).toBeNull()
   })
 
-  it("hides the wallpaper row where the platform has no palette, rather than disabling it", () => {
+  it("hides the wallpaper row where the platform has no palette, rather than disabling it", async () => {
     theme.wallpaperColorsAvailable = false
 
-    const { queryByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { queryByTestId } = await renderLoaded()
 
     expect(queryByTestId("wallpaper-colors-toggle")).toBeNull()
   })
 
   // A failed read must not hide the only control that turns the setting off.
-  it("keeps the wallpaper row when the palette read has not landed, and disables it", () => {
+  it("keeps the wallpaper row when the palette read has not landed, and disables it", async () => {
     theme.wallpaperPaletteReady = false
 
-    const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByTestId } = await renderLoaded()
 
     expect(getByTestId("wallpaper-colors-toggle").props.accessibilityState.disabled).toBe(true)
   })
 
-  it("hands the wallpaper choice to the theme, which owns the palette", () => {
-    const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("hands the wallpaper choice to the theme, which owns the palette", async () => {
+    const { getByTestId } = await renderLoaded()
 
     fireEvent.press(getByTestId("wallpaper-colors-toggle"))
 
@@ -208,7 +215,7 @@ describe("AppearanceScreen", () => {
   })
 
   it("puts the units the choice produces under the label", async () => {
-    const { getByText, queryByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByText, queryByText } = await renderLoaded()
 
     expect(getByText("km · km/h · m")).toBeTruthy()
 
@@ -219,7 +226,7 @@ describe("AppearanceScreen", () => {
   })
 
   it("puts a clock in the chosen format under the time format label", async () => {
-    const { getByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByText } = await renderLoaded()
     const { clockSample } = require("../../utils/appearance")
 
     expect(getByText(clockSample("24h"))).toBeTruthy()
@@ -230,7 +237,7 @@ describe("AppearanceScreen", () => {
   })
 
   it("names the host serving tiles rather than describing the setting", async () => {
-    const { findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { findByText } = await renderLoaded()
 
     expect(await findByText("maps.mxd.codes")).toBeTruthy()
   })
@@ -240,13 +247,13 @@ describe("AppearanceScreen", () => {
       Promise.resolve(key === "mapStyleUrlLight" ? "https://a.example.org/l.json" : "https://b.example.org/d.json")
     )
 
-    const { findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { findByText } = await renderLoaded()
 
     expect(await findByText("a.example.org · b.example.org")).toBeTruthy()
   })
 
-  it("toggles the map tile server panel when pressed", () => {
-    const { getByTestId, queryByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+  it("toggles the map tile server panel when pressed", async () => {
+    const { getByTestId, queryByTestId } = await renderLoaded()
 
     expect(queryByTestId("map-style-url-light")).toBeNull()
 
@@ -258,7 +265,7 @@ describe("AppearanceScreen", () => {
 
   // A stored typo blanks every map, and only the reset undoes it.
   it("refuses a URL that is not one, and saves nothing", async () => {
-    const { getByTestId, findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByTestId, findByText } = await renderLoaded()
     fireEvent.press(getByTestId("map-tile-server-toggle"))
 
     fireEvent.changeText(getByTestId("map-style-url-light"), "htps://tiles.example.org")
@@ -269,7 +276,7 @@ describe("AppearanceScreen", () => {
   })
 
   it("saves a good URL and moves the host on the row", async () => {
-    const { getByTestId, findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByTestId, findByText } = await renderLoaded()
     fireEvent.press(getByTestId("map-tile-server-toggle"))
 
     fireEvent.changeText(getByTestId("map-style-url-light"), "https://tiles.example.org/light.json")
@@ -283,7 +290,7 @@ describe("AppearanceScreen", () => {
 
   it("accepts an emptied field as a return to the default", async () => {
     mockGetSetting.mockResolvedValue("https://tiles.example.org/light.json")
-    const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByTestId } = await renderLoaded()
     fireEvent.press(getByTestId("map-tile-server-toggle"))
 
     fireEvent.changeText(getByTestId("map-style-url-light"), "")
@@ -293,20 +300,20 @@ describe("AppearanceScreen", () => {
   })
 
   it("offers the reset only once something custom is stored", async () => {
-    const { getByTestId, queryByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByTestId, queryByTestId } = await renderLoaded()
     fireEvent.press(getByTestId("map-tile-server-toggle"))
 
     expect(queryByTestId("map-style-reset-btn")).toBeNull()
 
     mockGetSetting.mockResolvedValue("https://tiles.example.org/light.json")
-    const custom = render(<AppearanceScreen navigation={mockNavigation} />)
+    const custom = await renderLoaded()
     fireEvent.press(custom.getByTestId("map-tile-server-toggle"))
 
     await waitFor(() => expect(custom.getByTestId("map-style-reset-btn")).toBeTruthy())
   })
 
   it("opens the Language screen from a row that names the current choice", async () => {
-    const { getByTestId, findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { getByTestId, findByText } = await renderLoaded()
 
     expect(await findByText("System default")).toBeTruthy()
     fireEvent.press(getByTestId("nav-language"))
@@ -316,7 +323,7 @@ describe("AppearanceScreen", () => {
   // Android's App languages page changes the choice while Colota sits in the background.
   it("re-reads the language row when the app comes back to the foreground", async () => {
     const { AppState } = require("react-native")
-    const { findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    const { findByText } = await renderLoaded()
     expect(await findByText("System default")).toBeTruthy()
 
     mockGetAppLanguage.mockResolvedValueOnce({ picked: "en", effective: "en" })

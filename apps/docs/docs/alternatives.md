@@ -4,23 +4,7 @@ sidebar_position: 2
 
 # Alternatives
 
-Colota is one of several Android apps that can record and forward GPS location data. This page gives an honest overview of the options so you can pick the right tool.
-
-## Comparison
-
-|                                        | Colota | OwnTracks | GPSLogger | Traccar Client | μLogger |
-| -------------------------------------- | :----: | :-------: | :-------: | :------------: | :-----: |
-| In-app location history & trip view    |   ✓    |     –     |     –     |       –        |    –    |
-| File export (GPX, KML, CSV…)           |   ✓    |     –     |     ✓     |       –        |    ✓    |
-| Scheduled auto-export                  |   ✓    |     –     |     –     |       –        |    –    |
-| Waypoints / notes                      |   –    |     –     |     ✓     |       –        |    ✓    |
-| Geofencing (pause zones)               |   ✓    |     –     |     –     |       –        |    –    |
-| Automatic condition-based profiles     |   ✓    |     –     |     –     |       –        |    –    |
-| Offline maps                           |   ✓    |     –     |     –     |       –        |    –    |
-| Built-in server integrations           |   ✓    |     –     |     –     |       –        |    –    |
-| MQTT support                           |   –    |     ✓     |     –     |       –        |    –    |
-| FOSS variant (no Google Play Services) |   ✓    |     ✓     |     ✓     |       –        |    ✓    |
-| iOS app available                      |   –    |     ✓     |     –     |       ✓        |    –    |
+Colota is one of several Android apps that can record and forward GPS location data. The apps below are a few common ones, not a complete list.
 
 ## When to use each
 

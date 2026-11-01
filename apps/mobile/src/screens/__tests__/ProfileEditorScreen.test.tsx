@@ -332,7 +332,7 @@ describe("ProfileEditorScreen", () => {
         "On Wi-Fi, track every 1 min after 10 m and sync every 5 min."
       )
 
-      fireEvent.press(getByTestId("condition-wifi_ssid"))
+      await act(async () => fireEvent.press(getByTestId("condition-wifi_ssid")))
       expect(getByTestId("wifi-ssid-input").props.value).toBe("HomeNet")
       expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
     })
@@ -353,9 +353,9 @@ describe("ProfileEditorScreen", () => {
   })
 
   describe("bluetooth device", () => {
-    it("blocks Save until a device is picked and opens the device screen for it", () => {
+    it("blocks Save until a device is picked and opens the device screen for it", async () => {
       const { getByTestId, getByText } = renderNew()
-      fireEvent.press(getByTestId("condition-bluetooth_device"))
+      await act(async () => fireEvent.press(getByTestId("condition-bluetooth_device")))
 
       expect(getByText("Pick a device")).toBeTruthy()
       expect(getByText("Pick a device or the profile can't match")).toBeTruthy()
@@ -398,7 +398,7 @@ describe("ProfileEditorScreen", () => {
       })
 
       fireEvent.press(getByTestId("condition-charging"))
-      fireEvent.press(getByTestId("condition-bluetooth_device"))
+      await act(async () => fireEvent.press(getByTestId("condition-bluetooth_device")))
       expect(getByText("Old Car")).toBeTruthy()
       expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
     })

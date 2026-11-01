@@ -216,8 +216,9 @@ describe("TrackingProfilesScreen", () => {
       await waitFor(() => expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to update profile.", "error"))
     })
 
-    it("reloads on focus, so an edit shows on the way back", () => {
-      renderScreen()
+    it("reloads on focus, so an edit shows on the way back", async () => {
+      const { findByTestId } = renderScreen()
+      await findByTestId("profile-1")
       expect(mockAddListener).toHaveBeenCalledWith("focus", expect.any(Function))
     })
   })

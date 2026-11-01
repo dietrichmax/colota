@@ -38,11 +38,13 @@ object FileLoggerInitializer {
 }
 
 /** Logs the actual `onTrimMemory` pressure levels (RUNNING_* and COMPLETE). Skips
- *  UI_HIDDEN / BACKGROUND / MODERATE since those fire on every backgrounding. */
+ *  UI_HIDDEN / BACKGROUND / MODERATE since those fire on every backgrounding.
+ *  Android stops sending these levels from API 34, so it logs on Android 13 and below only. */
 object MemoryPressureLogger {
 
     private const val TAG = "MainApp"
 
+    @Suppress("DEPRECATION")
     fun log(level: Int) {
         val name = when (level) {
             ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> "RUNNING_CRITICAL"
