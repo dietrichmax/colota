@@ -8,6 +8,7 @@ package com.Colota.backup
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import com.Colota.data.DatabaseHelper
+import com.Colota.data.DatabaseMigrations
 import com.Colota.util.SecureStorageHelper
 import org.json.JSONObject
 import java.io.File
@@ -51,7 +52,7 @@ class BackupRestorer @JvmOverloads constructor(
 
             // Migrate before the swap so a failure leaves the live DB untouched.
             try {
-                DatabaseHelper.migrateCandidate(dbFile)
+                DatabaseMigrations.migrateCandidate(dbFile)
             } catch (e: IllegalStateException) {
                 throw BackupException(BackupError.UNSUPPORTED_SCHEMA, e.message ?: "Migration refused", e)
             } catch (e: Exception) {

@@ -17,6 +17,7 @@ import com.Colota.BuildConfig
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
+import com.Colota.data.getDailyStats
 import com.Colota.service.LocationForegroundService
 import com.Colota.data.SettingsKeys
 import com.Colota.service.ProfileConstants
