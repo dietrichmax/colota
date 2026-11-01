@@ -13,6 +13,7 @@ import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
 import { Container } from "../components"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 import NativeLocationService from "../services/NativeLocationService"
+import MtlsService from "../services/MtlsService"
 import { describeServer } from "../utils/serverState"
 import { describeCertificate } from "../utils/certificateState"
 import { logger } from "../utils/logger"
@@ -51,7 +52,7 @@ export function ConnectionScreen({ navigation }: ScreenProps) {
             NativeLocationService.isNetworkAvailable(),
             NativeLocationService.getMostRecentLocation(),
             NativeLocationService.getAuthConfig(),
-            NativeLocationService.getClientCertInfo()
+            MtlsService.getClientCertInfo()
           ])
           if (cancelled) return
           setStats(nextStats)

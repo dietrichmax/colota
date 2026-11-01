@@ -351,6 +351,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | Service | Purpose |
 | --- | --- |
 | `NativeLocationService` | TypeScript bridge to the native `LocationServiceModule` with typed methods for all native operations |
+| `MtlsService` | Thin TypeScript wrapper over the native `MtlsBridgeModule`: client certificate and server CA import, pick, clear and info, plus `testEndpoint` for Test connection |
 | `LocationServicePermission` | Sequential Android permission requests (fine location → background location → notifications → battery exemption) |
 | `ProfileService` | Thin wrapper over `NativeLocationService` for tracking profile CRUD and trip event queries |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |

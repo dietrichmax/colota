@@ -7,16 +7,11 @@ import { NativeModules } from "react-native"
 import {
   AuthConfig,
   BluetoothDeviceInfo,
-  ClientCertInfo,
-  ClientCertInfoResult,
   DailyStat,
   DatabaseStats,
   Geofence,
-  KeyChainPickResult,
   SavedTrackingProfile,
   Settings,
-  TestEndpointArgs,
-  TestEndpointResult,
   TrackingProfile,
   TripBoundaryOverride
 } from "../types/global"
@@ -24,7 +19,7 @@ import { logger } from "../utils/logger"
 import { parseSystemPalette, type SystemPalette } from "../styles/dynamicColors"
 import { SETTINGS_READ_ATTEMPTS, SETTINGS_READ_RETRY_DELAY_MS } from "../constants"
 
-const { LocationServiceModule, MtlsBridgeModule, BuildConfigModule } = NativeModules
+const { LocationServiceModule, BuildConfigModule } = NativeModules
 
 /**
  * Native location service bridge.
@@ -1037,75 +1032,6 @@ class NativeLocationService {
   static async getAuthHeaders(): Promise<Record<string, string>> {
     this.ensureModule()
     return LocationServiceModule.getAuthHeaders()
-  }
-
-  // ============================================================================
-  // mTLS CLIENT CERTIFICATE (delegates to MtlsBridgeModule)
-  // ============================================================================
-
-  private static ensureMtlsModule(): void {
-    if (!MtlsBridgeModule) {
-      throw new Error("[NativeLocationService] MtlsBridgeModule not available. Check native linking.")
-    }
-  }
-
-  static async pickClientCertFile(): Promise<string | null> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.pickClientCertFile()
-  }
-
-  /**
-   * Opens Android's system KeyChain picker. Returns cert info on selection,
-   * null on cancel. The private key stays in the OS keystore.
-   */
-  static async pickKeyChainCert(): Promise<KeyChainPickResult | null> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.pickKeyChainCert()
-  }
-
-  /**
-   * Rejects with `E_CERT_PASSWORD` on a bad password or `E_CERT_INVALID` on a
-   * malformed PKCS12.
-   */
-  static async importClientCert(b64: string, password: string): Promise<ClientCertInfo> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.importClientCert(b64, password)
-  }
-
-  static async clearClientCert(): Promise<boolean> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.clearClientCert()
-  }
-
-  static async getClientCertInfo(): Promise<ClientCertInfoResult> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.getClientCertInfo()
-  }
-
-  static async testEndpoint(args: TestEndpointArgs): Promise<TestEndpointResult> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.testEndpoint(args)
-  }
-
-  static async pickServerCaFile(): Promise<string | null> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.pickServerCaFile()
-  }
-
-  /** Rejects with `E_CA_INVALID` if the bytes don't parse as X.509 (PEM or DER). */
-  static async importServerCa(b64: string): Promise<ClientCertInfo> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.importServerCa(b64)
-  }
-
-  static async clearServerCa(): Promise<boolean> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.clearServerCa()
-  }
-
-  static async getServerCaInfo(): Promise<ClientCertInfoResult> {
-    this.ensureMtlsModule()
-    return MtlsBridgeModule.getServerCaInfo()
   }
 }
 

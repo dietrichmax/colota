@@ -57,7 +57,7 @@ const mockPickServerCaFile = jest.fn().mockResolvedValue(null)
 const mockImportServerCa = jest.fn().mockResolvedValue({})
 const mockClearServerCa = jest.fn().mockResolvedValue(true)
 
-jest.mock("../../../../services/NativeLocationService", () => ({
+jest.mock("../../../../services/MtlsService", () => ({
   __esModule: true,
   default: {
     getClientCertInfo: (...a: any[]) => mockGetClientCertInfo(...a),

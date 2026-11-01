@@ -22,6 +22,7 @@ import {
 import { useTheme } from "../hooks/useTheme"
 import BackupService, { type BackupManifest, type PasswordStrengthResult } from "../services/BackupService"
 import NativeLocationService from "../services/NativeLocationService"
+import MtlsService from "../services/MtlsService"
 import { showChoice, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import {
@@ -84,7 +85,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
     const [statsResult, lastResult, certResult] = await Promise.allSettled([
       NativeLocationService.getStats(),
       NativeLocationService.getSetting("last_backup_at"),
-      NativeLocationService.getClientCertInfo()
+      MtlsService.getClientCertInfo()
     ])
     if (statsResult.status === "fulfilled") {
       setStats({ total: statsResult.value.total, databaseSizeMB: statsResult.value.databaseSizeMB })
