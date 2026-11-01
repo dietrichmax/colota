@@ -85,12 +85,12 @@ jest.mock("../../components", () => {
       R.createElement(View, { testID }, R.createElement(Text, null, label), R.createElement(Text, null, caption)),
     FieldMessage: ({ children, variant }: any) =>
       R.createElement(Text, { accessibilityValue: { text: variant ?? "info" } }, children),
-    TextField: ({ label, value, onChangeText, testID, error, disabled }: any) =>
+    TextField: ({ label, value, onChangeText, testID, error, disabled, autoComplete }: any) =>
       R.createElement(
         View,
         null,
         R.createElement(Text, null, label),
-        R.createElement(TextInput, { testID, value, onChangeText, editable: !disabled }),
+        R.createElement(TextInput, { testID, value, onChangeText, editable: !disabled, autoComplete }),
         error ? R.createElement(Text, null, error) : null
       ),
     Button: ({ title, onPress, disabled, testID, loading, variant }: any) =>
@@ -199,6 +199,14 @@ describe("BackupRestoreScreen", () => {
   })
 
   describe("making a backup", () => {
+    it("offers both password fields to a password manager as a new password", async () => {
+      const api = renderScreen()
+      await api.findByText(/^You last backed up /)
+
+      expect(api.getByTestId("backup-password").props.autoComplete).toBe("new-password")
+      expect(api.getByTestId("backup-password-confirm").props.autoComplete).toBe("new-password")
+    })
+
     it("says under Create backup why it is disabled, one reason at a time", async () => {
       const api = renderScreen()
       await api.findByText(/^You last backed up /)
@@ -294,6 +302,16 @@ describe("BackupRestoreScreen", () => {
       expect(mockRestoreBackup).not.toHaveBeenCalled()
       // The file stays picked, so retrying is one press.
       expect(api.getByTestId("picked-file")).toBeTruthy()
+    })
+
+    it("lets a password manager fill the password the backup was made with", async () => {
+      const api = renderScreen()
+      await api.findByText(/^You last backed up /)
+
+      fireEvent.press(api.getByTestId("choose-backup-row"))
+      await waitFor(() => expect(api.getByTestId("picked-file")).toBeTruthy())
+
+      expect(api.getByTestId("restore-password").props.autoComplete).toBe("current-password")
     })
 
     it("offers no destructive button until the archive has been read", async () => {
