@@ -26,19 +26,13 @@ class MtlsService {
     return MtlsBridgeModule.pickClientCertFile()
   }
 
-  /**
-   * Opens Android's system KeyChain picker. Returns cert info on selection,
-   * null on cancel. The private key stays in the OS keystore.
-   */
+  /** Android's KeyChain picker; null on cancel. The private key never leaves the OS keystore. */
   static async pickKeyChainCert(): Promise<KeyChainPickResult | null> {
     this.ensureModule()
     return MtlsBridgeModule.pickKeyChainCert()
   }
 
-  /**
-   * Rejects with `E_CERT_PASSWORD` on a bad password or `E_CERT_INVALID` on a
-   * malformed PKCS12.
-   */
+  /** Rejects with `E_CERT_PASSWORD` on a wrong password, `E_CERT_INVALID` on a malformed PKCS12. */
   static async importClientCert(b64: string, password: string): Promise<ClientCertInfo> {
     this.ensureModule()
     return MtlsBridgeModule.importClientCert(b64, password)
