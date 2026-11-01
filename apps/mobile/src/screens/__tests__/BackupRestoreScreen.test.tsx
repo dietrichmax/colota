@@ -25,7 +25,13 @@ jest.mock("../../services/NativeLocationService", () => ({
   default: {
     getStats: (...a: unknown[]) => mockGetStats(...a),
     getSetting: (...a: unknown[]) => mockGetSetting(...a),
-    saveSetting: (...a: unknown[]) => mockSaveSetting(...a),
+    saveSetting: (...a: unknown[]) => mockSaveSetting(...a)
+  }
+}))
+
+jest.mock("../../services/MtlsService", () => ({
+  __esModule: true,
+  default: {
     getClientCertInfo: (...a: unknown[]) => mockGetClientCertInfo(...a)
   }
 }))

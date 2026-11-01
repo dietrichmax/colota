@@ -53,7 +53,13 @@ jest.mock("../../../../services/NativeLocationService", () => ({
     getStats: (...args: any[]) => mockGetStats(...args),
     manualFlush: (...args: any[]) => mockManualFlush(...args),
     getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
-    isPrivateEndpoint: (...args: any[]) => mockIsEndpointPrivate(...args),
+    isPrivateEndpoint: (...args: any[]) => mockIsEndpointPrivate(...args)
+  }
+}))
+
+jest.mock("../../../../services/MtlsService", () => ({
+  __esModule: true,
+  default: {
     testEndpoint: (...args: any[]) => mockTestEndpoint(...args)
   }
 }))

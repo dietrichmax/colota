@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
 import { ActivityIndicator, Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter } from "react-native"
-import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
+import { FolderOpen, CircleCheckBig } from "lucide-react-native"
 import {
   Button,
   Card,
@@ -24,6 +24,8 @@ import {
   Toggle,
   TextField
 } from "../components"
+import { AutoExportStatus } from "../components/features/settings/AutoExportStatus"
+import { AutoExportHistory, type ExportFile } from "../components/features/settings/AutoExportHistory"
 import { useTheme } from "../hooks/useTheme"
 
 import { ScreenProps } from "../types/global"
@@ -40,7 +42,6 @@ import {
 import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { FILE_FORMATS } from "../utils/fileFormats"
 import { logger } from "../utils/logger"
-import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
 import { size, space, STATE_LAYER_ALPHA } from "../constants"
 import { useTranslation } from "../i18n/useTranslation"
@@ -50,13 +51,6 @@ import type { TranslationKey } from "../i18n/options"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
-
-type ExportFile = {
-  name: string
-  size: number
-  lastModified: number
-  uri: string
-}
 
 const INTERVALS: readonly ExportInterval[] = ["daily", "weekly", "monthly"]
 
@@ -556,64 +550,14 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* Status */}
         <View style={styles.section}>
-          <SectionTitle>{t("autoExport.section.status")}</SectionTitle>
-          <Card>
-            <View style={styles.statusRow}>
-              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>{t("autoExport.lastExport")}</Text>
-              <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(lastExport)}</Text>
-            </View>
-            {lastFileName && (
-              <>
-                <Divider />
-                <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>{t("autoExport.lastFile")}</Text>
-                  <Text style={[styles.statusValue, { color: colors.text }]} numberOfLines={1}>
-                    {lastFileName}
-                  </Text>
-                </View>
-                <Divider />
-                <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>
-                    {t("autoExport.rowsExported")}
-                  </Text>
-                  <Text style={[styles.statusValue, { color: colors.text }]}>{lastRowCount}</Text>
-                </View>
-              </>
-            )}
-            {lastError ? (
-              <>
-                <Divider />
-                <View style={styles.errorRow}>
-                  <TriangleAlert size={size.icon.sm} color={colors.error} />
-                  <Text style={[styles.errorText, { color: colors.error }]} numberOfLines={2}>
-                    {lastError}
-                  </Text>
-                </View>
-              </>
-            ) : null}
-            {enabled && nextExport > 0 && (
-              <>
-                <Divider />
-                <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>
-                    {t("autoExport.nextExport")}
-                  </Text>
-                  <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(nextExport)}</Text>
-                </View>
-              </>
-            )}
-            {directoryUri && (
-              <>
-                <Divider />
-                <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>
-                    {t("autoExport.exportFiles")}
-                  </Text>
-                  <Text style={[styles.statusValue, { color: colors.text }]}>{fileCount}</Text>
-                </View>
-              </>
-            )}
-          </Card>
+          <AutoExportStatus
+            lastExport={lastExport}
+            lastFileName={lastFileName}
+            lastRowCount={lastRowCount}
+            lastError={lastError}
+            nextExport={enabled && nextExport > 0 ? nextExport : null}
+            fileCount={directoryUri ? fileCount : null}
+          />
         </View>
 
         {/* Export Now */}
@@ -637,33 +581,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {/* Export History */}
         {exportFiles.length > 0 && (
           <View style={styles.section}>
-            <SectionTitle>{t("autoExport.section.history")}</SectionTitle>
-            <Card>
-              {exportFiles.map((file, i) => (
-                <View key={file.name}>
-                  {i > 0 && <Divider />}
-                  <View style={styles.fileRow}>
-                    <View style={styles.fileInfo}>
-                      <Text style={[styles.fileName, { color: colors.text }]} numberOfLines={1}>
-                        {file.name}
-                      </Text>
-                      <Text style={[styles.fileMeta, { color: colors.textSecondary }]}>
-                        {formatBytes(file.size)} - {formatExportDateTime(file.lastModified)}
-                      </Text>
-                    </View>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={t("autoExport.share", { name: file.name })}
-                      android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
-                      style={styles.shareButton}
-                      onPress={() => handleShareFile(file)}
-                    >
-                      <Share2 size={size.icon.md} color={colors.primary} />
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-            </Card>
+            <AutoExportHistory files={exportFiles} onShare={handleShareFile} />
           </View>
         )}
       </ScrollView>
@@ -729,55 +647,6 @@ const styles = StyleSheet.create({
   },
   directoryContent: {
     flex: 1
-  },
-  statusRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.xs
-  },
-  statusLabel: {
-    fontSize: fontSizes.body,
-    ...fonts.regular
-  },
-  statusValue: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold,
-    flexShrink: 1,
-    textAlign: "right",
-    marginStart: space.md
-  },
-  errorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm,
-    paddingVertical: space.sm
-  },
-  errorText: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    flex: 1
-  },
-  fileRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: space.sm
-  },
-  fileInfo: {
-    flex: 1,
-    marginEnd: space.md
-  },
-  fileName: {
-    fontSize: fontSizes.description,
-    ...fonts.semiBold,
-    marginBottom: space.xxs
-  },
-  fileMeta: {
-    fontSize: fontSizes.caption,
-    ...fonts.regular
-  },
-  shareButton: {
-    padding: space.sm
   },
   fieldLabel: {
     fontSize: fontSizes.description,
