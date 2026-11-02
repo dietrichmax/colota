@@ -10,6 +10,15 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import type { RootStackParamList } from "./navigation"
 import type { TranslationKey } from "../i18n/options"
+import type {
+  AccuracyMode,
+  ApiTemplateName,
+  AuthType,
+  DawarichMode,
+  HttpMethod,
+  ProfileConditionType,
+  SyncCondition
+} from "@colota/shared"
 
 export interface ScreenProps {
   navigation: NativeStackNavigationProp<RootStackParamList>
@@ -106,17 +115,7 @@ export interface CustomField {
   value: string
 }
 
-export type HttpMethod = "POST" | "GET"
-
-export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
-
-/** Positioning accuracy of the continuous location stream. */
-export type AccuracyMode = "high" | "balanced"
-
-export type ApiTemplateName =
-  "custom" | "dawarich" | "geopulse" | "overland" | "owntracks" | "phonetrack" | "reitti" | "traccar"
-
-export type DawarichMode = "single" | "batch"
+export type { HttpMethod, SyncCondition, AccuracyMode, ApiTemplateName, DawarichMode }
 
 export interface ApiTemplate {
   name: ApiTemplateName
@@ -367,7 +366,7 @@ export const DEFAULT_SETTINGS: Settings = {
 // AUTHENTICATION
 // ============================================================================
 
-export type AuthType = "none" | "basic" | "bearer"
+export type { AuthType }
 
 export interface AuthConfig {
   authType: AuthType
@@ -389,15 +388,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
 // TRACKING PROFILES
 // ============================================================================
 
-export type ProfileConditionType =
-  | "charging"
-  | "android_auto"
-  | "bluetooth_device"
-  | "speed_above"
-  | "speed_below"
-  | "stationary"
-  | "wifi_any"
-  | "wifi_ssid"
+export type { ProfileConditionType }
 
 export interface ProfileCondition {
   type: ProfileConditionType

@@ -3,7 +3,15 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX, defaultProfileDelays, PROFILE_CONDITIONS } from "../constants"
+import {
+  ACCURACY_MODES,
+  API_TEMPLATE_NAMES,
+  AUTH_TYPES,
+  DAWARICH_MODES,
+  HTTP_METHODS,
+  PROFILE_CONDITION_TYPES
+} from "@colota/shared"
+import { OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX, defaultProfileDelays } from "../constants"
 import { isEndpointAllowed } from "./settingsValidation"
 import {
   TRACKING_PRESETS,
@@ -15,6 +23,7 @@ import {
   type ApiTemplateName,
   type HttpMethod,
   type DawarichMode,
+  type AccuracyMode,
   type SelectablePreset,
   type SyncPreset,
   type Geofence,
@@ -60,12 +69,6 @@ export interface ValidationResult {
   error?: string
 }
 
-const VALID_API_TEMPLATES = ["custom", ...Object.keys(API_TEMPLATES)] as ApiTemplateName[]
-const VALID_HTTP_METHODS: HttpMethod[] = ["POST", "GET"]
-const VALID_DAWARICH_MODES: DawarichMode[] = ["single", "batch"]
-const VALID_AUTH_TYPES: AuthType[] = ["none", "basic", "bearer"]
-
-const VALID_PROFILE_CONDITIONS = PROFILE_CONDITIONS.map((c) => c.type)
 const BLUETOOTH_ADDRESS = /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i
 
 export function detectPreset(settings: Partial<Settings>): SyncPreset {
@@ -189,8 +192,8 @@ export function validateConfig(raw: unknown): ValidationResult {
 
   // Strict exact match, unlike the running app's settings (trimmed/case-insensitive): the value is
   // machine-generated, and the sibling enum fields (httpMethod, dawarichMode, ...) parse the same way.
-  if ("accuracyMode" in obj && (obj.accuracyMode === "high" || obj.accuracyMode === "balanced")) {
-    settings.accuracyMode = obj.accuracyMode
+  if ("accuracyMode" in obj && ACCURACY_MODES.includes(obj.accuracyMode as AccuracyMode)) {
+    settings.accuracyMode = obj.accuracyMode as AccuracyMode
     entries.push({
       field: "accuracyMode",
       label: t("setup.field.accuracyMode"),
@@ -231,7 +234,7 @@ export function validateConfig(raw: unknown): ValidationResult {
   if (
     "apiTemplate" in obj &&
     typeof obj.apiTemplate === "string" &&
-    VALID_API_TEMPLATES.includes(obj.apiTemplate as ApiTemplateName)
+    API_TEMPLATE_NAMES.includes(obj.apiTemplate as ApiTemplateName)
   ) {
     settings.apiTemplate = obj.apiTemplate as ApiTemplateName
     entries.push({
@@ -248,7 +251,7 @@ export function validateConfig(raw: unknown): ValidationResult {
   if (
     "httpMethod" in obj &&
     typeof obj.httpMethod === "string" &&
-    VALID_HTTP_METHODS.includes(obj.httpMethod as HttpMethod)
+    HTTP_METHODS.includes(obj.httpMethod as HttpMethod)
   ) {
     settings.httpMethod = obj.httpMethod as HttpMethod
     entries.push({ field: "httpMethod", label: t("setup.field.httpMethod"), value: obj.httpMethod, category: "api" })
@@ -257,7 +260,7 @@ export function validateConfig(raw: unknown): ValidationResult {
   if (
     "dawarichMode" in obj &&
     typeof obj.dawarichMode === "string" &&
-    VALID_DAWARICH_MODES.includes(obj.dawarichMode as DawarichMode)
+    DAWARICH_MODES.includes(obj.dawarichMode as DawarichMode)
   ) {
     settings.dawarichMode = obj.dawarichMode as DawarichMode
     entries.push({
@@ -325,7 +328,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     const authObj = obj.auth as Record<string, unknown>
     auth = {}
 
-    if ("type" in authObj && typeof authObj.type === "string" && VALID_AUTH_TYPES.includes(authObj.type as AuthType)) {
+    if ("type" in authObj && typeof authObj.type === "string" && AUTH_TYPES.includes(authObj.type as AuthType)) {
       auth.authType = authObj.type as AuthType
       entries.push({
         field: "authType",
@@ -435,7 +438,7 @@ export function validateConfig(raw: unknown): ValidationResult {
 
       const condRaw = p.condition as Record<string, unknown> | undefined
       if (!condRaw || typeof condRaw !== "object" || typeof condRaw.type !== "string") continue
-      if (!VALID_PROFILE_CONDITIONS.includes(condRaw.type as ProfileConditionType)) continue
+      if (!PROFILE_CONDITION_TYPES.includes(condRaw.type as ProfileConditionType)) continue
       const condType = condRaw.type as ProfileConditionType
       const needsSpeed = condType === "speed_above" || condType === "speed_below"
       if (needsSpeed && (typeof condRaw.speedThreshold !== "number" || condRaw.speedThreshold <= 0)) continue

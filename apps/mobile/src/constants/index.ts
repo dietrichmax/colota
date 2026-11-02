@@ -132,9 +132,7 @@ export const SYNC_INTERVAL_SUB_KEYS: Record<number, TranslationKey> = {
   900: "syncInterval.sub.900"
 }
 
-// Overland batch envelope (Dawarich + batch mode, Overland template)
-export const OVERLAND_BATCH_MIN = 1
-export const OVERLAND_BATCH_MAX = 500
+export { OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX } from "@colota/shared"
 
 // Map style
 export const MAP_STYLE_URL_LIGHT = "https://maps.mxd.codes/styles/bright/style.json"
