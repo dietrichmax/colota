@@ -3,6 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import { buildSetupLinkFromConfig } from "@colota/shared"
 import type { Settings, AuthConfig, Geofence, TrackingProfile } from "../types/global"
 
 /** Which config categories to include in a shared setup link. */
@@ -85,17 +86,17 @@ export function buildSetupConfig(parts: SetupShareParts, sel: SetupShareSelectio
 
 /** Builds the full `colota://setup?config=...` deep link for the selected categories. */
 export function buildSetupLink(parts: SetupShareParts, sel: SetupShareSelection): string {
-  return encode(buildSetupConfig(parts, sel))
+  return buildSetupLinkFromConfig(buildSetupConfig(parts, sel))
 }
 
 /** Single-category link for the standalone Geofences share button. */
 export function buildGeofencesLink(geofences: Geofence[]): string {
-  return encode({ geofences: geofences.map(stripGeofence) })
+  return buildSetupLinkFromConfig({ geofences: geofences.map(stripGeofence) })
 }
 
 /** Single-category link for the standalone Tracking Profiles share button. */
 export function buildProfilesLink(profiles: TrackingProfile[]): string {
-  return encode({ profiles: profiles.map(stripProfile) })
+  return buildSetupLinkFromConfig({ profiles: profiles.map(stripProfile) })
 }
 
 // Strip DB-only fields (id/createdAt, plus enabled for geofences - the importer defaults it to true).
@@ -105,20 +106,4 @@ function stripGeofence({ id: _id, createdAt: _createdAt, enabled: _enabled, ...r
 
 function stripProfile({ id: _id, createdAt: _createdAt, ...rest }: TrackingProfile) {
   return rest
-}
-
-function encode(config: Record<string, unknown>): string {
-  return `colota://setup?config=${encodeConfig(config)}`
-}
-
-export function encodeConfig(config: unknown): string {
-  return btoa(JSON.stringify(config))
-}
-
-/**
- * Decodes a setup-link `config` param. React Navigation's query parser decodes `+` as a space, and
- * base64 never contains spaces, so any space here was a `+` - restore it before decoding.
- */
-export function decodeConfig(param: string): unknown {
-  return JSON.parse(atob(param.replace(/ /g, "+")))
 }

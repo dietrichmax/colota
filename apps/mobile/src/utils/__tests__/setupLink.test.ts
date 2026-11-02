@@ -1,12 +1,15 @@
 import {
-  buildSetupConfig,
-  buildSetupLink,
-  encodeConfig,
-  decodeConfig,
-  type SetupShareParts,
-  type SetupShareSelection
-} from "../setupLink"
+  API_TEMPLATE_NAMES,
+  AUTH_TYPES,
+  DAWARICH_MODES,
+  HTTP_METHODS,
+  PROFILE_CONDITION_TYPES,
+  buildSetupLinkFromConfig,
+  decodeConfig
+} from "@colota/shared"
+import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../setupLink"
 import { validateConfig, setupEndpointHost } from "../setupConfig"
+import { PROFILE_CONDITIONS } from "../../constants"
 import type { Settings, AuthConfig, Geofence, TrackingProfile } from "../../types/global"
 
 const settings = {
@@ -173,10 +176,42 @@ describe("setupLink", () => {
   it("decodeConfig restores a '+' that the deep-link query parser turned into a space", () => {
     // The high-byte run guarantees a '+' in the base64 - the char the query parser mangles to a space.
     const config = { pad: "ø".repeat(20), endpoint: "https://example.com/api", interval: 10 }
-    const encoded = encodeConfig(config)
+    const encoded = buildSetupLinkFromConfig(config).split("config=")[1]
     const asReceived = encoded.replace(/\+/g, " ")
     expect(asReceived).not.toBe(encoded) // proves the payload's base64 actually contained a '+'
     expect(decodeConfig(asReceived)).toEqual(config)
+  })
+})
+
+// The docs generator offers these lists as its options, so each value must import and anything else must drop.
+describe("shared setup schema", () => {
+  it("imports every value the schema lists for an enum key and drops any other", () => {
+    for (const apiTemplate of API_TEMPLATE_NAMES) {
+      expect(validateConfig({ apiTemplate }).config.settings.apiTemplate).toBe(apiTemplate)
+    }
+    expect(validateConfig({ apiTemplate: "nextcloud" }).config.settings.apiTemplate).toBeUndefined()
+
+    for (const httpMethod of HTTP_METHODS) {
+      expect(validateConfig({ httpMethod }).config.settings.httpMethod).toBe(httpMethod)
+    }
+    expect(validateConfig({ httpMethod: "PUT" }).config.settings.httpMethod).toBeUndefined()
+
+    for (const dawarichMode of DAWARICH_MODES) {
+      expect(validateConfig({ dawarichMode }).config.settings.dawarichMode).toBe(dawarichMode)
+    }
+    expect(validateConfig({ dawarichMode: "stream" }).config.settings.dawarichMode).toBeUndefined()
+
+    for (const type of AUTH_TYPES) {
+      expect(validateConfig({ auth: { type } }).config.auth?.authType).toBe(type)
+    }
+    expect(validateConfig({ auth: { type: "digest" } }).config.auth).toBeNull()
+
+    const profile = { name: "P", interval: 5, distance: 0, syncInterval: 0, condition: { type: "on_battery" } }
+    expect(validateConfig({ profiles: [profile] }).config.profiles).toEqual([])
+  })
+
+  it("has an app condition for every profile condition a link can carry, so an imported profile can be shown", () => {
+    expect(PROFILE_CONDITIONS.map((c) => c.type).sort()).toEqual([...PROFILE_CONDITION_TYPES].sort())
   })
 })
 

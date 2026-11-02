@@ -1,5 +1,17 @@
 import { useState, useMemo, useCallback } from "react"
 import { encode } from "uqr"
+import {
+  API_TEMPLATE_NAMES,
+  AUTH_TYPES,
+  DAWARICH_MODES,
+  HTTP_METHODS,
+  OVERLAND_BATCH_MAX,
+  OVERLAND_BATCH_MIN,
+  SYNC_CONDITIONS,
+  buildSetupLinkFromConfig,
+  type AccuracyMode,
+  type ProfileConditionType
+} from "@colota/shared"
 import styles from "./DeepLinkGenerator.module.css"
 
 interface KeyValue {
@@ -20,12 +32,12 @@ interface GeofenceRow {
   heartbeatIntervalMinutes: string
 }
 
-type ProfileConditionType =
-  "charging" | "android_auto" | "wifi_any" | "wifi_ssid" | "speed_above" | "speed_below" | "stationary"
+// bluetooth_device needs the paired device's MAC address, which only the app knows.
+type LinkProfileCondition = Exclude<ProfileConditionType, "bluetooth_device">
 
 interface ProfileRow {
   name: string
-  conditionType: ProfileConditionType
+  conditionType: LinkProfileCondition
   speedKmh: string
   ssid: string
   interval: string
@@ -40,30 +52,20 @@ interface ProfileRow {
 // chosen to keep the QR below v25 at ECC L
 const QR_MAX_SCANNABLE_LENGTH = 1200
 
-const PROFILE_CONDITION_OPTIONS: { value: ProfileConditionType; label: string }[] = [
-  { value: "charging", label: "Charging" },
-  { value: "android_auto", label: "Android Auto / Car mode" },
-  { value: "wifi_any", label: "Wi-Fi" },
-  { value: "wifi_ssid", label: "Wi-Fi network" },
-  { value: "speed_above", label: "Speed above threshold" },
-  { value: "speed_below", label: "Speed below threshold" },
-  { value: "stationary", label: "Stationary" }
-]
+const PROFILE_CONDITION_LABELS: Record<LinkProfileCondition, string> = {
+  charging: "Charging",
+  android_auto: "Android Auto / Car mode",
+  wifi_any: "Wi-Fi",
+  wifi_ssid: "Wi-Fi network",
+  speed_above: "Speed above threshold",
+  speed_below: "Speed below threshold",
+  stationary: "Stationary"
+}
 
-const API_TEMPLATES = [
-  "custom",
-  "dawarich",
-  "geopulse",
-  "overland",
-  "owntracks",
-  "phonetrack",
-  "reitti",
-  "traccar"
-] as const
-const AUTH_TYPES = ["none", "basic", "bearer"] as const
-const SYNC_CONDITIONS = ["any", "wifi_any", "wifi_ssid", "vpn"] as const
-
-const DAWARICH_MODES = ["single", "batch"] as const
+const ACCURACY_MODE_LABELS: Record<AccuracyMode, string> = {
+  high: "High accuracy",
+  balanced: "Lower accuracy"
+}
 
 export default function DeepLinkGenerator() {
   // Connection
@@ -250,8 +252,7 @@ export default function DeepLinkGenerator() {
 
   const deepLink = useMemo(() => {
     if (isEmpty) return ""
-    const encoded = btoa(JSON.stringify(config))
-    return `colota://setup?config=${encoded}`
+    return buildSetupLinkFromConfig(config)
   }, [config, isEmpty])
 
   const isQrTooLarge = deepLink.length > QR_MAX_SCANNABLE_LENGTH
@@ -382,7 +383,7 @@ export default function DeepLinkGenerator() {
             <label className={styles.label}>API Template</label>
             <select className={styles.select} value={apiTemplate} onChange={(e) => setApiTemplate(e.target.value)}>
               <option value="">-- not set --</option>
-              {API_TEMPLATES.map((t) => (
+              {API_TEMPLATE_NAMES.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
@@ -393,8 +394,11 @@ export default function DeepLinkGenerator() {
             <label className={styles.label}>HTTP Method</label>
             <select className={styles.select} value={httpMethod} onChange={(e) => setHttpMethod(e.target.value)}>
               <option value="">-- not set --</option>
-              <option value="POST">POST</option>
-              <option value="GET">GET</option>
+              {HTTP_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -416,12 +420,14 @@ export default function DeepLinkGenerator() {
         {(apiTemplate === "overland" || (apiTemplate === "dawarich" && dawarichMode === "batch")) && (
           <div className={styles.row}>
             <div className={styles.field}>
-              <label className={styles.label}>Batch size (1-500)</label>
+              <label className={styles.label}>
+                Batch size ({OVERLAND_BATCH_MIN}-{OVERLAND_BATCH_MAX})
+              </label>
               <input
                 className={styles.input}
                 type="number"
-                min="1"
-                max="500"
+                min={OVERLAND_BATCH_MIN}
+                max={OVERLAND_BATCH_MAX}
                 placeholder="50"
                 value={overlandBatchSize}
                 onChange={(e) => setOverlandBatchSize(e.target.value)}
@@ -488,8 +494,11 @@ export default function DeepLinkGenerator() {
             <label className={styles.label}>Positioning accuracy</label>
             <select className={styles.select} value={accuracyMode} onChange={(e) => setAccuracyMode(e.target.value)}>
               <option value="">-- not set --</option>
-              <option value="high">High accuracy</option>
-              <option value="balanced">Lower accuracy</option>
+              {Object.entries(ACCURACY_MODE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -841,11 +850,11 @@ export default function DeepLinkGenerator() {
                     <select
                       className={styles.select}
                       value={p.conditionType}
-                      onChange={(e) => updateProfile(i, "conditionType", e.target.value as ProfileConditionType)}
+                      onChange={(e) => updateProfile(i, "conditionType", e.target.value as LinkProfileCondition)}
                     >
-                      {PROFILE_CONDITION_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
+                      {Object.entries(PROFILE_CONDITION_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
                         </option>
                       ))}
                     </select>

@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo } from "react"
 import { View, Text, ScrollView, StyleSheet, DeviceEventEmitter } from "react-native"
+import { decodeConfig } from "@colota/shared"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import {
@@ -32,7 +33,6 @@ import {
   type ConfigEntry,
   type ValidationResult
 } from "../utils/setupConfig"
-import { decodeConfig } from "../utils/setupLink"
 import { space } from "../constants"
 import { useTranslation } from "../i18n/useTranslation"
 // Handlers and the parse memo use the non-hook t, so no dependency list carries it.
