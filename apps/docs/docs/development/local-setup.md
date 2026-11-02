@@ -138,6 +138,8 @@ colota/
 │       └── src/
 │           ├── colors.ts            # Theme color definitions
 │           ├── typography.ts        # Font family and sizes
+│           ├── radius.ts            # Corner radius scale
+│           ├── setupSchema.ts       # colota://setup values and encoding
 │           └── index.ts             # Barrel exports
 └── screenshots/
     ├── capture.yaml                 # Maestro flow that captures every screenshot

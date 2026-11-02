@@ -73,7 +73,7 @@ Colota is a monorepo with a React Native UI layer and native Kotlin modules for 
 
 - **apps/mobile** - React Native + Kotlin Android app
 - **apps/docs** - This documentation site (Docusaurus)
-- **packages/shared** - Shared theme colors, typography, and types
+- **packages/shared** - Shared theme colors, typography, corner radii and the `colota://setup` schema
 
 The native layer handles the foreground service, database, HTTP sync, geofencing, and credential storage. See the [Architecture](/docs/development/architecture) page for details.
 
