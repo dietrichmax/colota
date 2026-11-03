@@ -29,30 +29,7 @@ export const RESTART_DEBOUNCE_MS = 100
 export const SETTINGS_READ_ATTEMPTS = 3
 export const SETTINGS_READ_RETRY_DELAY_MS = 150
 
-// Spacing scale. Every padding, margin and gap reads from here; designSystemGuard fails a literal.
-// The grid is 4dp from xs up. xxs is the one sub-grid step and has one job: the gap between a
-// label and its own caption, which is type pairing rather than layout.
-export const space = { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const
-
-// Sizes are not spacing: these are the painted or touchable extents of a control.
-export const size = {
-  touch: 48,
-  row: 56,
-  chip: 32,
-  iconButton: 32,
-  iconColumn: 40,
-  numericField: 88,
-  /** The disc behind an empty screen's glyph. */
-  emptyIcon: 64,
-  icon: { sm: 16, md: 20, lg: 24 }
-} as const
-
-/**
- * Material's pressed state layer: 10 percent of the element's own content colour, concatenated
- * onto a hex token. Android draws it as a ripple from the touch point, which an opacity fade
- * of the whole element is not.
- */
-export const STATE_LAYER_ALPHA = "1A"
+export { space, size, STATE_LAYER_ALPHA } from "@colota/shared"
 
 /** The off switch track is `border` at half, which keeps the thumb 3:1 on it in every theme. */
 export const SWITCH_TRACK_ALPHA = "80"

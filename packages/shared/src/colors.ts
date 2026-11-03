@@ -5,6 +5,9 @@
 
 export type ThemeMode = "light" | "dark"
 
+// Material's pressed state layer: 10 percent of the element's own content colour, appended to a hex token.
+export const STATE_LAYER_ALPHA = "1A"
+
 export interface ThemeColors {
   primary: string
   primaryDark: string

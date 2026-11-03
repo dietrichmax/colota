@@ -454,6 +454,7 @@ User taps "Start" → TrackingProvider.startTracking()
 - **Colors** - `lightColors` and `darkColors` objects with all theme colors
 - **Typography** - `fontFamily` ("Inter") and `fontSizes` scale
 - **Corner radii** - the `radius` scale
+- **Spacing and sizes** - the `space` grid, the `size` extents of controls and icons, and `STATE_LAYER_ALPHA` for pressed states
 - **Types** - `ThemeColors` interface and `ThemeMode` type
 - **Setup links** - the values a `colota://setup` link may carry (API templates, HTTP methods, Dawarich modes, accuracy modes, sync conditions, auth types, profile conditions, Overland batch bounds) and its encoding, used by the app's importer and share screens and by the docs link generator
 

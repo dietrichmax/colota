@@ -139,6 +139,8 @@ colota/
 │           ├── colors.ts            # Theme color definitions
 │           ├── typography.ts        # Font family and sizes
 │           ├── radius.ts            # Corner radius scale
+│           ├── space.ts             # Spacing grid
+│           ├── size.ts              # Control and icon sizes
 │           ├── setupSchema.ts       # colota://setup values and encoding
 │           └── index.ts             # Barrel exports
 └── screenshots/

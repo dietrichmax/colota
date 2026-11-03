@@ -3,11 +3,13 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-export { lightColors, darkColors } from "./colors"
+export { lightColors, darkColors, STATE_LAYER_ALPHA } from "./colors"
 export type { ThemeColors, ThemeMode } from "./colors"
 export { fontFamily, fontSizes } from "./typography"
 export { radius } from "./radius"
 export type { RadiusName } from "./radius"
+export { space } from "./space"
+export { size } from "./size"
 export {
   API_TEMPLATE_NAMES,
   HTTP_METHODS,
