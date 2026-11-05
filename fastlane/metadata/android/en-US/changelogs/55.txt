@@ -1,1 +1,2 @@
 - Password managers can now fill in the backup password
+- Fixed impossible position jumps, like a phone at home showing up on another continent under GPS spoofing, being recorded
