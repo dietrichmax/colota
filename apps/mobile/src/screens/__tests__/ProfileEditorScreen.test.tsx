@@ -14,6 +14,7 @@ const mockProfiles: TrackingProfile[] = [
     condition: { type: "speed_above", speedThreshold: 13.89 },
     activationDelay: 12,
     deactivationDelay: 30,
+    accuracyThreshold: 150,
     enabled: true
   },
   {
@@ -26,6 +27,7 @@ const mockProfiles: TrackingProfile[] = [
     condition: { type: "wifi_ssid", ssid: "HomeNet" },
     activationDelay: 0,
     deactivationDelay: 60,
+    accuracyThreshold: null,
     enabled: true
   },
   {
@@ -38,6 +40,7 @@ const mockProfiles: TrackingProfile[] = [
     condition: { type: "bluetooth_device", bluetoothAddress: "00:11:22:33:44:55", bluetoothName: "Old Car" },
     activationDelay: 0,
     deactivationDelay: 60,
+    accuracyThreshold: null,
     enabled: true
   }
 ]
@@ -86,7 +89,14 @@ jest.mock("../../utils/geo", () => ({
   inputToSpeed: (v: number) => v / 3.6
 }))
 
-let mockSettings = { isOfflineMode: false, interval: 5, distance: 0, syncInterval: 0 }
+let mockSettings = {
+  isOfflineMode: false,
+  interval: 5,
+  distance: 0,
+  syncInterval: 0,
+  filterInaccurateLocations: false,
+  accuracyThreshold: 50
+}
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({ settings: mockSettings })
 }))
@@ -196,7 +206,14 @@ import type { BluetoothDeviceInfo } from "../../types/global"
 describe("ProfileEditorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockSettings = { isOfflineMode: false, interval: 5, distance: 0, syncInterval: 0 }
+    mockSettings = {
+      isOfflineMode: false,
+      interval: 5,
+      distance: 0,
+      syncInterval: 0,
+      filterInaccurateLocations: false,
+      accuracyThreshold: 50
+    }
     mockGetProfiles.mockResolvedValue(mockProfiles)
     mockCheckBluetoothPermission.mockResolvedValue(true)
   })
@@ -457,7 +474,7 @@ describe("ProfileEditorScreen", () => {
 
   describe("override fields", () => {
     it("name the Tracking & sync value they replace instead of a bare default", () => {
-      mockSettings = { isOfflineMode: false, interval: 30, distance: 2, syncInterval: 300 }
+      mockSettings = { ...mockSettings, interval: 30, distance: 2, syncInterval: 300 }
       const { getByText } = renderNew()
 
       expect(getByText(/^At least 1 s\. Replaces the 30 s from Tracking & sync/)).toBeTruthy()
@@ -492,6 +509,29 @@ describe("ProfileEditorScreen", () => {
       })
       expect(queryByText("Set to 1 s")).toBeNull()
       jest.useRealTimers()
+    })
+
+    it("leaves the accuracy filter empty to follow Tracking & sync, and names what empty means", () => {
+      mockSettings = { ...mockSettings, filterInaccurateLocations: true, accuracyThreshold: 50 }
+      const { getByTestId, getByText, unmount } = renderNew()
+
+      expect(getByTestId("accuracy-input").props.value).toBe("")
+      expect(getByText(/^At least 1 m\. Empty uses the 50 m from Tracking & sync/)).toBeTruthy()
+      unmount()
+
+      mockSettings = { ...mockSettings, filterInaccurateLocations: false }
+      expect(renderNew().getByText(/^At least 1 m\. Empty keeps every fix, as Tracking & sync does/)).toBeTruthy()
+    })
+
+    it("keeps an emptied accuracy filter empty on blur, since empty is the global setting and not a missing number", () => {
+      const { getByTestId, queryByText } = renderNew()
+
+      fireEvent.changeText(getByTestId("accuracy-input"), "")
+      fireEvent(getByTestId("accuracy-input"), "blur")
+
+      expect(getByTestId("accuracy-input").props.value).toBe("")
+      expect(queryByText(/^Set to/)).toBeNull()
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
     })
 
     it("restores the stored priority when its box is left empty, and flags a non-number", () => {
@@ -530,6 +570,34 @@ describe("ProfileEditorScreen", () => {
         expect(mockCreateProfile).toHaveBeenCalledWith(
           expect.objectContaining({ condition: { type: "speed_above", speedThreshold: expect.closeTo(13.89, 1) } })
         )
+      )
+    })
+
+    it("saves no accuracy threshold for an empty field and the typed one in metres", async () => {
+      const { getByTestId } = renderNew()
+
+      fireEvent.press(getByTestId("save-profile-btn"))
+      await waitFor(() =>
+        expect(mockCreateProfile).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: null }))
+      )
+
+      fireEvent.changeText(getByTestId("accuracy-input"), "200")
+      fireEvent.press(getByTestId("save-profile-btn"))
+      await waitFor(() =>
+        expect(mockCreateProfile).toHaveBeenLastCalledWith(expect.objectContaining({ accuracyThreshold: 200 }))
+      )
+    })
+
+    it("loads a stored accuracy threshold, and clearing it saves the profile back onto the global filter", async () => {
+      const { findByTestId, getByTestId } = renderEdit()
+
+      expect((await findByTestId("accuracy-input")).props.value).toBe("150")
+
+      fireEvent.changeText(getByTestId("accuracy-input"), "")
+      fireEvent.press(getByTestId("save-profile-btn"))
+
+      await waitFor(() =>
+        expect(mockUpdateProfile).toHaveBeenCalledWith(expect.objectContaining({ id: 1, accuracyThreshold: null }))
       )
     })
 

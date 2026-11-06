@@ -1,2 +1,3 @@
 - Password managers can now fill in the backup password
+- Tracking profiles can set their own accuracy filter, looser or stricter than the one in Tracking & sync
 - Fixed a settings change not reaching tracking when the screen was left right after making it

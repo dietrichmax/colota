@@ -33,6 +33,7 @@ const profile = (overrides: Partial<SavedTrackingProfile>): SavedTrackingProfile
   condition: { type: "charging" },
   activationDelay: 0,
   deactivationDelay: 60,
+  accuracyThreshold: null,
   enabled: true,
   ...overrides
 })

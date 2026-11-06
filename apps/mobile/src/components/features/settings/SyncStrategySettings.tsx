@@ -235,7 +235,7 @@ export function SyncStrategySettings({
           <>
             <StateLine
               icon={UserRoundPen}
-              iconColor={colors.textSecondary}
+              iconColor={colors.success}
               label={t("trackingSync.profileActive", { name: activeProfile.name })}
               caption={t("trackingSync.inForce", { clause: recordingPhrase(activeProfile) })}
               testID="profile-override-recording"
@@ -304,7 +304,7 @@ export function SyncStrategySettings({
               <>
                 <StateLine
                   icon={UserRoundPen}
-                  iconColor={colors.textSecondary}
+                  iconColor={colors.success}
                   label={t("trackingSync.profileActive", { name: activeProfile.name })}
                   caption={t("trackingSync.inForce", { clause: syncSummary(activeProfile.syncInterval) })}
                   testID="profile-override-sync"
@@ -418,6 +418,22 @@ export function SyncStrategySettings({
 
       <SectionTitle style={styles.groupTop}>{t("trackingSync.section.accuracy")}</SectionTitle>
       <Card rows>
+        {activeProfile && activeProfile.accuracyThreshold !== null && (
+          <>
+            <StateLine
+              icon={UserRoundPen}
+              iconColor={colors.success}
+              label={t("trackingSync.profileActive", { name: activeProfile.name })}
+              caption={t("trackingSync.inForce", {
+                clause: t("trackingSync.filter.clause", {
+                  threshold: `${metersToInput(activeProfile.accuracyThreshold)} ${unit}`
+                })
+              })}
+              testID="profile-override-accuracy"
+            />
+            <Divider tight />
+          </>
+        )}
         <SettingRow label={t("trackingSync.filter")} hint={filterHint}>
           <Toggle
             accessibilityLabel={t("trackingSync.filter")}

@@ -563,7 +563,7 @@ class LocationServiceModuleTest {
         val module = LocationServiceModule(mockContext)
         val helper = mockk<ProfileHelper>(relaxed = true)
         setField(module, "profileHelper", helper)
-        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 7
+        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 7
 
         awaitPromise { promise ->
             module.createProfile(
@@ -583,7 +583,7 @@ class LocationServiceModuleTest {
             )
         }
 
-        verify { helper.insertProfile("Home", 60000L, 10f, 300, 15, "wifi_ssid", null, "HomeNet", null, null, 60, 0) }
+        verify { helper.insertProfile("Home", 60000L, 10f, 300, 15, "wifi_ssid", null, "HomeNet", null, null, 60, 0, null) }
     }
 
     @Test
@@ -612,6 +612,59 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
+    // Tracking profiles - accuracy threshold plumbing
+    // ========================================================================
+
+    @Test
+    fun `createProfile forwards the accuracy threshold to the helper`() {
+        val module = LocationServiceModule(mockContext)
+        val helper = mockk<ProfileHelper>(relaxed = true)
+        setField(module, "profileHelper", helper)
+        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 9
+
+        awaitPromise { promise ->
+            module.createProfile(
+                JavaOnlyMap().apply {
+                    putString("name", "Driving")
+                    putDouble("intervalMs", 2000.0)
+                    putDouble("minUpdateDistance", 10.0)
+                    putInt("syncIntervalSeconds", 0)
+                    putInt("priority", 15)
+                    putString("conditionType", "speed_above")
+                    putDouble("speedThreshold", 13.89)
+                    putInt("deactivationDelaySeconds", 30)
+                    putInt("activationDelaySeconds", 0)
+                    putDouble("accuracyThreshold", 200.0)
+                },
+                promise
+            )
+        }
+
+        verify { helper.insertProfile("Driving", 2000L, 10f, 0, 15, "speed_above", 13.89f, null, null, null, 30, 0, 200f) }
+    }
+
+    @Test
+    fun `updateProfile writes, clears or leaves the accuracy threshold by whether the key is present`() {
+        val module = LocationServiceModule(mockContext)
+        val helper = mockk<ProfileHelper>(relaxed = true)
+        setField(module, "profileHelper", helper)
+
+        awaitPromise { promise ->
+            module.updateProfile(JavaOnlyMap().apply { putInt("id", 3); putDouble("accuracyThreshold", 150.0) }, promise)
+        }
+        awaitPromise { promise ->
+            module.updateProfile(JavaOnlyMap().apply { putInt("id", 4); putNull("accuracyThreshold") }, promise)
+        }
+        awaitPromise { promise ->
+            module.updateProfile(JavaOnlyMap().apply { putInt("id", 5); putString("name", "Renamed") }, promise)
+        }
+
+        verify { helper.updateProfile(id = 3, accuracyThreshold = 150f, hasAccuracyThreshold = true) }
+        verify { helper.updateProfile(id = 4, accuracyThreshold = null, hasAccuracyThreshold = true) }
+        verify { helper.updateProfile(id = 5, name = "Renamed", accuracyThreshold = null, hasAccuracyThreshold = false) }
+    }
+
+    // ========================================================================
     // Tracking profiles — Bluetooth device plumbing
     // ========================================================================
 
@@ -620,7 +673,7 @@ class LocationServiceModuleTest {
         val module = LocationServiceModule(mockContext)
         val helper = mockk<ProfileHelper>(relaxed = true)
         setField(module, "profileHelper", helper)
-        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 8
+        every { helper.insertProfile(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 8
 
         awaitPromise { promise ->
             module.createProfile(
@@ -645,7 +698,7 @@ class LocationServiceModuleTest {
         verify {
             helper.insertProfile(
                 "Car", 5000L, 0f, 60, 20, "bluetooth_device", null, null,
-                "AA:BB:CC:DD:EE:FF", "My Car", 60, 0
+                "AA:BB:CC:DD:EE:FF", "My Car", 60, 0, null
             )
         }
     }

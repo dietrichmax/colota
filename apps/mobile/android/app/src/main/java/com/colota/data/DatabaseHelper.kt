@@ -31,7 +31,7 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         const val DATABASE_NAME = "Colota.db"
-        const val DATABASE_VERSION = 9
+        const val DATABASE_VERSION = 10
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
@@ -65,6 +65,7 @@ class DatabaseHelper private constructor(context: Context) :
                 bluetooth_name TEXT,
                 deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
                 activation_delay_seconds INTEGER NOT NULL DEFAULT 0,
+                accuracy_threshold REAL,
                 enabled INTEGER NOT NULL DEFAULT 1,
                 created_at INTEGER NOT NULL
             )

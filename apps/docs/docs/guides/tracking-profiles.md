@@ -6,7 +6,7 @@ sidebar_position: 2
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-A tracking profile is a rule: while a condition holds, such as charging, Android Auto or a speed, Colota records and syncs with that profile's interval, movement threshold and sync interval instead of the Tracking & sync values.
+A tracking profile is a rule: while a condition holds, such as charging, Android Auto or a speed, Colota records and syncs with that profile's interval, movement threshold, accuracy filter and sync interval instead of the Tracking & sync values.
 
 <ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking profiles" }, ]} />
 
@@ -24,7 +24,7 @@ A tracking profile is a rule: while a condition holds, such as charging, Android
 2. Tap **Create profile** in the app bar
 3. Pick the condition; each row says what watching it costs, and a speed condition asks for the speed
 4. Optionally name it (blank saves as the condition's name) and set a priority
-5. Set the tracking interval, movement threshold and sync interval; each field says which Tracking & sync value it replaces
+5. Set the tracking interval, movement threshold, accuracy filter and sync interval; each field says which Tracking & sync value it replaces
 6. Tap **Create profile**
 
 The editor's first line reads the rule back as you build it, for example "When charging, track every 5 s, any movement and sync each fix." Tap a profile in the list to edit it; Delete is at the bottom of the editor.
@@ -90,10 +90,13 @@ Each profile overrides the default tracking configuration with:
 
 - **Tracking interval** - How often to request a location fix (seconds)
 - **Movement threshold** - Minimum movement required between updates (meters or feet)
+- **Accuracy filter** - Drops fixes less accurate than this while the profile is active (meters or feet). Leave it empty to keep the Tracking & sync filter. A value can be looser or stricter than that filter and applies even when it is off.
 - **Sync interval** - How often to sync with the server (Instant, 1 min, 5 min, 15 min, or Custom)
 - **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher wins; equal numbers go to the older profile)
 - **Activation Delay** - How long the condition must keep matching before the profile is applied (seconds, default 0 = immediate). Prevents activating on brief spikes, e.g. a momentary speed reading. For the Stationary condition it instead sets how long the device must be still before the profile activates (default 60s).
 - **Deactivation Delay** - How long the profile stays active after its condition stops matching, also when a lower-priority profile matches (seconds). Prevents rapid toggling when conditions fluctuate.
+
+A profile's accuracy filter only decides which fixes are recorded while the profile is active. Profiles switch on and off on the fixes the Tracking & sync filter lets through, so a speed profile with a looser filter still needs fixes that pass that filter to activate.
 
 When creating a new profile, the tracking interval, movement threshold and sync interval are pre-filled with your current Tracking & sync values, and each field says which value it replaces. The values a profile hands back to are the ones the service loaded when tracking started; a Tracking & sync change applies at the next restart. A profile's sync interval applies at the switch, counted from the last scheduled sync; a shorter one syncs at once when that much time has already passed.
 
@@ -131,7 +134,7 @@ Note that Stationary has the highest priority so it takes over from Walking when
 - If the condition matches again before the delay expires, the timer is cancelled. A higher-priority profile that matches still takes over as soon as its own activation delay has passed
 - After the delay expires, the highest-priority matching profile takes over once its activation delay has passed. Until then, or if nothing matches, settings revert to the defaults configured in the Settings screen
 - Profile changes made in the editor take effect immediately on the running service
-- **Tracking & sync** shows the active profile above the Recording and Sync interval groups with the values in force. The rows below are the defaults the profile is overriding
+- **Tracking & sync** shows the active profile above the Recording and Sync interval groups with the values in force, and above the Accuracy filter card when the profile has its own filter. The rows below are the defaults the profile is overriding
 
 ## Active Profile Indicators
 
@@ -139,7 +142,7 @@ When a profile is active, Colota shows it in three places:
 
 - **Dashboard** - The state line reads "Tracking · ProfileName"
 - **Tracking profiles** - The list's first line names it with the values in force, and its row opens with "Active"
-- **Tracking & sync** - A line above the Recording and Sync interval groups names it with the values in force
+- **Tracking & sync** - A line above the Recording and Sync interval groups names it with the values in force, and one above the Accuracy filter card when the profile has its own filter
 
 All of them clear when the profile deactivates (after the deactivation delay) or when tracking stops.
 
