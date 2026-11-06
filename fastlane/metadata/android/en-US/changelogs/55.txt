@@ -1,1 +1,2 @@
 - Password managers can now fill in the backup password
+- Fixed a settings change not reaching tracking when the screen was left right after making it
