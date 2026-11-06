@@ -420,7 +420,7 @@ Supporting utilities in `mapUtils.ts`:
 
 | Hook | Purpose |
 | --- | --- |
-| `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions and location state. On app foreground it reconciles the user's intent against real service liveness and restarts a service that died or was never started |
+| `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions and location state. On app foreground it reconciles the user's intent against real service liveness and restarts a service that died or was never started. A settings change reaches the running service as one START, never a stop and a start, and the service keeps an active profile's values when it reloads |
 | `useTheme` | Provides theme colors, mode, and toggle from ThemeProvider context |
 | `useAutoSave` | Debounced auto-save pattern for settings screens |
 | `useTimeout` | Managed timeout with automatic cleanup on unmount |

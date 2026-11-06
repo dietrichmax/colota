@@ -156,38 +156,42 @@ describe("useLocationTracking", () => {
   })
 
   describe("restartTracking", () => {
-    it("stops the service and clears coords during restart", async () => {
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it("hands the running service its new settings without stopping it, so a paused JS timer cannot leave tracking off", async () => {
+      jest.useFakeTimers()
       const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
       })
+      mockStart.mockClear()
 
-      expect(result.current.tracking).toBe(true)
-
+      // No timer is advanced: a restart that waited on one would never reach start.
       await act(async () => {
         await result.current.restartTracking({ ...DEFAULT_SETTINGS, interval: 30 })
       })
 
-      expect(mockStop).toHaveBeenCalled()
+      expect(mockStop).not.toHaveBeenCalled()
+      expect(mockStart).toHaveBeenCalledWith(expect.objectContaining({ interval: 30 }))
+      expect(result.current.tracking).toBe(true)
     })
 
-    it("queues restart if already restarting", async () => {
-      const logSpy = jest.spyOn(console, "log").mockImplementation()
+    it("keeps tracking on when the START is refused, since the running service keeps its old settings", async () => {
       const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
-
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
       })
+      mockStart.mockRejectedValueOnce(new Error("refused"))
 
-      // Start two restarts simultaneously
-      act(() => {
-        result.current.restartTracking()
-        result.current.restartTracking() // should queue
+      await act(async () => {
+        await expect(result.current.restartTracking()).rejects.toThrow("refused")
       })
 
-      const queuedCalls = logSpy.mock.calls.filter((c: any[]) => typeof c[0] === "string" && c[0].includes("queuing"))
-      expect(queuedCalls.length).toBeGreaterThan(0)
+      expect(mockStop).not.toHaveBeenCalled()
+      expect(result.current.tracking).toBe(true)
     })
   })
 

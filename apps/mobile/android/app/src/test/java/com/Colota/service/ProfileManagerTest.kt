@@ -857,6 +857,20 @@ class ProfileManagerTest {
     }
 
     @Test
+    fun `activeConfig is the active profile's config, which a reload keeps over the global values`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile(intervalMs = 10000))
+        val manager = createManager()
+        assertNull(manager.activeConfig())
+
+        manager.onChargingStateChanged(true)
+
+        val config = manager.activeConfig()!!
+        assertEquals(10000L, config.interval)
+        assertEquals("Charging", config.profileName)
+        assertEquals(ProfileConstants.CONDITION_CHARGING, config.conditionType)
+    }
+
+    @Test
     fun `reapplies an edited accuracy threshold on the active profile, cleared included`() = runTest {
         every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile().copy(accuracyThreshold = 20f))
         val manager = createManager()
