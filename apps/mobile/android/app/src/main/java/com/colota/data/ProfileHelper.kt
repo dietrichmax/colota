@@ -34,6 +34,8 @@ class ProfileHelper(private val context: Context) {
         val bluetoothAddress: String? = null,
         val deactivationDelaySeconds: Int,
         val activationDelaySeconds: Int,
+        /** Replaces the global accuracy filter while the profile is active; null keeps the global one. */
+        val accuracyThreshold: Float? = null,
     )
 
     companion object {
@@ -56,7 +58,7 @@ class ProfileHelper(private val context: Context) {
                     "id", "name", "interval_ms", "min_update_distance",
                     "sync_interval_seconds", "priority", "condition_type",
                     "speed_threshold", "wifi_ssid", "bluetooth_address", "deactivation_delay_seconds",
-                    "activation_delay_seconds",
+                    "activation_delay_seconds", "accuracy_threshold",
                 ),
                 "enabled = 1",
                 null, null, null,
@@ -74,6 +76,7 @@ class ProfileHelper(private val context: Context) {
                 val btAddressIdx = cursor.getColumnIndexOrThrow("bluetooth_address")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
                 val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
+                val accuracyIdx = cursor.getColumnIndexOrThrow("accuracy_threshold")
 
                 while (cursor.moveToNext()) {
                     profiles.add(CachedProfile(
@@ -89,6 +92,7 @@ class ProfileHelper(private val context: Context) {
                         bluetoothAddress = if (cursor.isNull(btAddressIdx)) null else cursor.getString(btAddressIdx),
                         deactivationDelaySeconds = cursor.getInt(delayIdx),
                         activationDelaySeconds = cursor.getInt(activationDelayIdx),
+                        accuracyThreshold = if (cursor.isNull(accuracyIdx)) null else cursor.getFloat(accuracyIdx),
                     ))
                 }
             }
@@ -121,6 +125,7 @@ class ProfileHelper(private val context: Context) {
                 val btNameIdx = cursor.getColumnIndexOrThrow("bluetooth_name")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
                 val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
+                val accuracyIdx = cursor.getColumnIndexOrThrow("accuracy_threshold")
                 val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
                 val createdIdx = cursor.getColumnIndexOrThrow("created_at")
 
@@ -155,6 +160,11 @@ class ProfileHelper(private val context: Context) {
                         }
                         putInt("deactivationDelaySeconds", cursor.getInt(delayIdx))
                         putInt("activationDelaySeconds", cursor.getInt(activationDelayIdx))
+                        if (cursor.isNull(accuracyIdx)) {
+                            putNull("accuracyThreshold")
+                        } else {
+                            putDouble("accuracyThreshold", cursor.getFloat(accuracyIdx).toDouble())
+                        }
                         putBoolean("enabled", cursor.getInt(enabledIdx) == 1)
                         putDouble("createdAt", cursor.getLong(createdIdx).toDouble())
                     })
@@ -180,6 +190,7 @@ class ProfileHelper(private val context: Context) {
         bluetoothName: String?,
         deactivationDelaySeconds: Int,
         activationDelaySeconds: Int,
+        accuracyThreshold: Float?,
     ): Int {
         val values = ContentValues().apply {
             put("name", name)
@@ -194,6 +205,7 @@ class ProfileHelper(private val context: Context) {
             if (bluetoothName != null) put("bluetooth_name", bluetoothName) else putNull("bluetooth_name")
             put("deactivation_delay_seconds", deactivationDelaySeconds)
             put("activation_delay_seconds", activationDelaySeconds)
+            if (accuracyThreshold != null) put("accuracy_threshold", accuracyThreshold) else putNull("accuracy_threshold")
             put("enabled", 1)
             put("created_at", System.currentTimeMillis() / 1000)
         }
@@ -206,7 +218,7 @@ class ProfileHelper(private val context: Context) {
     /**
      * PATCH-style update: null args leave the column untouched. Returns false if nothing changed.
      * [speedThreshold] is tri-state because null is a valid column value: set [hasSpeedThreshold]
-     * false to leave it alone, true+null to clear, true+value to write.
+     * false to leave it alone, true+null to clear, true+value to write. [accuracyThreshold] works the same way.
      */
     fun updateProfile(
         id: Int,
@@ -226,6 +238,8 @@ class ProfileHelper(private val context: Context) {
         deactivationDelaySeconds: Int? = null,
         activationDelaySeconds: Int? = null,
         enabled: Boolean? = null,
+        accuracyThreshold: Float? = null,
+        hasAccuracyThreshold: Boolean = false,
     ): Boolean {
         val values = ContentValues().apply {
             name?.let { put("name", it) }
@@ -246,6 +260,9 @@ class ProfileHelper(private val context: Context) {
             }
             deactivationDelaySeconds?.let { put("deactivation_delay_seconds", it) }
             activationDelaySeconds?.let { put("activation_delay_seconds", it) }
+            if (hasAccuracyThreshold) {
+                if (accuracyThreshold != null) put("accuracy_threshold", accuracyThreshold) else putNull("accuracy_threshold")
+            }
             enabled?.let { put("enabled", if (it) 1 else 0) }
         }
 

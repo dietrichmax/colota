@@ -116,6 +116,69 @@ class DatabaseHelperSQLiteTest {
         assertTrue(columns.contains("bluetooth_name"))
     }
 
+    @Test
+    fun `tracking_profiles table includes accuracy_threshold column`() {
+        val columns = queryColumnNames("tracking_profiles")
+        assertTrue(columns.contains("accuracy_threshold"))
+    }
+
+    // ========================================================================
+    // Migration v9 -> v10: accuracy_threshold
+    // ========================================================================
+
+    @Test
+    fun `migration from v9 adds accuracy_threshold as null, so existing profiles keep the global filter`() {
+        val candidate = File.createTempFile("candidate-v9", ".db").also { it.delete() }
+        SQLiteDatabase.openOrCreateDatabase(candidate, null).use { old ->
+            old.execSQL(
+                """
+                CREATE TABLE tracking_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    interval_ms INTEGER NOT NULL,
+                    min_update_distance REAL NOT NULL,
+                    sync_interval_seconds INTEGER NOT NULL,
+                    priority INTEGER NOT NULL DEFAULT 0,
+                    condition_type TEXT NOT NULL,
+                    speed_threshold REAL,
+                    wifi_ssid TEXT,
+                    bluetooth_address TEXT,
+                    bluetooth_name TEXT,
+                    deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
+                    activation_delay_seconds INTEGER NOT NULL DEFAULT 0,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    created_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            old.execSQL(
+                """
+                INSERT INTO tracking_profiles
+                    (name, interval_ms, min_update_distance, sync_interval_seconds,
+                     priority, condition_type, speed_threshold, deactivation_delay_seconds, created_at)
+                VALUES ('Driving', 2000, 10, 0, 15, 'speed_above', 13.89, 30, 0)
+                """.trimIndent()
+            )
+            old.version = 9
+        }
+
+        DatabaseMigrations.migrateCandidate(candidate)
+
+        SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
+            assertEquals(10, migrated.version)
+            migrated.rawQuery(
+                "SELECT speed_threshold, accuracy_threshold FROM tracking_profiles WHERE name = 'Driving'",
+                null
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(13.89, cursor.getDouble(0), 0.001)
+                assertTrue(cursor.isNull(1))
+            }
+        }
+
+        candidate.delete()
+    }
+
     // ========================================================================
     // Migration v8 -> v9: bluetooth_address, bluetooth_name
     // ========================================================================
@@ -157,7 +220,7 @@ class DatabaseHelperSQLiteTest {
         DatabaseMigrations.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
-            assertEquals(9, migrated.version)
+            assertEquals(10, migrated.version)
             migrated.rawQuery(
                 "SELECT wifi_ssid, bluetooth_address, bluetooth_name FROM tracking_profiles WHERE name = 'Home'",
                 null
@@ -214,7 +277,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(9, migrated.version)
+            assertEquals(10, migrated.version)
             migrated.rawQuery("PRAGMA table_info(tracking_profiles)", null).use { cursor ->
                 val columns = mutableSetOf<String>()
                 while (cursor.moveToNext()) columns.add(cursor.getString(1))
@@ -274,7 +337,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(9, migrated.version)
+            assertEquals(10, migrated.version)
             // migrateCandidate stamps the version unconditionally, so the version alone proves
             // nothing about the v7 step. This is the restore-an-older-backup path.
             assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
@@ -315,7 +378,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(9, migrated.version)
+            assertEquals(10, migrated.version)
             assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
             migrated.rawQuery("PRAGMA table_info(locations)", null).use { locCursor ->
                 val locCols = mutableSetOf<String>()

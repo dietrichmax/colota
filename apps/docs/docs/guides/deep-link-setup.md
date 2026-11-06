@@ -111,6 +111,7 @@ Each entry in the `profiles` array describes one [tracking profile](tracking-pro
 | `priority` | number | `10` | Higher value wins when multiple profiles match |
 | `activationDelay` | number | `0` (stationary: `60`) | Seconds the condition must keep matching before the profile is applied (0 = immediate). For `stationary`, how long the device must be still before activating |
 | `deactivationDelay` | number | `60` (stationary: `0`) | Seconds to keep the profile active after the condition stops matching. Stationary resumes via the motion sensor instead |
+| `accuracyThreshold` | number | - | Accuracy filter in meters while the profile is active. Omitted or not a positive number keeps the Tracking & sync filter |
 
 Imported profiles are appended by default. When both profiles and geofences are present the same "Replace ... with the same name" toggle on the import screen also deletes existing profiles whose names match before creating the incoming ones.
 

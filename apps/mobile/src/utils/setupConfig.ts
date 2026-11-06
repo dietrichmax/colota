@@ -478,6 +478,10 @@ export function validateConfig(raw: unknown): ValidationResult {
           typeof p.deactivationDelay === "number" && p.deactivationDelay >= 0
             ? p.deactivationDelay
             : delays.deactivationDelay,
+        accuracyThreshold:
+          Number.isInteger(p.accuracyThreshold) && (p.accuracyThreshold as number) >= 1
+            ? (p.accuracyThreshold as number)
+            : null,
         enabled: typeof p.enabled === "boolean" ? p.enabled : true,
         condition
       })

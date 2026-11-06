@@ -46,6 +46,7 @@ interface ProfileRow {
   priority: string
   activationDelay: string
   deactivationDelay: string
+  accuracyThreshold: string
   enabled: boolean
 }
 
@@ -217,6 +218,7 @@ export default function DeepLinkGenerator() {
         entry.activationDelay = p.activationDelay ? Number(p.activationDelay) : 0
         entry.deactivationDelay = p.deactivationDelay ? Number(p.deactivationDelay) : 60
       }
+      if (Number(p.accuracyThreshold) > 0) entry.accuracyThreshold = Number(p.accuracyThreshold)
       pfs.push(entry)
     }
     if (pfs.length > 0) obj.profiles = pfs
@@ -358,6 +360,7 @@ export default function DeepLinkGenerator() {
         priority: "10",
         activationDelay: "0",
         deactivationDelay: "60",
+        accuracyThreshold: "",
         enabled: true
       }
     ])
@@ -946,6 +949,17 @@ export default function DeepLinkGenerator() {
                       />
                     </div>
                   )}
+                  <div className={styles.field}>
+                    <label className={styles.label}>Accuracy filter (m)</label>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      min="1"
+                      placeholder="Tracking & sync"
+                      value={p.accuracyThreshold}
+                      onChange={(e) => updateProfile(i, "accuracyThreshold", e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className={styles.geofenceFlags}>
                   <label className={styles.checkbox}>

@@ -486,6 +486,7 @@ class NativeLocationService {
       },
       activationDelay: p.activationDelaySeconds,
       deactivationDelay: p.deactivationDelaySeconds,
+      accuracyThreshold: p.accuracyThreshold ?? null,
       enabled: p.enabled,
       createdAt: p.createdAt
     }))
@@ -510,7 +511,8 @@ class NativeLocationService {
       bluetoothAddress: profile.condition.bluetoothAddress ?? null,
       bluetoothName: profile.condition.bluetoothName ?? null,
       deactivationDelaySeconds: profile.deactivationDelay,
-      activationDelaySeconds: profile.activationDelay
+      activationDelaySeconds: profile.activationDelay,
+      accuracyThreshold: profile.accuracyThreshold
     })
   }
 
@@ -536,6 +538,7 @@ class NativeLocationService {
     }
     if (update.deactivationDelay !== undefined) config.deactivationDelaySeconds = update.deactivationDelay
     if (update.activationDelay !== undefined) config.activationDelaySeconds = update.activationDelay
+    if (update.accuracyThreshold !== undefined) config.accuracyThreshold = update.accuracyThreshold
     if (update.enabled !== undefined) config.enabled = update.enabled
 
     return LocationServiceModule.updateProfile(config)

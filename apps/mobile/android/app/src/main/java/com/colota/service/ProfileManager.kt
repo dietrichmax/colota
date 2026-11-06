@@ -40,6 +40,7 @@ class ProfileManager(
         val profileName: String?,
         val profileId: Int?,
         val conditionType: String,
+        val accuracyThreshold: Float?,
     )
 
     // Default config (written externally by the service, read inside @Synchronized deactivateToDefault)
@@ -162,7 +163,8 @@ class ProfileManager(
                     val active = activeProfile!!
                     if (active.intervalMs != matchingProfile.intervalMs ||
                         active.minUpdateDistance != matchingProfile.minUpdateDistance ||
-                        active.syncIntervalSeconds != matchingProfile.syncIntervalSeconds) {
+                        active.syncIntervalSeconds != matchingProfile.syncIntervalSeconds ||
+                        active.accuracyThreshold != matchingProfile.accuracyThreshold) {
                         activateProfile(matchingProfile)
                     }
                     return
@@ -300,6 +302,7 @@ class ProfileManager(
             profileName = profile.name,
             profileId = profile.id,
             conditionType = profile.conditionType,
+            accuracyThreshold = profile.accuracyThreshold,
         ))
     }
 
@@ -465,6 +468,7 @@ class ProfileManager(
             profileName = null,
             profileId = null,
             conditionType = "",
+            accuracyThreshold = null,
         ))
     }
 }
