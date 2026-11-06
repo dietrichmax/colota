@@ -69,6 +69,7 @@ const profiles: TrackingProfile[] = [
     condition: { type: "speed_above", speedThreshold: 8.33 },
     activationDelay: 0,
     deactivationDelay: 60,
+    accuracyThreshold: 200,
     enabled: true,
     createdAt: 456
   },
@@ -82,6 +83,7 @@ const profiles: TrackingProfile[] = [
     condition: { type: "wifi_ssid", ssid: "HomeNet" },
     activationDelay: 0,
     deactivationDelay: 60,
+    accuracyThreshold: null,
     enabled: true,
     createdAt: 789
   }
@@ -124,6 +126,29 @@ describe("setupLink", () => {
     // The network name has to survive the share; the import screen rejects the profile without it.
     expect(result.config.profiles[1].condition).toEqual({ type: "wifi_ssid", ssid: "HomeNet" })
     expect(result.config.profiles[1]).not.toHaveProperty("id")
+    expect(result.config.profiles[0].accuracyThreshold).toBe(200)
+    expect(result.config.profiles[1].accuracyThreshold).toBeNull()
+  })
+
+  it("leaves a profile without its own accuracy threshold out of the link, which keeps the QR code small", () => {
+    const config = buildSetupConfig(parts, ALL) as { profiles: Record<string, unknown>[] }
+
+    expect(config.profiles[0].accuracyThreshold).toBe(200)
+    expect(config.profiles[1]).not.toHaveProperty("accuracyThreshold")
+  })
+
+  it("imports a profile's accuracy threshold only as whole metres the editor accepts, anything else follows the global filter", () => {
+    const base = { name: "P", interval: 5, distance: 0, syncInterval: 0, condition: { type: "charging" } }
+    const thresholdOf = (accuracyThreshold: unknown) =>
+      validateConfig({ profiles: [{ ...base, accuracyThreshold }] }).config.profiles[0].accuracyThreshold
+
+    expect(thresholdOf(150)).toBe(150)
+    expect(thresholdOf(0)).toBeNull()
+    expect(thresholdOf(0.5)).toBeNull()
+    expect(thresholdOf(12.5)).toBeNull()
+    expect(thresholdOf(-5)).toBeNull()
+    expect(thresholdOf("150")).toBeNull()
+    expect(thresholdOf(undefined)).toBeNull()
   })
 
   it("reads a valid positioning accuracy mode and rejects anything else", () => {

@@ -39,7 +39,7 @@ import type { RootScreenProps } from "../types/navigation"
 import { useTranslation } from "../i18n/useTranslation"
 
 type Draft = Omit<TrackingProfile, "id" | "createdAt">
-type NumericKey = "interval" | "distance" | "activationDelay" | "deactivationDelay" | "speed"
+type NumericKey = "interval" | "distance" | "accuracy" | "activationDelay" | "deactivationDelay" | "speed"
 
 const DEFAULT_SPEED_INPUT = 30
 const DEFAULT_PRIORITY = 10
@@ -63,6 +63,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     priority: DEFAULT_PRIORITY,
     condition: { type: "charging" },
     ...defaultProfileDelays("charging"),
+    accuracyThreshold: null,
     enabled: true
   })
   const [saving, setSaving] = useState(false)
@@ -73,6 +74,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const [text, setText] = useState({
     interval: String(settings.interval),
     distance: String(metersToInput(settings.distance)),
+    accuracy: "",
     speed: String(DEFAULT_SPEED_INPUT),
     priority: String(DEFAULT_PRIORITY),
     ssid: "",
@@ -130,6 +132,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           condition: existing.condition,
           activationDelay: existing.activationDelay,
           deactivationDelay: existing.deactivationDelay,
+          accuracyThreshold: existing.accuracyThreshold,
           enabled: existing.enabled
         })
         if (existing.condition.bluetoothAddress) {
@@ -141,6 +144,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         setText({
           interval: String(existing.interval),
           distance: String(metersToInput(existing.distance)),
+          accuracy: existing.accuracyThreshold === null ? "" : String(metersToInput(existing.accuracyThreshold)),
           speed: String(
             existing.condition.speedThreshold ? speedToInput(existing.condition.speedThreshold) : DEFAULT_SPEED_INPUT
           ),
@@ -168,22 +172,30 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     setProfile((prev) => {
       if (key === "speed") return { ...prev, condition: { ...prev.condition, speedThreshold: inputToSpeed(value) } }
       if (key === "distance") return { ...prev, distance: inputToMeters(value) }
+      if (key === "accuracy") return { ...prev, accuracyThreshold: inputToMeters(value) }
       return { ...prev, [key]: value }
     })
   }, [])
 
-  const minOf = (key: NumericKey) => (key === "interval" || key === "speed" ? 1 : 0)
-  const unitOf = (key: NumericKey) => (key === "distance" ? distanceUnit : key === "speed" ? speedUnit : t("unit.s"))
+  const minOf = (key: NumericKey) => (key === "interval" || key === "speed" || key === "accuracy" ? 1 : 0)
+  const unitOf = (key: NumericKey) =>
+    key === "distance" || key === "accuracy" ? distanceUnit : key === "speed" ? speedUnit : t("unit.s")
 
   const handleNumeric = (key: NumericKey, value: string) => {
     setText((prev) => ({ ...prev, [key]: value }))
     setNote(null)
+    if (key === "accuracy" && value === "") {
+      setProfile((prev) => ({ ...prev, accuracyThreshold: null }))
+      return
+    }
     const num = parseWholeNumber(value)
     if (num !== null && num >= minOf(key)) store(key, num)
   }
 
   // An empty or below-minimum box clamps to the minimum on blur and says so, the Tracking & sync rule.
   const handleBlur = (key: NumericKey) => {
+    // Empty is the accuracy field's "follow Tracking & sync" value, not a missing number.
+    if (key === "accuracy" && text.accuracy === "") return
     const min = minOf(key)
     const num = parseWholeNumber(text[key])
     if (num !== null && num >= min) return
@@ -291,6 +303,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     !!priorityError ||
     !!errorOf("interval") ||
     (!isStationary && !!errorOf("distance")) ||
+    !!errorOf("accuracy") ||
     (isSpeed && !!errorOf("speed")) ||
     !!ssidError ||
     !!deviceError ||
@@ -470,6 +483,27 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               message={noteOf("distance")}
             />
           )}
+          <NumericInput
+            label={t("profileEditor.accuracy")}
+            testID="accuracy-input"
+            value={text.accuracy}
+            onChange={(v) => handleNumeric("accuracy", v)}
+            onBlur={() => handleBlur("accuracy")}
+            unit={distanceUnit}
+            placeholder={
+              settings.filterInaccurateLocations ? String(metersToInput(settings.accuracyThreshold)) : undefined
+            }
+            hint={
+              settings.filterInaccurateLocations
+                ? t("profileEditor.accuracy.hint", {
+                    unit: distanceUnit,
+                    threshold: `${metersToInput(settings.accuracyThreshold)} ${distanceUnit}`
+                  })
+                : t("profileEditor.accuracy.hintOff", { unit: distanceUnit })
+            }
+            error={errorOf("accuracy")}
+            message={noteOf("accuracy")}
+          />
           {!settings.isOfflineMode && (
             <>
               <Divider tight />

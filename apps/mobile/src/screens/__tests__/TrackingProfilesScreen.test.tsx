@@ -15,6 +15,7 @@ const mockProfiles: TrackingProfile[] = [
     condition: { type: "speed_above", speedThreshold: 13.89 },
     activationDelay: 15,
     deactivationDelay: 30,
+    accuracyThreshold: null,
     enabled: true
   },
   {
@@ -27,6 +28,7 @@ const mockProfiles: TrackingProfile[] = [
     condition: { type: "charging" },
     activationDelay: 0,
     deactivationDelay: 60,
+    accuracyThreshold: null,
     enabled: false
   }
 ]

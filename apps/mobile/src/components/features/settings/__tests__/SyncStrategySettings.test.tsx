@@ -2,6 +2,7 @@ import React from "react"
 import { render, fireEvent, act } from "@testing-library/react-native"
 import { DEFAULT_SETTINGS, TRACKING_PRESETS, Settings, SavedTrackingProfile } from "../../../../types/global"
 import { SAVE_SUCCESS_DISPLAY_MS } from "../../../../constants"
+import { lightColors } from "@colota/shared"
 
 // Mock barrel export (avoids transitive native module imports)
 jest.mock("../../../index", () => {
@@ -37,8 +38,13 @@ jest.mock("../../../index", () => {
     FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children, style }: any) => R.createElement(View, { testID: "card", style }, children),
     Divider: () => R.createElement(View, { testID: "divider" }),
-    StateLine: ({ label, caption, testID }: any) =>
-      R.createElement(View, { testID }, R.createElement(Text, null, label), R.createElement(Text, null, caption)),
+    StateLine: ({ label, caption, iconColor, testID }: any) =>
+      R.createElement(
+        View,
+        { testID, accessibilityValue: { text: iconColor } },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, caption)
+      ),
     NumericInput: ({ label, value, onChange, onBlur, unit, hint, placeholder: ph, error, message }: any) =>
       R.createElement(
         View,
@@ -124,7 +130,8 @@ const charging: SavedTrackingProfile = {
   priority: 1,
   condition: { type: "charging" } as any,
   activationDelay: 0,
-  deactivationDelay: 0
+  deactivationDelay: 0,
+  accuracyThreshold: null
 } as SavedTrackingProfile
 
 describe("SyncStrategySettings", () => {
@@ -400,6 +407,14 @@ describe("SyncStrategySettings", () => {
       expect(queryByTestId("profile-override-notice")).toBeNull()
     })
 
+    it("marks each profile line green, as the Profiles screen and the Settings row mark a profile in force", () => {
+      const { getByTestId } = renderComponent({}, { ...charging, accuracyThreshold: 200 })
+
+      for (const id of ["profile-override-recording", "profile-override-sync", "profile-override-accuracy"]) {
+        expect(getByTestId(id).props.accessibilityValue.text).toBe(lightColors.success)
+      }
+    })
+
     it("keeps the rows below selectable, since they are the defaults the profile hands back", () => {
       const { getByTestId } = renderComponent({}, charging)
 
@@ -421,6 +436,21 @@ describe("SyncStrategySettings", () => {
 
       expect(queryByTestId("profile-override-recording")).toBeNull()
       expect(queryByTestId("profile-override-sync")).toBeNull()
+      expect(queryByTestId("profile-override-accuracy")).toBeNull()
+    })
+
+    it("shows the profile's own accuracy filter in force over the global one, and nothing when it follows the global one", () => {
+      const { getByTestId, getByText, unmount } = renderComponent(
+        { filterInaccurateLocations: true, accuracyThreshold: 50 },
+        { ...charging, accuracyThreshold: 200 }
+      )
+
+      expect(getByTestId("profile-override-accuracy")).toBeTruthy()
+      expect(getByText("In force: fixes worse than 200 m dropped")).toBeTruthy()
+      unmount()
+
+      const { queryByTestId } = renderComponent({}, { ...charging, accuracyThreshold: null })
+      expect(queryByTestId("profile-override-accuracy")).toBeNull()
     })
   })
 
