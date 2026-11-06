@@ -621,6 +621,16 @@ class SyncManagerTest {
     }
 
     @Test
+    fun `starting periodic sync counts failures from zero, as a new service would`() = scope.runTest {
+        setField("consecutiveFailures", 5)
+
+        syncManager.startPeriodicSync()
+
+        assertEquals(0, getField("consecutiveFailures"))
+        syncManager.stopPeriodicSync()
+    }
+
+    @Test
     fun `periodic sync sends error event after 3 consecutive failures`() = scope.runTest {
         mockkObject(LocationServiceModule.Companion)
         every { LocationServiceModule.sendSyncErrorEvent(any(), any()) } returns true

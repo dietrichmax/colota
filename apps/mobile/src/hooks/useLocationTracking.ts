@@ -9,7 +9,6 @@ import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
 import { ensurePermissions, checkPermissions } from "../services/LocationServicePermission"
-import { SERVICE_RESTART_DELAY_MS, RESTART_DEBOUNCE_MS } from "../constants"
 import { logger } from "../utils/logger"
 import { t } from "../i18n/t"
 
@@ -25,7 +24,7 @@ const locationEventEmitter = new NativeEventEmitter(LocationServiceModule)
  * - Permission guards
  * - Native event subscription
  * - State hydration from SQLite
- * - Service restart logic with proper delays
+ * - Applying new settings to the running service
  *
  * @param settings Initial tracking configuration
  * @param settingsHydrated Whether `settings` has been read back from SQLite yet
@@ -35,14 +34,11 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
   // State
   const [coords, setCoords] = useState<LocationCoords | null>(null)
   const [tracking, setTracking] = useState(false)
-  const [isRestarting, setIsRestarting] = useState(false)
 
   // Refs for synchronous checks
   const settingsRef = useRef<Settings>(settings)
   const isTrackingRef = useRef(false)
-  const restartingRef = useRef(false)
   const revivingRef = useRef(false)
-  const restartQueuedRef = useRef(false)
   const listenerRef = useRef<any>(null)
 
   // Sync refs with state
@@ -60,7 +56,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
    */
   useEffect(() => {
     const syncInitialLocation = async () => {
-      if (!coords && (tracking || isRestarting)) {
+      if (!coords && tracking) {
         try {
           const latest = await NativeLocationService.getMostRecentLocation()
           if (latest) {
@@ -83,7 +79,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
     }
 
     syncInitialLocation()
-  }, [tracking, isRestarting, coords])
+  }, [tracking, coords])
 
   /**
    * Subscribes to real-time location updates from native service
@@ -207,53 +203,19 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
     setTracking(false)
   }, [])
 
-  /**
-   * Restarts the service with new settings
-   * Includes delay for Android to release foreground service resources
-   * @param newSettings Settings for the new service instance
-   */
-  /** False when nothing was cycled: tracking was off, or a restart was already in flight. */
-  const restartTracking = useCallback(
-    async (newSettings?: Settings): Promise<boolean> => {
-      // Only restart if tracking is active - settings are persisted separately,
-      // so they'll be picked up when the user starts tracking later.
-      if (!isTrackingRef.current) {
-        logger.debug("[useLocationTracking] Not tracking, skip restart (settings saved separately)")
-        return false
-      }
+  /** Sends new settings to the running service as one START, which reloads them without stopping it; false while tracking is off. */
+  const restartTracking = useCallback(async (newSettings?: Settings): Promise<boolean> => {
+    // Only restart if tracking is active - settings are persisted separately,
+    // so they'll be picked up when the user starts tracking later.
+    if (!isTrackingRef.current) {
+      logger.debug("[useLocationTracking] Not tracking, skip restart (settings saved separately)")
+      return false
+    }
 
-      if (restartingRef.current) {
-        logger.debug("[useLocationTracking] Restart already in progress, queuing")
-        restartQueuedRef.current = true
-        return false
-      }
-
-      logger.debug("[useLocationTracking] Restarting service")
-      setIsRestarting(true)
-      restartingRef.current = true
-
-      try {
-        stopTracking()
-
-        // Android requires delay to fully release foreground service
-        await new Promise<void>((resolve) => setTimeout(resolve, SERVICE_RESTART_DELAY_MS))
-
-        await startTracking(newSettings ?? settingsRef.current)
-        return true
-      } finally {
-        restartingRef.current = false
-        setIsRestarting(false)
-
-        // Process queued restart if any
-        if (restartQueuedRef.current) {
-          restartQueuedRef.current = false
-          logger.debug("[useLocationTracking] Processing queued restart")
-          setTimeout(() => restartTracking(settingsRef.current), RESTART_DEBOUNCE_MS)
-        }
-      }
-    },
-    [startTracking, stopTracking]
-  )
+    logger.debug("[useLocationTracking] Restarting service")
+    await NativeLocationService.start(newSettings ?? settingsRef.current)
+    return true
+  }, [])
 
   /**
    * Restarts the service when the user wants tracking but no started service is alive.
@@ -396,14 +358,12 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
   useEffect(() => {
     return () => {
       logger.debug("[useLocationTracking] React component unmounted (foreground service still running)")
-      restartQueuedRef.current = false
-      restartingRef.current = false
     }
   }, [])
 
   return {
     coords,
-    tracking: tracking || isRestarting,
+    tracking,
     startTracking,
     stopTracking,
     restartTracking,

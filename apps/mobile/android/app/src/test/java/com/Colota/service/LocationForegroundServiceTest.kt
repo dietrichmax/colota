@@ -1377,6 +1377,18 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `entering a zone ends a pending entry delay for it, so the delay cannot enter a second time`() {
+        val delay = Job()
+        setField("pendingPauseZone", homeGeofence)
+        setField("entryDelayJob", delay)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
+        assertTrue(delay.isCancelled)
+    }
+
+    @Test
     fun `enterPauseZone does not save anchor on entry`() = testScope.runTest {
         val location = mockLocation()
         setField("lastKnownLocation", location)
@@ -3753,6 +3765,25 @@ class LocationForegroundServiceTest {
 
         verify { service["handleZoneRecheckAction"]() }
         verify(exactly = 0) { service["handleStart"]() }
+    }
+
+    @Test
+    fun `a config reload keeps an active profile's values and hands the global ones to the profile manager as defaults`() {
+        every { dbHelper.getAllSettings() } returns mapOf("interval" to "5000", "syncInterval" to "0")
+        every { profileManager.activeConfig() } returns ProfileManager.ProfileConfig(
+            interval = 2000L, distance = 10f, syncInterval = 60,
+            profileName = "Stationary", profileId = 3, conditionType = ProfileConstants.CONDITION_STATIONARY
+        )
+
+        LocationForegroundService::class.java.getDeclaredMethod("loadConfigFromIntent", Intent::class.java)
+            .apply { isAccessible = true }.invoke(service, null)
+
+        val config = getField<ServiceConfig>("config")
+        assertEquals(2000L, config.interval)
+        assertEquals(60, config.syncIntervalSeconds)
+        assertEquals(0f, config.minUpdateDistance)
+        verify { profileManager.defaultInterval = 5000L }
+        verify { profileManager.defaultSyncInterval = 0 }
     }
 
     /** Promoting a stop into a start would resurrect tracking the user just ended. */

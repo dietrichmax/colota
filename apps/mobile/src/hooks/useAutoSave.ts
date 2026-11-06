@@ -26,8 +26,7 @@ export function useAutoSave() {
   const messageTimeout = useTimeout()
   const pending = useRef<(() => void) | null>(null)
 
-  // A running service reads its config only at start. Not in the background: JS timers are paused
-  // there, so restartTracking would stop the service and not start it again.
+  // A running service reads its config only at start. Not in the background, where Android may refuse the START.
   useEffect(
     () => () => {
       if (AppState.currentState === "active") pending.current?.()

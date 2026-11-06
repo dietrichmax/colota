@@ -827,6 +827,20 @@ class ProfileManagerTest {
     }
 
     @Test
+    fun `activeConfig is the active profile's config, which a reload keeps over the global values`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile(intervalMs = 10000))
+        val manager = createManager()
+        assertNull(manager.activeConfig())
+
+        manager.onChargingStateChanged(true)
+
+        val config = manager.activeConfig()!!
+        assertEquals(10000L, config.interval)
+        assertEquals("Charging", config.profileName)
+        assertEquals(ProfileConstants.CONDITION_CHARGING, config.conditionType)
+    }
+
+    @Test
     fun `does not reapply config when same profile matches with same settings`() = runTest {
         val profile = chargingProfile()
         every { profileHelper.getEnabledProfiles() } returns listOf(profile)

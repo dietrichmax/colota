@@ -1080,6 +1080,10 @@ class LocationForegroundService : Service() {
     }
 
     private fun enterPauseZone(geofence: GeofenceHelper.Geofence) {
+        // A start can enter from a fresh fix while an entry delay for the zone is pending; that delay would enter again.
+        entryDelayJob?.cancel()
+        entryDelayJob = null
+        pendingPauseZone = null
         insidePauseZone = true
         currentZoneName = geofence.name
         currentZoneGeofence = geofence
@@ -1598,12 +1602,7 @@ class LocationForegroundService : Service() {
     /** Hot-swaps GPS interval and sync config on profile change. */
     private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int, conditionType: String) {
         val isStationary = conditionType == ProfileConstants.CONDITION_STATIONARY
-        config = config.copy(
-            interval = interval,
-            // A distance filter would drop every stationary point (each ~0m from the last), defeating the heartbeat.
-            minUpdateDistance = if (isStationary) 0f else distance,
-            syncIntervalSeconds = syncInterval
-        )
+        config = config.withProfile(interval, distance, syncInterval, conditionType)
 
         pushConfigToSyncManager()
 
@@ -1621,6 +1620,13 @@ class LocationForegroundService : Service() {
 
         AppLogger.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
     }
+
+    private fun ServiceConfig.withProfile(interval: Long, distance: Float, syncInterval: Int, conditionType: String) = copy(
+        interval = interval,
+        // A distance filter would drop every stationary point (each ~0m from the last), defeating the heartbeat.
+        minUpdateDistance = if (conditionType == ProfileConstants.CONDITION_STATIONARY) 0f else distance,
+        syncIntervalSeconds = syncInterval
+    )
 
     private fun scheduleStationaryHeartbeat() {
         stationaryHeartbeatArmed = true
@@ -1688,19 +1694,24 @@ class LocationForegroundService : Service() {
     }
 
     private fun loadConfigFromIntent(intent: Intent?) {
-        config = if (intent != null) {
+        val loaded = if (intent != null) {
             ServiceConfig.fromIntent(intent, dbHelper)
         } else {
             ServiceConfig.fromDatabase(dbHelper)
         }
 
-        pushConfigToSyncManager()
-
         // Defaults for ProfileManager to revert to when no profile matches
-        profileManager.defaultInterval = config.interval
-        profileManager.defaultDistance = config.minUpdateDistance
-        profileManager.defaultSyncInterval = config.syncIntervalSeconds
-        profileManager.defaultAccuracyMode = config.accuracyMode
+        profileManager.defaultInterval = loaded.interval
+        profileManager.defaultDistance = loaded.minUpdateDistance
+        profileManager.defaultSyncInterval = loaded.syncIntervalSeconds
+        profileManager.defaultAccuracyMode = loaded.accuracyMode
+
+        // A START on a running service reloads the global values; an active profile keeps its own.
+        config = profileManager.activeConfig()
+            ?.let { loaded.withProfile(it.interval, it.distance, it.syncInterval, it.conditionType) }
+            ?: loaded
+
+        pushConfigToSyncManager()
 
         val parsedFieldMap = PayloadBuilder.parseFieldMap(config.fieldMap) ?: emptyMap()
         val parsedCustomFields = PayloadBuilder.parseCustomFields(config.customFields) ?: emptyMap()

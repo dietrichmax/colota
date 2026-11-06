@@ -293,15 +293,19 @@ class ProfileManager(
         AppLogger.i(TAG, "Activated profile: ${profile.name} (interval=${profile.intervalMs}ms, sync=${profile.syncIntervalSeconds}s)")
 
         LocationServiceModule.sendProfileSwitchEvent(profile.name, profile.id)
-        onConfigSwitch(ProfileConfig(
-            interval = profile.intervalMs,
-            distance = profile.minUpdateDistance,
-            syncInterval = profile.syncIntervalSeconds,
-            profileName = profile.name,
-            profileId = profile.id,
-            conditionType = profile.conditionType,
-        ))
+        onConfigSwitch(configOf(profile))
     }
+
+    fun activeConfig(): ProfileConfig? = activeProfile?.let(::configOf)
+
+    private fun configOf(profile: ProfileHelper.CachedProfile) = ProfileConfig(
+        interval = profile.intervalMs,
+        distance = profile.minUpdateDistance,
+        syncInterval = profile.syncIntervalSeconds,
+        profileName = profile.name,
+        profileId = profile.id,
+        conditionType = profile.conditionType,
+    )
 
     private fun scheduleDeactivation(profile: ProfileHelper.CachedProfile) {
         if (deactivationJob?.isActive == true) return // already scheduled
