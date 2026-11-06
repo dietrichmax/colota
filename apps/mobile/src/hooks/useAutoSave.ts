@@ -3,7 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { AppState } from "react-native"
 import { useTimeout } from "./useTimeout"
 import { AUTOSAVE_DEBOUNCE_MS, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 import { logger } from "../utils/logger"
@@ -23,6 +24,16 @@ export function useAutoSave() {
   const saveTimeout = useTimeout()
   const restartTimeout = useTimeout()
   const messageTimeout = useTimeout()
+  const pending = useRef<(() => void) | null>(null)
+
+  // A running service reads its config only at start. Not in the background: JS timers are paused
+  // there, so restartTracking would stop the service and not start it again.
+  useEffect(
+    () => () => {
+      if (AppState.currentState === "active") pending.current?.()
+    },
+    []
+  )
 
   const announce = useCallback(
     (text: string, failed: boolean) => {
@@ -53,7 +64,8 @@ export function useAutoSave() {
    */
   const debouncedSaveAndRestart = useCallback(
     (saveFn: () => Promise<void>, restartFn: () => Promise<boolean>) => {
-      saveTimeout.set(async () => {
+      const run = async () => {
+        pending.current = null
         setSaving(true)
         try {
           await saveFn()
@@ -66,7 +78,9 @@ export function useAutoSave() {
         // Restart immediately: the input was already debounced by saveTimeout.
         restartTimeout.clear()
         await runRestart(restartFn)
-      }, AUTOSAVE_DEBOUNCE_MS)
+      }
+      pending.current = run
+      saveTimeout.set(run, AUTOSAVE_DEBOUNCE_MS)
     },
     [saveTimeout, restartTimeout, runRestart, announce]
   )
@@ -79,10 +93,16 @@ export function useAutoSave() {
   const immediateSaveAndRestart = useCallback(
     (saveFn: () => Promise<void>, restartFn: () => Promise<boolean>) => {
       saveTimeout.clear()
+      pending.current = null
       setSaving(true)
       saveFn()
         .then(() => {
-          restartTimeout.set(() => runRestart(restartFn), AUTOSAVE_DEBOUNCE_MS)
+          const restart = () => {
+            pending.current = null
+            runRestart(restartFn)
+          }
+          pending.current = restart
+          restartTimeout.set(restart, AUTOSAVE_DEBOUNCE_MS)
         })
         .catch((err) => {
           setSaving(false)
