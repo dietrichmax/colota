@@ -164,7 +164,7 @@ class ProfileManager(
                     if (active.intervalMs != matchingProfile.intervalMs ||
                         active.minUpdateDistance != matchingProfile.minUpdateDistance ||
                         active.syncIntervalSeconds != matchingProfile.syncIntervalSeconds ||
-                        active.accuracyThreshold != matchingProfile.accuracyThreshold) {
+                        compareValues(active.accuracyThreshold, matchingProfile.accuracyThreshold) != 0) {
                         activateProfile(matchingProfile)
                     }
                     return
