@@ -32,8 +32,17 @@ data class ServiceConfig(
     val customFields: String? = null,
     val httpMethod: String = "POST",
     val apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
-    val overlandBatchSize: Int = 50
+    val overlandBatchSize: Int = 50,
+    val sendInRegions: Boolean = false
 ) {
+    /** Current geofences have a shape only in a field-mapped POST body or an Overland batch. */
+    val reportsGeofences: Boolean
+        get() = sendInRegions && when (apiFormat) {
+            ApiFormat.OVERLAND_BATCH -> true
+            ApiFormat.FIELD_MAPPED -> httpMethod.equals("POST", ignoreCase = true)
+            ApiFormat.TRACCAR_JSON -> false
+        }
+
     companion object {
         internal fun deriveApiFormat(apiTemplate: String, httpMethod: String, dawarichMode: String): ApiFormat = when {
             apiTemplate == "traccar" && httpMethod == "POST" -> ApiFormat.TRACCAR_JSON
@@ -65,7 +74,8 @@ data class ServiceConfig(
                 customFields = saved["customFields"],
                 httpMethod = httpMethod,
                 apiFormat = apiFormat,
-                overlandBatchSize = saved["overlandBatchSize"]?.toIntOrNull()?.coerceIn(1, 500) ?: 50
+                overlandBatchSize = saved["overlandBatchSize"]?.toIntOrNull()?.coerceIn(1, 500) ?: 50,
+                sendInRegions = saved["sendInRegions"]?.toBoolean() ?: false
             )
         }
 
@@ -113,7 +123,8 @@ data class ServiceConfig(
                 customFields = customFieldsJson ?: dbConfig.customFields,
                 httpMethod = httpMethod,
                 apiFormat = apiFormat,
-                overlandBatchSize = (config.getIntOrNull("overlandBatchSize") ?: dbConfig.overlandBatchSize).coerceIn(1, 500)
+                overlandBatchSize = (config.getIntOrNull("overlandBatchSize") ?: dbConfig.overlandBatchSize).coerceIn(1, 500),
+                sendInRegions = config.getBooleanOrNull("sendInRegions") ?: dbConfig.sendInRegions
             )
         }
 
@@ -141,7 +152,8 @@ data class ServiceConfig(
                 apiFormat = if (extras.containsKey("apiFormat"))
                     ApiFormat.fromWire(extras.getString("apiFormat"))
                 else dbConfig.apiFormat,
-                overlandBatchSize = extras.getIntOrDefault("overlandBatchSize", dbConfig.overlandBatchSize).coerceIn(1, 500)
+                overlandBatchSize = extras.getIntOrDefault("overlandBatchSize", dbConfig.overlandBatchSize).coerceIn(1, 500),
+                sendInRegions = extras.getBooleanOrDefault("sendInRegions", dbConfig.sendInRegions)
             )
         }
     }
@@ -164,6 +176,7 @@ data class ServiceConfig(
             putExtra("httpMethod", httpMethod)
             putExtra("apiFormat", apiFormat.wireName)
             putExtra("overlandBatchSize", overlandBatchSize)
+            putExtra("sendInRegions", sendInRegions)
         }
     }
 }

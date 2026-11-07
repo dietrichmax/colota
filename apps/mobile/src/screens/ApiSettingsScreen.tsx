@@ -32,14 +32,17 @@ import {
   RadioRow,
   Button,
   TextField,
-  IconButton
+  IconButton,
+  SettingRow,
+  Toggle
 } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
   buildOverlandBatchPayload,
   isTraccarJsonFormat,
-  isOverlandFormat
+  isOverlandFormat,
+  supportsGeofenceReporting
 } from "../utils/apiPayload"
 import { HIT_SLOP_LG, space, STATE_LAYER_ALPHA } from "../constants"
 import { radius } from "@colota/shared"
@@ -86,6 +89,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
   const [localTemplate, setLocalTemplate] = useState<ApiTemplateName>(settings.apiTemplate || "custom")
   const [localHttpMethod, setLocalHttpMethod] = useState<HttpMethod>(settings.httpMethod || "POST")
   const [localDawarichMode, setLocalDawarichMode] = useState<DawarichMode>(settings.dawarichMode || "single")
+  const [localSendInRegions, setLocalSendInRegions] = useState(settings.sendInRegions)
   const [copied, setCopied] = useState(false)
   const isInstantSync = settings.syncInterval === 0
   const isGetMethod = localHttpMethod === "GET"
@@ -94,6 +98,13 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
   const batchDisabledReason = isInstantSync
     ? t("requestFormat.dawarich.batch.needsInterval")
     : t("requestFormat.dawarich.batch.needsPost")
+  const inRegionsAvailable = supportsGeofenceReporting(localTemplate, localHttpMethod, localDawarichMode)
+  const inRegionsOn = inRegionsAvailable && localSendInRegions
+  const inRegionsHint = inRegionsAvailable
+    ? t("requestFormat.inRegions.hint")
+    : isTraccarJsonFormat(localTemplate, localHttpMethod)
+      ? t("requestFormat.geofences.noTraccar")
+      : t("requestFormat.geofences.needsPost")
   const copiedTimeout = useTimeout()
   const {
     saving,
@@ -147,7 +158,8 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
           batteryLevel: 0.85,
           batteryState: "unplugged",
           deviceId,
-          timestamp: "2025-02-12T13:00:00Z"
+          timestamp: "2025-02-12T13:00:00Z",
+          inregions: inRegionsOn ? ["Home"] : undefined
         }),
         null,
         2
@@ -198,8 +210,9 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
     }
 
     const entries = params.map((p) => `  "${p.key}": ${isNaN(Number(p.value)) ? `"${p.value}"` : p.value}`)
+    if (inRegionsOn) entries.push(`  "inregions": ["Home"]`)
     return "{\n" + entries.join(",\n") + "\n}"
-  }, [localFieldMap, localCustomFields, localHttpMethod, localTemplate, localDawarichMode])
+  }, [localFieldMap, localCustomFields, localHttpMethod, localTemplate, localDawarichMode, inRegionsOn])
 
   /**
    * Build sanitized settings from current field map, custom fields, and template.
@@ -240,10 +253,11 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
         customFields: sanitizedCustomFields,
         apiTemplate: newTemplate,
         httpMethod: newHttpMethod,
-        dawarichMode: newDawarichMode
+        dawarichMode: newDawarichMode,
+        sendInRegions: localSendInRegions
       }
     },
-    [settings]
+    [settings, localSendInRegions]
   )
 
   /**
@@ -456,6 +470,36 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
       saveImmediately(localFieldMap, newCustomFields, localTemplate, localHttpMethod, mode)
     },
     [localFieldMap, localCustomFields, localTemplate, localHttpMethod, saveImmediately]
+  )
+
+  const handleInRegionsChange = useCallback(
+    (value: boolean) => {
+      setLocalSendInRegions(value)
+      const base = buildSanitizedSettings(
+        localFieldMap,
+        localCustomFields,
+        localTemplate,
+        localHttpMethod,
+        localDawarichMode
+      )
+      if (!base) return
+      const next = { ...base, sendInRegions: value }
+      immediateSaveAndRestart(
+        () => setSettings(next),
+        () => restartTracking(next)
+      )
+    },
+    [
+      localFieldMap,
+      localCustomFields,
+      localTemplate,
+      localHttpMethod,
+      localDawarichMode,
+      buildSanitizedSettings,
+      immediateSaveAndRestart,
+      setSettings,
+      restartTracking
+    ]
   )
 
   const handleCopyPayload = useCallback(async () => {
@@ -682,6 +726,21 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
             </Text>
           </View>
         )}
+
+        <View style={styles.section}>
+          <SectionTitle>{t("requestFormat.section.geofences")}</SectionTitle>
+          <Card rows>
+            <SettingRow label={t("requestFormat.inRegions")} hint={inRegionsHint} disabled={!inRegionsAvailable}>
+              <Toggle
+                accessibilityLabel={t("requestFormat.inRegions")}
+                value={inRegionsOn}
+                disabled={!inRegionsAvailable}
+                onValueChange={handleInRegionsChange}
+                testID="inregions-toggle"
+              />
+            </SettingRow>
+          </Card>
+        </View>
 
         {/* Example payload preview */}
         <View style={styles.exampleSection}>

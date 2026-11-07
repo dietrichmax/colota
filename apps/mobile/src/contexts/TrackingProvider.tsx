@@ -82,6 +82,7 @@ export function parseRawSettings(allRaw: Record<string, string>): Settings {
     httpMethod: (allRaw.httpMethod as HttpMethod) ?? DEFAULT_SETTINGS.httpMethod,
     dawarichMode: (allRaw.dawarichMode as DawarichMode) ?? DEFAULT_SETTINGS.dawarichMode,
     overlandBatchSize: parsePositiveInt(allRaw.overlandBatchSize ?? "", DEFAULT_SETTINGS.overlandBatchSize),
+    sendInRegions: allRaw.sendInRegions === "true",
 
     hasCompletedSetup: allRaw.hasCompletedSetup === "true"
   }

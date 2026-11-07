@@ -82,6 +82,26 @@ When exiting a [pause zone](/docs/guides/geofencing#anchor-points), Colota sends
 
 A zone [heartbeat](/docs/guides/geofencing) produces the same kind of synthetic point while you are still inside the zone: the zone centre, `acc` 0, timestamped when the heartbeat fired. Filter on both if you want to tell app-generated points from real fixes.
 
+### Geofences
+
+With **Send current geofences** on, every point carries `inregions`, the key OwnTracks uses: the names of the enabled geofences the point is in, pausing or not.
+
+```json
+{
+  "lat": 48.1351,
+  "lon": 11.582,
+  "acc": 12,
+  "tst": 1704067200,
+  "inregions": ["Home"]
+}
+```
+
+- The field is left out while the point is in no geofence
+- It keeps its name whatever the field mapping says
+- In an Overland batch it sits in each feature's `properties`
+- A geofence counts as left once two fixes in a row lie further out than its radius plus their accuracy, so the point that first leaves still names it
+- Turning the switch on, or creating a zone where you stand, names the zone from the next point on
+
 ### Custom fields
 
 Custom static fields (configured in Request format) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.
