@@ -742,7 +742,7 @@ describe("SetupImportScreen", () => {
     })
 
     it("calls createProfile on apply with all fields", async () => {
-      const { getByText } = renderScreen(encode({ profiles: [validProfile] }))
+      const { getByText } = renderScreen(encode({ profiles: [{ ...validProfile, accuracyThreshold: 150 }] }))
 
       fireEvent.press(getByText("Apply configuration"))
 
@@ -757,6 +757,7 @@ describe("SetupImportScreen", () => {
         priority: 20,
         activationDelay: 5,
         deactivationDelay: 30,
+        accuracyThreshold: 150,
         enabled: true,
         condition: { type: "speed_above", speedThreshold: 8.33 }
       })

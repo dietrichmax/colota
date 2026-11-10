@@ -131,6 +131,8 @@ class LocationForegroundService : Service() {
     @Volatile private var isMotionlessPaused = false
 
     @Volatile private lateinit var config: ServiceConfig
+    // The active profile's accuracy threshold; kept out of config so deactivation restores the global filter.
+    @Volatile private var profileAccuracyThreshold: Float? = null
 
     companion object {
         private const val TAG = "LocationService"
@@ -250,7 +252,7 @@ class LocationForegroundService : Service() {
         profileManager = ProfileManager(
             profileHelper, serviceScope!!,
             onConfigSwitch = { config ->
-                applyProfileConfig(config.interval, config.distance, config.syncInterval, config.conditionType)
+                applyProfileConfig(config.interval, config.distance, config.syncInterval, config.conditionType, config.accuracyThreshold)
             },
             onStationaryChanged = ::handleStationaryChanged
         )
@@ -991,8 +993,13 @@ class LocationForegroundService : Service() {
         // Stamped before the filters: the header time is the last fix received, saved or not.
         lastFixEpochMs = location.time
         updateNotification()
-        if (config.filterInaccurateLocations && location.accuracy > config.accuracyThreshold) {
-            AppLogger.d(TAG, "Location filtered: accuracy ${location.accuracy}m > threshold ${config.accuracyThreshold}m")
+        // Profiles switch on what the global filter passes; an active profile's threshold decides only what is recorded.
+        val globalThreshold = config.accuracyThreshold.takeIf { config.filterInaccurateLocations }
+        val recordThreshold = profileAccuracyThreshold ?: globalThreshold
+        val passesGlobal = globalThreshold == null || location.accuracy <= globalThreshold
+        val recordable = recordThreshold == null || location.accuracy <= recordThreshold
+        if (!passesGlobal && !recordable) {
+            AppLogger.d(TAG, "Location filtered: accuracy ${location.accuracy}m > threshold ${recordThreshold}m")
             return
         }
 
@@ -1029,7 +1036,11 @@ class LocationForegroundService : Service() {
         applySpeedFallback(location)
 
         // Before distance filter so stationary locations still update the speed buffer
-        profileManager.onLocationUpdate(location)
+        if (passesGlobal) profileManager.onLocationUpdate(location)
+        if (!recordable) {
+            AppLogger.d(TAG, "Location filtered: accuracy ${location.accuracy}m > profile threshold ${recordThreshold}m")
+            return
+        }
 
         // Software-side distance filter. Enforces config.minUpdateDistance for DB/sync
         // regardless of the OS filter (which passes 0m to when a location-dependent
@@ -1128,6 +1139,10 @@ class LocationForegroundService : Service() {
     }
 
     private fun enterPauseZone(geofence: GeofenceHelper.Geofence) {
+        // A start can enter from a fresh fix while an entry delay for the zone is pending; that delay would enter again.
+        entryDelayJob?.cancel()
+        entryDelayJob = null
+        pendingPauseZone = null
         insidePauseZone = true
         currentZoneName = geofence.name
         currentZoneGeofence = geofence
@@ -1644,14 +1659,12 @@ class LocationForegroundService : Service() {
     // ── Profile hot-swap ────────────────────────────────────────────────
 
     /** Hot-swaps GPS interval and sync config on profile change. */
-    private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int, conditionType: String) {
+    private fun applyProfileConfig(
+        interval: Long, distance: Float, syncInterval: Int, conditionType: String, accuracyThreshold: Float?
+    ) {
         val isStationary = conditionType == ProfileConstants.CONDITION_STATIONARY
-        config = config.copy(
-            interval = interval,
-            // A distance filter would drop every stationary point (each ~0m from the last), defeating the heartbeat.
-            minUpdateDistance = if (isStationary) 0f else distance,
-            syncIntervalSeconds = syncInterval
-        )
+        profileAccuracyThreshold = accuracyThreshold
+        config = config.withProfile(interval, distance, syncInterval, conditionType)
 
         pushConfigToSyncManager()
 
@@ -1667,8 +1680,15 @@ class LocationForegroundService : Service() {
 
         refreshNotificationForCurrentState()
 
-        AppLogger.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
+        AppLogger.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s, accuracy=${accuracyThreshold?.let { "${it}m" } ?: "global"}")
     }
+
+    private fun ServiceConfig.withProfile(interval: Long, distance: Float, syncInterval: Int, conditionType: String) = copy(
+        interval = interval,
+        // A distance filter would drop every stationary point (each ~0m from the last), defeating the heartbeat.
+        minUpdateDistance = if (conditionType == ProfileConstants.CONDITION_STATIONARY) 0f else distance,
+        syncIntervalSeconds = syncInterval
+    )
 
     private fun scheduleStationaryHeartbeat() {
         stationaryHeartbeatArmed = true
@@ -1736,19 +1756,24 @@ class LocationForegroundService : Service() {
     }
 
     private fun loadConfigFromIntent(intent: Intent?) {
-        config = if (intent != null) {
+        val loaded = if (intent != null) {
             ServiceConfig.fromIntent(intent, dbHelper)
         } else {
             ServiceConfig.fromDatabase(dbHelper)
         }
 
-        pushConfigToSyncManager()
-
         // Defaults for ProfileManager to revert to when no profile matches
-        profileManager.defaultInterval = config.interval
-        profileManager.defaultDistance = config.minUpdateDistance
-        profileManager.defaultSyncInterval = config.syncIntervalSeconds
-        profileManager.defaultAccuracyMode = config.accuracyMode
+        profileManager.defaultInterval = loaded.interval
+        profileManager.defaultDistance = loaded.minUpdateDistance
+        profileManager.defaultSyncInterval = loaded.syncIntervalSeconds
+        profileManager.defaultAccuracyMode = loaded.accuracyMode
+
+        // A START on a running service reloads the global values; an active profile keeps its own.
+        config = profileManager.activeConfig()
+            ?.let { loaded.withProfile(it.interval, it.distance, it.syncInterval, it.conditionType) }
+            ?: loaded
+
+        pushConfigToSyncManager()
 
         val parsedFieldMap = PayloadBuilder.parseFieldMap(config.fieldMap) ?: emptyMap()
         val parsedCustomFields = PayloadBuilder.parseCustomFields(config.customFields) ?: emptyMap()

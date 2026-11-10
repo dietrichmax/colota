@@ -24,7 +24,7 @@ The interval and movement threshold sit under **Custom** in the Recording group;
 
 :::info[Tracking profiles override two of these]
 
-If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies its own interval, movement threshold and sync interval for as long as its condition holds. The Recording and Sync interval groups then open with a line naming the profile and the values in force, and the rows below stay the defaults the app falls back to when no profile applies. A profile is the usual reason fixes arrive at a different rate than the one set here.
+If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies its own interval, movement threshold and sync interval, and its own accuracy filter if it has one, for as long as its condition holds. The Recording and Sync interval groups then open with a line naming the profile and the values in force, as does the Accuracy filter card when the profile has its own filter, and the rows below stay the defaults the app falls back to when no profile applies. A profile is the usual reason fixes arrive at a different rate than the one set here.
 
 :::
 

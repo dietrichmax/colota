@@ -157,7 +157,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Geofence entry delay - keeps recording for 3.5× the configured tracking interval before pausing on zone entry, logging real arrival points for backends like GeoPulse
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
 - Battery critical shutdown (below 5% while unplugged), detected via a battery-broadcast receiver so it fires even while GPS is paused in a zone
-- Location accuracy filtering and the global positioning accuracy mode
+- Location accuracy filtering (profiles switch on what the global filter passes; an active profile's own threshold decides what is recorded) and the global positioning accuracy mode
 - Stationary detection - slows GPS to the profile's interval after 60s of fixes without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). It keeps working inside a pause zone and during an entry delay, since fixes reach `ProfileManager` before the in-zone drop; only a hold that stops the stream can prevent a verdict.
 - Queuing data for server sync
 
@@ -261,7 +261,7 @@ When both WiFi and motionless pause are enabled, GPS only resumes when both cond
 
 ### ProfileManager
 
-Evaluates tracking profile conditions and switches GPS settings automatically. Supports eight condition types: charging, Android Auto / car mode, Bluetooth device, Wi-Fi (any network), Wi-Fi network (named SSID), speed above threshold, speed below threshold and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
+Evaluates tracking profile conditions and switches GPS settings automatically. Supports eight condition types: charging, Android Auto / car mode, Bluetooth device, Wi-Fi (any network), Wi-Fi network (named SSID), speed above threshold, speed below threshold and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match. A switch hands the service the profile's interval, distance, sync interval and accuracy threshold; the service keeps the threshold outside `ServiceConfig`, so a switch to the defaults clears it and the global filter applies again.
 
 The stationary condition is decided by the fixes and never by a timer. `evaluateStationaryState` tracks a run of consecutive fixes below 0.3 m/s and the verdict is reached by the fix that completes the window, so a stream that stops delivering cannot produce one. A gap restarts the run unless it is within three times the previous gap, or 60 seconds if that is larger, and no gap over 15 minutes is ever tolerated. Calibrating on the previous gap keeps a sparse Doze cadence usable while a fast stream that goes quiet is treated as unobserved time rather than stillness; the window length deliberately plays no part, or a long window would license a long blackout. The motion sensor discards a run in progress as well as an active verdict.
 
@@ -420,7 +420,7 @@ Supporting utilities in `mapUtils.ts`:
 
 | Hook | Purpose |
 | --- | --- |
-| `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions and location state. On app foreground it reconciles the user's intent against real service liveness and restarts a service that died or was never started |
+| `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions and location state. On app foreground it reconciles the user's intent against real service liveness and restarts a service that died or was never started. A settings change reaches the running service as one START, never a stop and a start, and the service keeps an active profile's values when it reloads |
 | `useTheme` | Provides theme colors, mode, and toggle from ThemeProvider context |
 | `useAutoSave` | Debounced auto-save pattern for settings screens |
 | `useTimeout` | Managed timeout with automatic cleanup on unmount |

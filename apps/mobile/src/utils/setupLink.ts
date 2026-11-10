@@ -104,6 +104,6 @@ function stripGeofence({ id: _id, createdAt: _createdAt, enabled: _enabled, ...r
   return rest
 }
 
-function stripProfile({ id: _id, createdAt: _createdAt, ...rest }: TrackingProfile) {
-  return rest
+function stripProfile({ id: _id, createdAt: _createdAt, accuracyThreshold, ...rest }: TrackingProfile) {
+  return accuracyThreshold === null ? rest : { ...rest, accuracyThreshold }
 }

@@ -1,4 +1,5 @@
 import { renderHook, act } from "@testing-library/react-native"
+import { AppState } from "react-native"
 import { useAutoSave } from "../useAutoSave"
 import { AUTOSAVE_DEBOUNCE_MS, SAVE_SUCCESS_DISPLAY_MS } from "../../constants"
 
@@ -248,6 +249,184 @@ describe("useAutoSave", () => {
       })
 
       expect(result.current.saving).toBe(false)
+      expect(restartFn).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("leaving the screen inside the debounce", () => {
+    beforeEach(() => {
+      Object.assign(AppState, { currentState: "active" })
+    })
+
+    it("saves a pending typed change at once, or nothing ever stores it", async () => {
+      const saveFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      act(() => {
+        result.current.debouncedSaveAndRestart(saveFn, restartFn)
+      })
+
+      await act(async () => {
+        unmount()
+      })
+
+      expect(saveFn).toHaveBeenCalledTimes(1)
+      expect(restartFn).toHaveBeenCalledTimes(1)
+    })
+
+    it("restarts at once after a toggle, since the running service reads its config only at start", async () => {
+      const saveFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      await act(async () => {
+        result.current.immediateSaveAndRestart(saveFn, restartFn)
+      })
+
+      await act(async () => {
+        unmount()
+      })
+
+      expect(saveFn).toHaveBeenCalledTimes(1)
+      expect(restartFn).toHaveBeenCalledTimes(1)
+    })
+
+    it("restarts once, for the toggle that replaced a typed change", async () => {
+      const typedSave = jest.fn().mockResolvedValue(undefined)
+      const typedRestart = jest.fn().mockResolvedValue(true)
+      const toggleSave = jest.fn().mockResolvedValue(undefined)
+      const toggleRestart = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      act(() => {
+        result.current.debouncedSaveAndRestart(typedSave, typedRestart)
+      })
+      await act(async () => {
+        result.current.immediateSaveAndRestart(toggleSave, toggleRestart)
+      })
+
+      await act(async () => {
+        unmount()
+      })
+
+      expect(typedSave).not.toHaveBeenCalled()
+      expect(typedRestart).not.toHaveBeenCalled()
+      expect(toggleRestart).toHaveBeenCalledTimes(1)
+    })
+
+    it("never writes the older typed change over a toggle whose save is still running", async () => {
+      const typedSave = jest.fn().mockResolvedValue(undefined)
+      const toggleSave = jest.fn(() => new Promise<void>(() => {}))
+      const restartFn = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      act(() => {
+        result.current.debouncedSaveAndRestart(typedSave, restartFn)
+      })
+      act(() => {
+        result.current.immediateSaveAndRestart(toggleSave, restartFn)
+      })
+
+      await act(async () => {
+        unmount()
+      })
+
+      expect(typedSave).not.toHaveBeenCalled()
+    })
+
+    it("still restarts for a toggle whose save lands after the screen closed", async () => {
+      let landSave = () => {}
+      const saveFn = jest.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            landSave = resolve
+          })
+      )
+      const restartFn = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      act(() => {
+        result.current.immediateSaveAndRestart(saveFn, restartFn)
+      })
+      await act(async () => {
+        unmount()
+      })
+
+      await act(async () => {
+        landSave()
+      })
+      await act(async () => {
+        jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
+      })
+
+      expect(restartFn).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("leaving the screen after the debounce", () => {
+    beforeEach(() => {
+      Object.assign(AppState, { currentState: "active" })
+    })
+
+    it("does not restart again, since each restart cycles the service", async () => {
+      const saveFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      await act(async () => {
+        result.current.immediateSaveAndRestart(saveFn, restartFn)
+      })
+      await act(async () => {
+        jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
+      })
+
+      await act(async () => {
+        unmount()
+      })
+
+      expect(restartFn).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not save a typed change a second time", async () => {
+      const saveFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      act(() => {
+        result.current.debouncedSaveAndRestart(saveFn, restartFn)
+      })
+      await act(async () => {
+        jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
+      })
+
+      await act(async () => {
+        unmount()
+      })
+
+      expect(saveFn).toHaveBeenCalledTimes(1)
+      expect(restartFn).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("the screen closing while the app is in the background", () => {
+    beforeEach(() => {
+      Object.assign(AppState, { currentState: "background" })
+    })
+
+    it("does not restart, since JS timers are paused and the stopped service would not start again", async () => {
+      const saveFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
+      const { result, unmount } = renderHook(() => useAutoSave())
+
+      await act(async () => {
+        result.current.immediateSaveAndRestart(saveFn, restartFn)
+      })
+
+      await act(async () => {
+        unmount()
+      })
+
       expect(restartFn).not.toHaveBeenCalled()
     })
   })

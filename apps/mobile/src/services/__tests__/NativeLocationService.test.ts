@@ -560,6 +560,7 @@ describe("NativeLocationService", () => {
         condition: { type: "wifi_ssid", ssid: "HomeNet" },
         activationDelay: 0,
         deactivationDelay: 60,
+        accuracyThreshold: null,
         enabled: true
       })
 
@@ -578,6 +579,7 @@ describe("NativeLocationService", () => {
         condition: { type: "bluetooth_device", bluetoothAddress: "AA:BB:CC:DD:EE:FF", bluetoothName: "My Car" },
         activationDelay: 0,
         deactivationDelay: 60,
+        accuracyThreshold: null,
         enabled: true
       })
 
@@ -588,6 +590,57 @@ describe("NativeLocationService", () => {
           bluetoothName: "My Car"
         })
       )
+    })
+
+    it("reads a profile's accuracy threshold, and a missing one as null so the editor shows the global filter", async () => {
+      const row = {
+        id: 1,
+        name: "Driving",
+        intervalMs: 2000,
+        minUpdateDistance: 10,
+        syncIntervalSeconds: 0,
+        priority: 15,
+        conditionType: "speed_above",
+        speedThreshold: 13.89,
+        deactivationDelaySeconds: 30,
+        activationDelaySeconds: 0,
+        enabled: true,
+        createdAt: 1700000000
+      }
+      nativeMock.getProfiles.mockResolvedValueOnce([
+        { ...row, accuracyThreshold: 200 },
+        { ...row, id: 2 }
+      ])
+
+      const profiles = await NativeLocationService.getProfiles()
+
+      expect(profiles[0].accuracyThreshold).toBe(200)
+      expect(profiles[1].accuracyThreshold).toBeNull()
+    })
+
+    it("sends the accuracy threshold on create", async () => {
+      await NativeLocationService.createProfile({
+        name: "Driving",
+        interval: 2,
+        distance: 10,
+        syncInterval: 0,
+        priority: 15,
+        condition: { type: "speed_above", speedThreshold: 13.89 },
+        activationDelay: 0,
+        deactivationDelay: 30,
+        accuracyThreshold: 200,
+        enabled: true
+      })
+
+      expect(nativeMock.createProfile).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 200 }))
+    })
+
+    it("sends null to clear the accuracy threshold and leaves it out of an update that does not touch it", async () => {
+      await NativeLocationService.updateProfile({ id: 1, accuracyThreshold: null })
+      await NativeLocationService.updateProfile({ id: 2, enabled: false })
+
+      expect(nativeMock.updateProfile).toHaveBeenNthCalledWith(1, { id: 1, accuracyThreshold: null })
+      expect(nativeMock.updateProfile).toHaveBeenNthCalledWith(2, { id: 2, enabled: false })
     })
 
     it("clears the stored Bluetooth device when the condition no longer names one", async () => {

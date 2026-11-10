@@ -425,6 +425,8 @@ export interface TrackingProfile {
   activationDelay: number
   /** Seconds to wait before deactivating after condition stops matching */
   deactivationDelay: number
+  /** Metres; replaces the global accuracy filter while active. null follows the global setting */
+  accuracyThreshold: number | null
   /** Whether this profile is enabled */
   enabled: boolean
   createdAt?: number

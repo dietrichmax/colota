@@ -64,7 +64,8 @@ class ProfileHelperTest {
             "id", "name", "interval_ms", "min_update_distance",
             "sync_interval_seconds", "priority", "condition_type",
             "speed_threshold", "wifi_ssid", "bluetooth_address", "bluetooth_name",
-            "deactivation_delay_seconds", "activation_delay_seconds", "enabled", "created_at"
+            "deactivation_delay_seconds", "activation_delay_seconds", "enabled", "created_at",
+            "accuracy_threshold"
         )
 
         for ((idx, col) in columns.withIndex()) {
@@ -280,6 +281,69 @@ class ProfileHelperTest {
             ProfileHelper(mockk(relaxed = true)).getProfilesAsArray()
 
             verify { map.putString("wifiSsid", "HomeNet") }
+        } finally {
+            unmockkStatic(Arguments::class)
+        }
+    }
+
+    @Test
+    fun `getEnabledProfiles reads the accuracy threshold, and null where the profile follows the global filter`() {
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Driving", "interval_ms" to 2000L,
+                "min_update_distance" to 10f, "sync_interval_seconds" to 0,
+                "priority" to 15, "condition_type" to "speed_above",
+                "speed_threshold" to 13.89f, "deactivation_delay_seconds" to 30,
+                "accuracy_threshold" to 200f
+            ),
+            mapOf(
+                "id" to 2, "name" to "Charging", "interval_ms" to 10000L,
+                "min_update_distance" to 0f, "sync_interval_seconds" to 0,
+                "priority" to 10, "condition_type" to "charging",
+                "speed_threshold" to null, "deactivation_delay_seconds" to 60,
+                "accuracy_threshold" to null
+            )
+        ))
+        every { mockDb.query(any(), any(), eq("enabled = 1"), any(), any(), any(), any()) } returns cursor
+
+        val profiles = ProfileHelper(mockk(relaxed = true)).getEnabledProfiles()
+
+        assertEquals(200f, profiles[0].accuracyThreshold!!, 0.01f)
+        assertNull(profiles[1].accuracyThreshold)
+    }
+
+    @Test
+    fun `getProfilesAsArray hands the accuracy threshold to the editor, null when unset`() {
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Driving", "interval_ms" to 2000L,
+                "min_update_distance" to 10f, "sync_interval_seconds" to 0,
+                "priority" to 15, "condition_type" to "speed_above",
+                "speed_threshold" to 13.89f, "deactivation_delay_seconds" to 30,
+                "activation_delay_seconds" to 0, "enabled" to 1, "created_at" to 0,
+                "accuracy_threshold" to 200f
+            ),
+            mapOf(
+                "id" to 2, "name" to "Charging", "interval_ms" to 10000L,
+                "min_update_distance" to 0f, "sync_interval_seconds" to 0,
+                "priority" to 10, "condition_type" to "charging",
+                "speed_threshold" to null, "deactivation_delay_seconds" to 60,
+                "activation_delay_seconds" to 0, "enabled" to 1, "created_at" to 0,
+                "accuracy_threshold" to null
+            )
+        ))
+        every { mockDb.query(any(), any(), any(), any(), any(), any(), any()) } returns cursor
+
+        mockkStatic(Arguments::class)
+        try {
+            val map = mockk<WritableMap>(relaxed = true)
+            every { Arguments.createArray() } returns mockk(relaxed = true)
+            every { Arguments.createMap() } returns map
+
+            ProfileHelper(mockk(relaxed = true)).getProfilesAsArray()
+
+            verify { map.putDouble("accuracyThreshold", 200.0) }
+            verify { map.putNull("accuracyThreshold") }
         } finally {
             unmockkStatic(Arguments::class)
         }

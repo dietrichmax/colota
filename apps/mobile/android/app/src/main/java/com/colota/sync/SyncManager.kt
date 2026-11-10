@@ -101,6 +101,7 @@ class SyncManager(
     }
 
     fun startPeriodicSync() {
+        consecutiveFailures = 0
         AppLogger.d(TAG, "Starting periodic sync: interval=${syncIntervalSeconds}s, endpoint=${if (endpoint.isBlank()) "NONE" else AppLogger.maskSensitiveUrlValues(endpoint)}")
         syncJob = scope.launch {
             var resumingWait = false

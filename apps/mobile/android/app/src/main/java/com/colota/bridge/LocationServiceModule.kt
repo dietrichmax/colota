@@ -721,6 +721,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             bluetoothName = config.getStringOrNull("bluetoothName")?.takeIf { it.isNotBlank() },
             deactivationDelaySeconds = config.getInt("deactivationDelaySeconds"),
             activationDelaySeconds = config.getInt("activationDelaySeconds"),
+            accuracyThreshold = config.accuracyThresholdOrNull(),
         )
         afterProfileMutation(id > 0)
         id
@@ -746,6 +747,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             hasBluetoothDevice = config.hasKey("bluetoothAddress"),
             deactivationDelaySeconds = config.getIntOrNull("deactivationDelaySeconds"),
             activationDelaySeconds = config.getIntOrNull("activationDelaySeconds"),
+            accuracyThreshold = config.accuracyThresholdOrNull(),
+            hasAccuracyThreshold = config.hasKey("accuracyThreshold"),
             enabled = config.getBooleanOrNull("enabled"),
         )
         afterProfileMutation(changed)
@@ -758,6 +761,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         afterProfileMutation(changed)
         changed
     }
+
+    private fun ReadableMap.accuracyThresholdOrNull(): Float? =
+        if (hasKey("accuracyThreshold") && !isNull("accuracyThreshold")) getDouble("accuracyThreshold").toFloat() else null
 
     /** Uppercase, the form the connection broadcasts report, so the stored address compares directly. */
     private fun ReadableMap.bluetoothAddressOrNull(): String? =

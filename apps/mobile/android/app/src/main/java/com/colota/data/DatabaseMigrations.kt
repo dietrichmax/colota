@@ -108,5 +108,8 @@ object DatabaseMigrations {
             db.execSQL("ALTER TABLE $TABLE_PROFILES ADD COLUMN bluetooth_address TEXT")
             db.execSQL("ALTER TABLE $TABLE_PROFILES ADD COLUMN bluetooth_name TEXT")
         }
+        if (oldVersion < 10) {
+            db.execSQL("ALTER TABLE $TABLE_PROFILES ADD COLUMN accuracy_threshold REAL")
+        }
     }
 }

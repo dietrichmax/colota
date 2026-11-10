@@ -1,2 +1,6 @@
 - Password managers can now fill in the backup password
 - Fixed impossible position jumps, like a phone at home showing up on another continent under GPS spoofing, being recorded
+- Tracking profiles can set their own accuracy filter, looser or stricter than the one in Tracking & sync
+- Fixed a settings change not reaching tracking when the screen was left right after making it
+- Fixed tracking staying off when Colota was closed right after a settings change
+- An active tracking profile now stays in force when a setting changes or a shortcut or automation starts tracking

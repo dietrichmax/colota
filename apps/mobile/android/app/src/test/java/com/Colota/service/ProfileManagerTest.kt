@@ -31,6 +31,7 @@ class ProfileManagerTest {
     private var switchedSyncInterval: Int = 0
     private var switchedProfileName: String? = null
     private var switchedProfileId: Int? = null
+    private var switchedAccuracyThreshold: Float? = null
     private var switchCount = 0
     private var lastStationaryCallback: Boolean? = null
 
@@ -43,6 +44,7 @@ class ProfileManagerTest {
                 switchedSyncInterval = config.syncInterval
                 switchedProfileName = config.profileName
                 switchedProfileId = config.profileId
+                switchedAccuracyThreshold = config.accuracyThreshold
                 switchCount++
             },
             onStationaryChanged = { stationary ->
@@ -221,6 +223,7 @@ class ProfileManagerTest {
         switchedSyncInterval = 0
         switchedProfileName = null
         switchedProfileId = null
+        switchedAccuracyThreshold = null
         lastStationaryCallback = null
 
         mockkObject(com.Colota.bridge.LocationServiceModule)
@@ -263,6 +266,33 @@ class ProfileManagerTest {
         manager.onChargingStateChanged(false)
 
         assertEquals(0, switchCount)
+    }
+
+    // --- Accuracy threshold ---
+
+    @Test
+    fun `activating a profile hands the service its accuracy threshold`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile().copy(accuracyThreshold = 200f))
+
+        createManager().onChargingStateChanged(true)
+
+        assertEquals(200f, switchedAccuracyThreshold)
+    }
+
+    @Test
+    fun `deactivating hands the service no threshold, so the global accuracy filter applies again`() = testScope.runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(
+            chargingProfile(deactivationDelay = 0).copy(accuracyThreshold = 200f)
+        )
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        assertEquals(200f, switchedAccuracyThreshold)
+
+        manager.onChargingStateChanged(false)
+        advanceTimeBy(1_000)
+
+        assertNull(switchedProfileName)
+        assertNull(switchedAccuracyThreshold)
     }
 
     // --- Car mode condition ---
@@ -824,6 +854,39 @@ class ProfileManagerTest {
 
         assertEquals(5000L, switchedInterval)
         assertTrue(switchCount > countAfterActivate)
+    }
+
+    @Test
+    fun `activeConfig is the active profile's config, which a reload keeps over the global values`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile(intervalMs = 10000))
+        val manager = createManager()
+        assertNull(manager.activeConfig())
+
+        manager.onChargingStateChanged(true)
+
+        val config = manager.activeConfig()!!
+        assertEquals(10000L, config.interval)
+        assertEquals("Charging", config.profileName)
+        assertEquals(ProfileConstants.CONDITION_CHARGING, config.conditionType)
+    }
+
+    @Test
+    fun `reapplies an edited accuracy threshold on the active profile, cleared included`() = runTest {
+        every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile().copy(accuracyThreshold = 20f))
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        assertEquals(20f, switchedAccuracyThreshold)
+
+        every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile().copy(accuracyThreshold = 200f))
+        manager.invalidateProfiles()
+        manager.evaluate()
+        assertEquals(200f, switchedAccuracyThreshold)
+
+        every { profileHelper.getEnabledProfiles() } returns listOf(chargingProfile())
+        manager.invalidateProfiles()
+        manager.evaluate()
+        assertNull(switchedAccuracyThreshold)
+        assertEquals("Charging", switchedProfileName)
     }
 
     @Test

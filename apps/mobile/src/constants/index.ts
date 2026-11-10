@@ -24,8 +24,6 @@ export const LOG_FILTER_DEBOUNCE_MS = 200
 export const RETENTION_PRESET_DAYS = [30, 90, 365]
 /** A certificate this close to its notAfter reads as expiring: a CA round trip takes weeks. */
 export const CERT_EXPIRY_WARNING_DAYS = 30
-export const SERVICE_RESTART_DELAY_MS = 500
-export const RESTART_DEBOUNCE_MS = 100
 export const SETTINGS_READ_ATTEMPTS = 3
 export const SETTINGS_READ_RETRY_DELAY_MS = 150
 

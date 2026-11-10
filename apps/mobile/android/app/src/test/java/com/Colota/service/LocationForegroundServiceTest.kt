@@ -335,6 +335,44 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `an active profile's looser accuracy threshold records fixes the global filter drops, hidden from the profile rules`() = testScope.runTest {
+        setField("profileAccuracyThreshold", 200f)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(mockLocation(accuracy = 75f))
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { profileManager.onLocationUpdate(any()) }
+    }
+
+    @Test
+    fun `an active profile's stricter accuracy threshold keeps fixes out of the record but still shows them to the profile rules`() = testScope.runTest {
+        setField("profileAccuracyThreshold", 20f)
+        val location = mockLocation(accuracy = 30f)
+
+        invokeHandleLocationUpdate(location)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { profileManager.onLocationUpdate(location) }
+    }
+
+    @Test
+    fun `an active profile's accuracy threshold limits the record even with the global filter off`() = testScope.runTest {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            filterInaccurateLocations = false,
+            accuracyThreshold = 50f
+        ))
+        setField("profileAccuracyThreshold", 100f)
+        val location = mockLocation(accuracy = 150f)
+
+        invokeHandleLocationUpdate(location)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { profileManager.onLocationUpdate(location) }
+    }
+
+    @Test
     fun `handleLocationUpdate updates lastKnownLocation`() = testScope.runTest {
         val location = mockLocation()
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
@@ -1521,6 +1559,18 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `entering a zone ends a pending entry delay for it, so the delay cannot enter a second time`() {
+        val delay = Job()
+        setField("pendingPauseZone", homeGeofence)
+        setField("entryDelayJob", delay)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
+        assertTrue(delay.isCancelled)
+    }
+
+    @Test
     fun `enterPauseZone does not save anchor on entry`() = testScope.runTest {
         val location = mockLocation()
         setField("lastKnownLocation", location)
@@ -1944,6 +1994,19 @@ class LocationForegroundServiceTest {
         assertEquals(2000L, config.interval)
         assertEquals(10f, config.minUpdateDistance)
         assertEquals(60, config.syncIntervalSeconds)
+    }
+
+    @Test
+    fun `a profile switch carries its accuracy threshold and a switch without one brings the global filter back`() = runServiceTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeApplyProfileConfig(interval = 2000L, distance = 0f, syncInterval = 0, accuracyThreshold = 200f)
+        invokeHandleLocationUpdate(mockLocation(accuracy = 75f))
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+
+        invokeApplyProfileConfig(interval = 5000L, distance = 0f, syncInterval = 0, accuracyThreshold = null)
+        invokeHandleLocationUpdate(mockLocation(lat = 52.53, accuracy = 75f))
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -3015,12 +3078,15 @@ class LocationForegroundServiceTest {
         method.invoke(service, location)
     }
 
-    private fun invokeApplyProfileConfig(interval: Long, distance: Float, syncInterval: Int, conditionType: String = "") {
+    private fun invokeApplyProfileConfig(
+        interval: Long, distance: Float, syncInterval: Int, conditionType: String = "", accuracyThreshold: Float? = null
+    ) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "applyProfileConfig", Long::class.java, Float::class.java, Int::class.java, String::class.java
+            "applyProfileConfig", Long::class.java, Float::class.java, Int::class.java, String::class.java,
+            Float::class.javaObjectType
         )
         method.isAccessible = true
-        method.invoke(service, interval, distance, syncInterval, conditionType)
+        method.invoke(service, interval, distance, syncInterval, conditionType, accuracyThreshold)
     }
 
     private fun invokeStationaryHeartbeatFired() {
@@ -3897,6 +3963,26 @@ class LocationForegroundServiceTest {
 
         verify { service["handleZoneRecheckAction"]() }
         verify(exactly = 0) { service["handleStart"]() }
+    }
+
+    @Test
+    fun `a config reload keeps an active profile's values and hands the global ones to the profile manager as defaults`() {
+        every { dbHelper.getAllSettings() } returns mapOf("interval" to "5000", "syncInterval" to "0")
+        every { profileManager.activeConfig() } returns ProfileManager.ProfileConfig(
+            interval = 2000L, distance = 10f, syncInterval = 60,
+            profileName = "Stationary", profileId = 3, conditionType = ProfileConstants.CONDITION_STATIONARY,
+            accuracyThreshold = null
+        )
+
+        LocationForegroundService::class.java.getDeclaredMethod("loadConfigFromIntent", Intent::class.java)
+            .apply { isAccessible = true }.invoke(service, null)
+
+        val config = getField<ServiceConfig>("config")
+        assertEquals(2000L, config.interval)
+        assertEquals(60, config.syncIntervalSeconds)
+        assertEquals(0f, config.minUpdateDistance)
+        verify { profileManager.defaultInterval = 5000L }
+        verify { profileManager.defaultSyncInterval = 0 }
     }
 
     /** Promoting a stop into a start would resurrect tracking the user just ended. */

@@ -40,6 +40,7 @@ class ProfileManager(
         val profileName: String?,
         val profileId: Int?,
         val conditionType: String,
+        val accuracyThreshold: Float?,
     )
 
     // Default config (written externally by the service, read inside @Synchronized deactivateToDefault)
@@ -162,7 +163,8 @@ class ProfileManager(
                     val active = activeProfile!!
                     if (active.intervalMs != matchingProfile.intervalMs ||
                         active.minUpdateDistance != matchingProfile.minUpdateDistance ||
-                        active.syncIntervalSeconds != matchingProfile.syncIntervalSeconds) {
+                        active.syncIntervalSeconds != matchingProfile.syncIntervalSeconds ||
+                        compareValues(active.accuracyThreshold, matchingProfile.accuracyThreshold) != 0) {
                         activateProfile(matchingProfile)
                     }
                     return
@@ -293,15 +295,20 @@ class ProfileManager(
         AppLogger.i(TAG, "Activated profile: ${profile.name} (interval=${profile.intervalMs}ms, sync=${profile.syncIntervalSeconds}s)")
 
         LocationServiceModule.sendProfileSwitchEvent(profile.name, profile.id)
-        onConfigSwitch(ProfileConfig(
-            interval = profile.intervalMs,
-            distance = profile.minUpdateDistance,
-            syncInterval = profile.syncIntervalSeconds,
-            profileName = profile.name,
-            profileId = profile.id,
-            conditionType = profile.conditionType,
-        ))
+        onConfigSwitch(configOf(profile))
     }
+
+    fun activeConfig(): ProfileConfig? = activeProfile?.let(::configOf)
+
+    private fun configOf(profile: ProfileHelper.CachedProfile) = ProfileConfig(
+        interval = profile.intervalMs,
+        distance = profile.minUpdateDistance,
+        syncInterval = profile.syncIntervalSeconds,
+        profileName = profile.name,
+        profileId = profile.id,
+        conditionType = profile.conditionType,
+        accuracyThreshold = profile.accuracyThreshold,
+    )
 
     private fun scheduleDeactivation(profile: ProfileHelper.CachedProfile) {
         if (deactivationJob?.isActive == true) return // already scheduled
@@ -465,6 +472,7 @@ class ProfileManager(
             profileName = null,
             profileId = null,
             conditionType = "",
+            accuracyThreshold = null,
         ))
     }
 }
