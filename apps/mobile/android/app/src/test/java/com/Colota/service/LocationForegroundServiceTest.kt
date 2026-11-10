@@ -96,7 +96,7 @@ class LocationForegroundServiceTest {
             secondArg<(Location?) -> Unit>()(null)
         }
         mockkObject(PayloadBuilder)
-        every { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any()) } returns JSONObject()
+        every { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), any()) } returns JSONObject()
         every { PayloadBuilder.parseFieldMap(any()) } returns null
         every { PayloadBuilder.parseCustomFields(any()) } returns null
         every { syncManager.getCachedQueuedCount() } returns 0
@@ -160,6 +160,7 @@ class LocationForegroundServiceTest {
         setField("locationProvider", locationProvider)
         setField("dbHelper", dbHelper)
         setField("geofenceHelper", geofenceHelper)
+        setField("geofenceTransitions", GeofenceTransitions(geofenceHelper, dbHelper))
         setField("syncManager", syncManager)
         setField("deviceInfoHelper", deviceInfoHelper)
         setField("notificationHelper", notificationHelper)
@@ -278,6 +279,28 @@ class LocationForegroundServiceTest {
         invokeHandleLocationUpdate(location)
 
         verify { PayloadBuilder.buildLocationPayload(location, any(), 80, 2, any(), any(), any()) }
+    }
+
+    @Test
+    fun `handleLocationUpdate names the geofences the fix is in when the current geofences are sent`() = testScope.runTest {
+        setField("config", ServiceConfig(endpoint = "https://example.com", sendInRegions = true))
+        every { geofenceHelper.getEnabledRegions() } returns listOf(GeofenceHelper.Region(1, "Home", 52.52, 13.405, 100.0))
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(mockLocation())
+
+        verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), listOf("Home")) }
+    }
+
+    @Test
+    fun `handleLocationUpdate leaves geofences out of a GET request, which has no shape for them`() = testScope.runTest {
+        setField("config", ServiceConfig(endpoint = "https://example.com", sendInRegions = true, httpMethod = "GET"))
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(mockLocation())
+
+        verify(exactly = 0) { geofenceHelper.getEnabledRegions() }
+        verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), emptyList()) }
     }
 
     @Test
@@ -3327,6 +3350,56 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `a heartbeat names its zone although no fix reached the report during the hold`() = testScope.runTest {
+        setField("config", ServiceConfig(endpoint = "https://example.com", sendInRegions = true))
+        every { geofenceHelper.getEnabledRegions() } returns listOf(homeRegion)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeRecordHeartbeatLocation()
+
+        verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), listOf("Home")) }
+    }
+
+    @Test
+    fun `a heartbeat sends no geofences while the switch is off`() = testScope.runTest {
+        every { geofenceHelper.getEnabledRegions() } returns listOf(homeRegion)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeRecordHeartbeatLocation()
+
+        verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), emptyList()) }
+    }
+
+    @Test
+    fun `the departure anchor names the zone it leaves`() = testScope.runTest {
+        setField("config", ServiceConfig(endpoint = "https://example.com", sendInRegions = true))
+        every { geofenceHelper.getEnabledRegions() } returns listOf(homeRegion)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeExitPauseZone()
+
+        verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), listOf("Home")) }
+    }
+
+    @Test
+    fun `the departure anchor sends no geofences while the switch is off`() = testScope.runTest {
+        every { geofenceHelper.getEnabledRegions() } returns listOf(homeRegion)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeExitPauseZone()
+
+        verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), emptyList()) }
+    }
+
+    @Test
     fun `recordHeartbeatLocation must not overwrite lastKnownLocation`() = testScope.runTest {
         val realPreviousFix = mockLocation(lat = 52.50, lon = 13.40,
             time = System.currentTimeMillis() - 60_000)
@@ -3693,6 +3766,38 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `loadConfigFromIntent forgets the geofence state when reporting is off, so turning it on seeds silently`() {
+        mockkObject(ServiceConfig.Companion)
+        try {
+            every { ServiceConfig.fromDatabase(any()) } returns ServiceConfig(sendInRegions = false)
+            every { dbHelper.getSetting(SettingsKeys.GEOFENCE_STATE) } returns "{\"1\":true}"
+
+            invokeLoadConfigFromIntent(null)
+
+            verify { dbHelper.saveSetting(SettingsKeys.GEOFENCE_STATE, "") }
+        } finally {
+            unmockkObject(ServiceConfig.Companion)
+        }
+    }
+
+    @Test
+    fun `loadConfigFromIntent restores the geofence state when reporting is on`() {
+        mockkObject(ServiceConfig.Companion)
+        try {
+            every { ServiceConfig.fromDatabase(any()) } returns ServiceConfig(sendInRegions = true)
+            every { dbHelper.getSetting(SettingsKeys.GEOFENCE_STATE) } returns "{\"1\":true}"
+            every { geofenceHelper.getEnabledRegions() } returns listOf(GeofenceHelper.Region(1, "Home", 52.52, 13.405, 100.0))
+
+            invokeLoadConfigFromIntent(null)
+
+            assertEquals(listOf("Home"), getField<GeofenceTransitions>("geofenceTransitions").insideNames)
+            verify(exactly = 0) { dbHelper.saveSetting(SettingsKeys.GEOFENCE_STATE, any()) }
+        } finally {
+            unmockkObject(ServiceConfig.Companion)
+        }
+    }
+
+    @Test
     fun `loadConfigFromIntent keeps High as the ProfileManager accuracy default`() {
         mockkObject(ServiceConfig.Companion)
         try {
@@ -3707,6 +3812,7 @@ class LocationForegroundServiceTest {
     }
 
     private val homeGeofence = geofence("Home", 52.50, 13.40, 150.0)
+    private val homeRegion = GeofenceHelper.Region(1, "Home", 52.50, 13.40, 150.0)
     private val officeGeofence = geofence("Office", 48.14, 11.58, 200.0)
     private val parkGeofence = geofence("Park", 52.51, 13.35, 100.0)
 

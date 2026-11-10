@@ -21,7 +21,7 @@ object PayloadBuilder {
     // Field names buildLocationPayload writes when usesFixedFieldNames=true. Anything else in
     // an outgoing payload is a user-configured custom field (device_id, tid, etc.) and lifts
     // to envelope level via extractEnvelopeCustomFields.
-    private val canonicalLocationKeys = setOf("lat", "lon", "acc", "alt", "vel", "batt", "bs", "tst", "bear")
+    private val canonicalLocationKeys = setOf("lat", "lon", "acc", "alt", "vel", "batt", "bs", "tst", "bear", "inregions")
 
     fun extractEnvelopeCustomFields(payload: JSONObject): Map<String, String> {
         val fields = mutableMapOf<String, String>()
@@ -43,6 +43,7 @@ object PayloadBuilder {
         fieldMap: Map<String, String>,
         customFields: Map<String, String>,
         apiFormat: ApiFormat,
+        inRegions: List<String> = emptyList(),
     ): JSONObject {
         val effectiveFieldMap = if (apiFormat.usesFixedFieldNames) emptyMap() else fieldMap
         return JSONObject().apply {
@@ -68,6 +69,9 @@ object PayloadBuilder {
             if (location.hasBearing()) {
                 put(effectiveFieldMap["bear"] ?: "bear", location.bearing.toDouble())
             }
+
+            // OwnTracks' key, never field-mapped
+            if (inRegions.isNotEmpty()) put("inregions", org.json.JSONArray(inRegions))
         }
     }
 
@@ -137,6 +141,7 @@ object PayloadBuilder {
                 put("battery_level", batt / 100.0)
                 put("battery_state", BatteryStatus.toOverlandString(flat.optInt("bs", BatteryStatus.UNKNOWN)))
             }
+            flat.optJSONArray("inregions")?.let { put("inregions", it) }
         }
         return JSONObject().apply {
             put("type", "Feature")

@@ -156,6 +156,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Pause zone detection (geofencing)
 - Geofence entry delay - keeps recording for 3.5× the configured tracking interval before pausing on zone entry, logging real arrival points for backends like GeoPulse
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
+- Geofence reporting - with Send current geofences on (a field-mapped POST or an Overland batch, `ServiceConfig.reportsGeofences`), `GeofenceTransitions` follows every enabled geofence on each fix that passed the filters, before the in-zone drop, and its names ride on each payload as `inregions`
 - Battery critical shutdown (below 5% while unplugged), detected via a battery-broadcast receiver so it fires even while GPS is paused in a zone
 - Location accuracy filtering (profiles switch on what the global filter passes; an active profile's own threshold decides what is recorded) and the global positioning accuracy mode
 - Stationary detection - slows GPS to the profile's interval after 60s of fixes without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). It keeps working inside a pause zone and during an entry delay, since fixes reach `ProfileManager` before the in-zone drop; only a hold that stops the stream can prevent a verdict.
@@ -259,6 +260,12 @@ Separately, a **Stationary tracking profile** drives its own heartbeat via `Stat
 
 When both WiFi and motionless pause are enabled, GPS only resumes when both conditions clear - WiFi disconnected **and** motion detected. Changes made in the editor take effect immediately even when already inside the zone, via `applyZoneSettingsIfChanged` on the next zone recheck.
 
+`getEnabledRegions` reads every enabled geofence, pausing or not, for the report. It answers null when the read fails, so the caller keeps its state instead of seeding it again.
+
+### GeofenceTransitions
+
+Which enabled geofences the device is in, for reporting only: pausing never reads it, so the report cannot move a pause. Enter is the first fix within the radius. Leave takes two fixes in a row further out than radius + accuracy and is dated by the first, so one wild fix cannot report a departure. The state is a JSON map of geofence id to inside under the `geofence_state` setting, so a restart neither repeats an enter nor misses a leave; a geofence missing from it is seeded silently, which covers turning the report on and creating a zone where the device stands. `loadConfigFromIntent` restores it while the report is on and clears it while it is off. During a WiFi or motionless hold no fixes arrive, so the leave lands on the first fix after GPS resumes. Heartbeat and anchor points sit at a zone centre and take their names from `namesAt`: the enabled geofences whose radius holds that centre. A hold that began before the report saw a fix still names its zone.
+
 ### ProfileManager
 
 Evaluates tracking profile conditions and switches GPS settings automatically. Supports eight condition types: charging, Android Auto / car mode, Bluetooth device, Wi-Fi (any network), Wi-Fi network (named SSID), speed above threshold, speed below threshold and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match. A switch hands the service the profile's interval, distance, sync interval and accuracy threshold; the service keeps the threshold outside `ServiceConfig`, so a switch to the defaults clears it and the global filter applies again.
@@ -299,7 +306,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `MotionStateDetector` / `RawSensorMotionDetector` | Single detector behind a `MotionState { STATIONARY, MOVING }` interface. Backed by 30s-batched accelerometer variance (hysteresis: > 0.30 m/s² for 3s -> MOVING; < 0.15 m/s² for the configured per-zone dwell -> STATIONARY) and parallel `TYPE_SIGNIFICANT_MOTION` as a fast-path for sharp events. Fans out to both motionless-pause and stationary-profile exit consumers via one callback site in `LocationForegroundService.onMotionStateChange`. |
 | `DeviceInfoHelper` | Device metadata and battery status with caching |
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
-| `PayloadBuilder` | Builds outgoing JSON payloads (field-mapped, Overland batch envelope, Traccar JSON) and extracts envelope custom fields |
+| `PayloadBuilder` | Builds outgoing JSON payloads (field-mapped, Overland batch envelope, Traccar JSON) and extracts envelope custom fields. `inregions` is a canonical key, so it stays on the Overland feature instead of lifting to the envelope |
 | `ServiceConfig` | Centralized configuration data class |
 | `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
 | `BuildConfigModule` | Exposes the version name, version code, flavor and device language to JS, plus `getSystemPalette` - the Android 12+ wallpaper tonal steps as `#RRGGBB` hex, null below API 31 - and the in-app language through AppCompat's per-app locale API: `getAppLanguage` (the pick and the language in use) and `setAppLanguage`. `MainActivity` handles `locale` and `layoutDirection` itself, so a switch does not recreate it, and native text is read through `util/AppLanguage`, because below Android 13 AppCompat localises activities only |

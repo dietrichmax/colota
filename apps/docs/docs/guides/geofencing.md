@@ -78,6 +78,15 @@ To share zones together with your tracking, sync and API settings in a single li
 
 See the [Deep Link Setup](deep-link-setup.md#geofences) guide for the full payload format.
 
+## Reporting Zones to Your Server
+
+Colota can tell your server which zones each point is in, pause zones and plain zones alike.
+
+1. Go to **Settings → Connection → Request format**
+2. Turn on **Send current geofences** under **Geofences**
+
+Every point then carries `inregions` with the zone names. See [API Reference](/docs/api-reference#geofences) for the format.
+
 ## How It Works
 
 - Zone detection uses the Haversine formula (1-2ms per check)

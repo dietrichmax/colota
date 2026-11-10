@@ -213,7 +213,8 @@ class DatabaseHelper private constructor(context: Context) :
             "syncPreset" to "instant",
             "httpMethod" to "POST",
             "dawarichMode" to "single",
-            "overlandBatchSize" to "50"
+            "overlandBatchSize" to "50",
+            "sendInRegions" to "false"
         )
 
         db.beginTransaction()

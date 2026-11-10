@@ -136,6 +136,7 @@ describe("NativeLocationService", () => {
         httpMethod: "POST" as const,
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
+        sendInRegions: false,
         hasCompletedSetup: false
       }
 
@@ -171,12 +172,42 @@ describe("NativeLocationService", () => {
         httpMethod: "POST" as const,
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
+        sendInRegions: false,
         hasCompletedSetup: false
       }
 
       await NativeLocationService.start(settings)
 
       expect(nativeMock.startService).toHaveBeenCalledWith(expect.objectContaining({ accuracyMode: "balanced" }))
+    })
+
+    it("forwards the current geofences switch, the only way a running service learns it", async () => {
+      const settings = {
+        interval: 5,
+        distance: 10,
+        endpoint: "https://example.com",
+        fieldMap: { lat: "lat", lon: "lon", acc: "acc" },
+        syncInterval: 0,
+        retryInterval: 30,
+        filterInaccurateLocations: false,
+        accuracyThreshold: 50,
+        accuracyMode: "high" as const,
+        isOfflineMode: false,
+        syncCondition: "any" as const,
+        syncSsid: "",
+        customFields: [],
+        apiTemplate: "custom" as const,
+        syncPreset: "instant" as const,
+        httpMethod: "POST" as const,
+        dawarichMode: "single" as const,
+        overlandBatchSize: 50,
+        sendInRegions: true,
+        hasCompletedSetup: false
+      }
+
+      await NativeLocationService.start(settings)
+
+      expect(nativeMock.startService).toHaveBeenCalledWith(expect.objectContaining({ sendInRegions: true }))
     })
 
     it("passes apiTemplate and httpMethod GET to native for traccar template", async () => {
@@ -199,6 +230,7 @@ describe("NativeLocationService", () => {
         httpMethod: "GET" as const,
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
+        sendInRegions: false,
         hasCompletedSetup: false
       }
 
@@ -232,6 +264,7 @@ describe("NativeLocationService", () => {
         httpMethod: "POST" as const,
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
+        sendInRegions: false,
         hasCompletedSetup: false
       }
 
