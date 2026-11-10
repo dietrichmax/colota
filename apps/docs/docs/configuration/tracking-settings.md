@@ -70,6 +70,8 @@ Some GPS chips occasionally emit a single fix that's far off (10s of km) with a 
 
 Colota drops these automatically by comparing the chip's reported speed against the speed implied by the distance and time since the previous fix. When the two disagree by a wide margin, the fix is discarded. The filter is always on, has no user setting, and only triggers on this specific glitch pattern - normal travel passes through because the chip-reported and implied speeds agree closely.
 
+A second check drops any fix that could only be reached faster than an airliner (400 m/s, about 1440 km/h), however long the gap since the last kept fix and whether or not the chip reports a speed. This catches GNSS spoofing and jamming, where a stationary phone suddenly reports a position on another continent with a tight accuracy and a plausible speed. The time between fixes is measured by the phone's own clock, not the GPS time a spoofer can shift. Both fixes' accuracy is allowed for, so a coarse fix never trips it, and a real long-haul flight is kept. If fixes keep failing this check for 15 minutes, the last kept fix is taken to be the wrong one and tracking continues from the newest fix.
+
 ## See also
 
 - [Sync Presets](sync-presets.md) - how often the queue is flushed to your server, and on which connections

@@ -73,6 +73,8 @@ class LocationForegroundService : Service() {
     private val startedAtMs: Long = System.currentTimeMillis()
     @Volatile private var motionDetector: MotionStateDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
+    /** First fix of the current run of impossible-travel rejections; null while fixes are plausible. */
+    private var impossibleJumpRunStart: Location? = null
 
     // Rate-limit the fresh-fix probe so repeated rechecks/resumes don't spin up GNSS. Main-thread only.
     @Volatile private var lastFreshProbeAtMs: Long? = null
@@ -163,6 +165,13 @@ class LocationForegroundService : Service() {
         private const val POSITION_JUMP_FILTER_MAX_REFERENCE_ACCURACY_M = 200f
         /** Gaps above this bypass the filter so post-resume fixes aren't dropped. */
         private const val POSITION_JUMP_FILTER_WINDOW_MS = 300_000L
+        /**
+         * Fastest ground speed a phone really travels: a subsonic airliner with a record jet-stream
+         * tailwind reaches ~1300 km/h, so 400 m/s (1440 km/h) leaves a margin over any real trip.
+         */
+        private const val MAX_PLAUSIBLE_GROUND_SPEED_MPS = 400f
+        /** A run of impossible fixes this long means the anchor itself is wrong, so the newest fix replaces it. */
+        private const val IMPOSSIBLE_JUMP_REANCHOR_MS = 15 * 60_000L
 
         /** Timeout for the active fresh-fix probe (ms). */
         private const val FRESH_FIX_TIMEOUT_MS = 30_000L
@@ -937,15 +946,49 @@ class LocationForegroundService : Service() {
 
         val prev = lastKnownLocation ?: return
 
-        val timeDeltaMs = location.time - prev.time
+        val timeDeltaMs = fixGapMs(prev, location)
         if (timeDeltaMs < 1000 || timeDeltaMs > 60_000) return
 
         val distanceMeters = prev.distanceTo(location)
         val calculatedSpeed = distanceMeters / (timeDeltaMs / 1000.0f)
 
-        if (calculatedSpeed > 278f) return  // ~1000 km/h, reject GPS jitter
+        if (calculatedSpeed > MAX_PLAUSIBLE_GROUND_SPEED_MPS) return  // GPS jitter, not travel
 
         location.speed = calculatedSpeed
+    }
+
+    /**
+     * Time between two fixes by the monotonic clock when both carry it, else by fix time. The fix
+     * time comes from the GNSS signal, which a spoofer can shift; the monotonic stamp is the phone's own.
+     */
+    private fun fixGapMs(from: Location, to: Location): Long =
+        if (from.elapsedRealtimeNanos > 0L && to.elapsedRealtimeNanos > 0L)
+            (to.elapsedRealtimeNanos - from.elapsedRealtimeNanos) / 1_000_000L
+        else to.time - from.time
+
+    /**
+     * True when reaching [location] from [prev] takes more than [MAX_PLAUSIBLE_GROUND_SPEED_MPS].
+     * Both accuracy radii widen the allowance so a coarse fix can't trip it. Rejected fixes leave
+     * [prev] as the anchor, so a run of them can't walk the track away; a run lasting
+     * [IMPOSSIBLE_JUMP_REANCHOR_MS] means the anchor is the bad fix and the newest one is accepted.
+     */
+    private fun isImpossibleTravel(prev: Location, location: Location): Boolean {
+        val gapSec = maxOf(fixGapMs(prev, location), 0L) / 1000f
+        val allowance = MAX_PLAUSIBLE_GROUND_SPEED_MPS * gapSec + prev.accuracy + location.accuracy
+        val distance = prev.distanceTo(location)
+        if (distance <= allowance) {
+            impossibleJumpRunStart = null
+            return false
+        }
+        val runStart = impossibleJumpRunStart ?: location.also { impossibleJumpRunStart = it }
+        val runMs = fixGapMs(runStart, location)
+        if (runMs >= IMPOSSIBLE_JUMP_REANCHOR_MS) {
+            AppLogger.w(TAG, "Impossible travel for ${runMs / 1000}s - re-anchoring on the newest fix")
+            impossibleJumpRunStart = null
+            return false
+        }
+        AppLogger.w(TAG, "Location filtered: impossible travel ${String.format(Locale.US, "%.0f", distance)}m in ${String.format(Locale.US, "%.0f", gapSec)}s")
+        return true
     }
 
     private fun handleLocationUpdate(location: Location) {
@@ -971,11 +1014,16 @@ class LocationForegroundService : Service() {
             return
         }
 
+        // Impossible-travel filter: no gap is long enough to excuse outrunning an airliner. Covers what the
+        // position-jump filter below can't judge - a fix after a long gap or without chip speed, such as
+        // a GNSS spoofer moving the phone to another continent while it lies at home.
+        if (prev != null && isImpossibleTravel(prev, location)) return
+
         // Position-jump filter: chip-reported and implied speed are independent signals; large disagreement means the chip hallucinated position.
         // Kept active while paused too: a real departure passes it anyway (implied speed agrees with
         // chip, or is below the floor), but one hallucinated jump must not fake a departure.
         if (prev != null && location.hasSpeed() && prev.accuracy <= POSITION_JUMP_FILTER_MAX_REFERENCE_ACCURACY_M) {
-            val dt = location.time - prev.time
+            val dt = fixGapMs(prev, location)
             if (dt in 1000..POSITION_JUMP_FILTER_WINDOW_MS) {
                 val distance = prev.distanceTo(location)
                 val implied = distance / (dt / 1000f)

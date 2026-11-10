@@ -566,6 +566,149 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // Impossible-travel filter - no gap excuses outrunning an airliner
+    // =========================================================================
+
+    private fun verifySaved(times: Int) {
+        verify(exactly = times) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `impossible-travel filter drops a spoofed fix after a gap the jump filter skips`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val home = mockLocation(lat = 49.00, lon = 32.00, accuracy = 14f, time = now - 311_000, distanceTo = 12_000_000f)
+        setField("lastKnownLocation", home)
+
+        val lima = mockLocation(lat = -12.045, lon = -77.042, accuracy = 28f, hasSpeed = true, speed = 56f, time = now)
+        invokeHandleLocationUpdate(lima)
+
+        verifySaved(0)
+        assertEquals(home, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `impossible-travel filter drops a far fix without chip speed`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 10_000, distanceTo = 50_000f)  // 50 km in 10s
+        setField("lastKnownLocation", prev)
+
+        invokeHandleLocationUpdate(mockLocation(hasSpeed = false, time = now))
+
+        verifySaved(0)
+    }
+
+    @Test
+    fun `impossible-travel filter drops a whole spoofed run and accepts the return home`() = testScope.runTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        val t0 = System.currentTimeMillis()
+        val home = mockLocation(lat = 49.00, lon = 32.00, accuracy = 14f, time = t0)
+        setField("lastKnownLocation", home)
+
+        // Six fixes circling Lima every 30s at a steady 56 m/s - consistent with each other, not with home.
+        val run = (0 until 6).map { i ->
+            mockLocation(lat = -12.04, lon = -77.05, accuracy = 20f, hasSpeed = true, speed = 56f, time = t0 + 311_000 + i * 30_000L)
+        }
+        run.forEach { every { home.distanceTo(it) } returns 12_000_000f }
+        run.forEach { invokeHandleLocationUpdate(it) }
+
+        verifySaved(0)
+        assertEquals(home, getField<Location?>("lastKnownLocation"))
+
+        val back = mockLocation(lat = 49.00, lon = 32.00, accuracy = 11f, hasSpeed = true, speed = 0f, time = t0 + 1_000_000)
+        every { home.distanceTo(back) } returns 5f
+        invokeHandleLocationUpdate(back)
+
+        verifySaved(1)
+        assertEquals(back, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `impossible-travel filter judges the gap by the monotonic clock, not a spoofed fix time`() = testScope.runTest {
+        // The spoofer also shifts GNSS time 20 years ahead; by fix time the jump would look affordable.
+        val now = System.currentTimeMillis()
+        val home = mockLocation(time = now, elapsedNanos = 1_000_000_000_000L, distanceTo = 12_000_000f)
+        setField("lastKnownLocation", home)
+
+        val spoofed = mockLocation(
+            hasSpeed = false,
+            time = now + 20L * 365 * 24 * 3_600_000,
+            elapsedNanos = 1_000_000_000_000L + 30_000_000_000L
+        )
+        invokeHandleLocationUpdate(spoofed)
+
+        verifySaved(0)
+    }
+
+    @Test
+    fun `impossible-travel filter keeps a long-haul flight after a long gap`() = testScope.runTest {
+        // 12,000 km in 10 h (333 m/s average, incl. tailwind) - the first fix on landing must be kept.
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        val now = System.currentTimeMillis()
+        val departure = mockLocation(time = now - 36_000_000, distanceTo = 12_000_000f)
+        setField("lastKnownLocation", departure)
+
+        invokeHandleLocationUpdate(mockLocation(hasSpeed = true, speed = 0f, time = now))
+
+        verifySaved(1)
+    }
+
+    @Test
+    fun `impossible-travel filter allows for both fixes' accuracy`() = testScope.runTest {
+        // 2 km in 1s is impossible between precise fixes, but the anchor only claims +-3 km
+        // (e.g. a cell-based probe fix), so a precise fix after it is kept.
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(accuracy = 3_000f, time = now - 1_000, distanceTo = 2_000f)
+        setField("lastKnownLocation", prev)
+
+        invokeHandleLocationUpdate(mockLocation(accuracy = 10f, hasSpeed = false, time = now))
+
+        verifySaved(1)
+    }
+
+    @Test
+    fun `impossible-travel filter re-anchors after a long run so a bad anchor can't block tracking`() = testScope.runTest {
+        // The anchor itself is the bad fix: every real fix after it looks impossible. After 15 min of that
+        // the newest fix replaces the anchor rather than dropping hours of real track.
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        val t0 = System.currentTimeMillis()
+        val badAnchor = mockLocation(lat = -12.04, lon = -77.05, time = t0, distanceTo = 12_000_000f)
+        setField("lastKnownLocation", badAnchor)
+
+        val early = mockLocation(hasSpeed = false, time = t0 + 60_000)
+        val stillRejected = mockLocation(hasSpeed = false, time = t0 + 60_000 + 14 * 60_000L)
+        val reanchor = mockLocation(hasSpeed = false, time = t0 + 60_000 + 15 * 60_000L)
+
+        invokeHandleLocationUpdate(early)
+        invokeHandleLocationUpdate(stillRejected)
+        verifySaved(0)
+
+        invokeHandleLocationUpdate(reanchor)
+        verifySaved(1)
+        assertEquals(reanchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `impossible-travel run restarts after a plausible fix`() = testScope.runTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        val t0 = System.currentTimeMillis()
+        val home = mockLocation(time = t0)
+        setField("lastKnownLocation", home)
+
+        val spoof1 = mockLocation(hasSpeed = false, time = t0 + 60_000)
+        every { home.distanceTo(spoof1) } returns 12_000_000f
+        invokeHandleLocationUpdate(spoof1)
+        assertNotNull(getField<Location?>("impossibleJumpRunStart"))
+
+        val real = mockLocation(hasSpeed = false, time = t0 + 120_000)
+        every { home.distanceTo(real) } returns 5f
+        invokeHandleLocationUpdate(real)
+
+        assertNull(getField<Location?>("impossibleJumpRunStart"))
+        verifySaved(1)
+    }
+
+    // =========================================================================
     // applySpeedFallback
     // =========================================================================
 
@@ -628,7 +771,8 @@ class LocationForegroundServiceTest {
     @Test
     fun `applySpeedFallback rejects unreasonable speed`() = testScope.runTest {
         val now = System.currentTimeMillis()
-        val prev = mockLocation(time = now - 1000, distanceTo = 500f)  // 500m/s > 278 cap
+        // 500m/s > 400 cap; the coarse prev keeps it inside the impossible-travel allowance so the cap is what rejects it.
+        val prev = mockLocation(accuracy = 100f, time = now - 1000, distanceTo = 500f)
         setField("lastKnownLocation", prev)
 
         val location = mockLocation(hasSpeed = false, time = now)
