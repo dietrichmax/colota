@@ -736,26 +736,105 @@ class LocationForegroundServiceTest {
         verifySaved(1)
     }
 
+    // Fix times stay equal in the run tests, so only the monotonic stamp real fixes carry can measure a run.
+    private val sameFixTime = 1_793_000_000_000L
+
+    private fun streamedFix(atMinute: Int, accuracy: Float = 10f) = mockLocation(
+        lat = 52.52 + atMinute / 1_000.0, hasSpeed = false, accuracy = accuracy,
+        time = sameFixTime, elapsedNanos = (1_000L + atMinute * 60L) * 1_000_000_000L
+    )
+
+    private fun farAnchorAtMinuteZero() = mockLocation(
+        lat = -12.04, lon = -77.05, time = sameFixTime, elapsedNanos = 1_000L * 1_000_000_000L, distanceTo = 12_000_000f
+    )
+
     @Test
     fun `impossible-travel filter re-anchors after a long run so a bad anchor can't block tracking`() = testScope.runTest {
-        // The anchor itself is the bad fix: every real fix after it looks impossible. After 15 min of that
-        // the newest fix replaces the anchor rather than dropping hours of real track.
+        // The anchor itself is the bad fix, so every real fix after it looks impossible. Rejections over
+        // 15 min mean the newest fix replaces the anchor rather than dropping hours of real track.
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
-        val t0 = System.currentTimeMillis()
-        val badAnchor = mockLocation(lat = -12.04, lon = -77.05, time = t0, distanceTo = 12_000_000f)
-        setField("lastKnownLocation", badAnchor)
+        setField("lastKnownLocation", farAnchorAtMinuteZero())
 
-        val early = mockLocation(hasSpeed = false, time = t0 + 60_000)
-        val stillRejected = mockLocation(hasSpeed = false, time = t0 + 60_000 + 14 * 60_000L)
-        val reanchor = mockLocation(hasSpeed = false, time = t0 + 60_000 + 15 * 60_000L)
-
-        invokeHandleLocationUpdate(early)
-        invokeHandleLocationUpdate(stillRejected)
+        listOf(1, 2, 3, 15).forEach { invokeHandleLocationUpdate(streamedFix(it)) }
         verifySaved(0)
 
+        val reanchor = streamedFix(16)
         invokeHandleLocationUpdate(reanchor)
         verifySaved(1)
         assertEquals(reanchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `impossible-travel filter needs several rejections, so one far fix after a long gap can't re-anchor`() = testScope.runTest {
+        // A 20 min interval or a Doze gap puts the second far fix 20 min into its run after one rejection.
+        val anchor = farAnchorAtMinuteZero()
+        setField("lastKnownLocation", anchor)
+
+        invokeHandleLocationUpdate(streamedFix(20))
+        invokeHandleLocationUpdate(streamedFix(40))
+
+        verifySaved(0)
+        assertEquals(anchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `a re-anchor fix the profile accuracy filter drops keeps the run, so the next accurate fix re-anchors`() = testScope.runTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("profileAccuracyThreshold", 20f)
+        setField("lastKnownLocation", farAnchorAtMinuteZero())
+
+        listOf(1, 2, 3).forEach { invokeHandleLocationUpdate(streamedFix(it)) }
+        invokeHandleLocationUpdate(streamedFix(16, accuracy = 50f))
+        verifySaved(0)
+
+        val accurate = streamedFix(17)
+        invokeHandleLocationUpdate(accurate)
+        verifySaved(1)
+        assertEquals(accurate, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `a re-anchor starts a new run, so the next far fix is judged against the new anchor alone`() = testScope.runTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("lastKnownLocation", farAnchorAtMinuteZero())
+        listOf(1, 2, 3).forEach { invokeHandleLocationUpdate(streamedFix(it)) }
+        val reanchor = streamedFix(16)
+        invokeHandleLocationUpdate(reanchor)
+
+        val farFromNewAnchor = streamedFix(17)
+        every { reanchor.distanceTo(farFromNewAnchor) } returns 12_000_000f
+        invokeHandleLocationUpdate(farFromNewAnchor)
+
+        verifySaved(1)
+        assertEquals(reanchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `a plausible fix too coarse to record still confirms the anchor and ends the run`() = testScope.runTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("profileAccuracyThreshold", 20f)
+        val anchor = farAnchorAtMinuteZero()
+        setField("lastKnownLocation", anchor)
+        listOf(1, 2, 3).forEach { invokeHandleLocationUpdate(streamedFix(it)) }
+        val nearAnchor = streamedFix(4, accuracy = 50f)
+        every { anchor.distanceTo(nearAnchor) } returns 5f
+        invokeHandleLocationUpdate(nearAnchor)
+
+        invokeHandleLocationUpdate(streamedFix(16))
+
+        verifySaved(0)
+    }
+
+    @Test
+    fun `stopping the stream starts the impossible-travel run again`() = testScope.runTest {
+        // A hold or a stop splits the run, so rejections before it cannot let the first fix after it re-anchor.
+        setField("lastKnownLocation", farAnchorAtMinuteZero())
+
+        listOf(1, 2, 3).forEach { invokeHandleLocationUpdate(streamedFix(it)) }
+        invokeStopLocationUpdates()
+        invokeHandleLocationUpdate(streamedFix(17))
+
+        verifySaved(0)
     }
 
     @Test
@@ -776,6 +855,80 @@ class LocationForegroundServiceTest {
 
         assertNull(getField<Location?>("impossibleJumpRunStart"))
         verifySaved(1)
+    }
+
+    // A spoofed probe or last-known fix must not become the anchor, or the spoofed stream after it reads as plausible.
+    private fun homeAnchor() = mockLocation(lat = 52.50, lon = 13.40, time = System.currentTimeMillis() - 120_000, distanceTo = 12_000_000f)
+
+    private fun pausedAtHomeWithAnchor(): Location {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        return homeAnchor().also { setField("lastKnownLocation", it) }
+    }
+
+    private fun probeReturns(fix: Location) {
+        every { locationProvider.getCurrentLocation(any(), any()) } answers { secondArg<(Location?) -> Unit>()(fix) }
+    }
+
+    private fun lastKnownReturns(fix: Location) {
+        every { locationProvider.getLastLocation(any(), any()) } answers { firstArg<(Location?) -> Unit>()(fix) }
+    }
+
+    @Test
+    fun `a far probe fix on a zone recheck neither ends the pause nor becomes the anchor`() {
+        val anchor = pausedAtHomeWithAnchor()
+        probeReturns(mockLocation(lat = -12.04, lon = -77.05))
+
+        invokeHandleZoneRecheckAction()
+
+        assertTrue(getField("insidePauseZone"))
+        assertEquals(anchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `a far probe fix from the pause watchdog neither ends the pause nor becomes the anchor`() {
+        val anchor = pausedAtHomeWithAnchor()
+        setField("lastFixAtMs", -700_000L)
+        probeReturns(mockLocation(lat = -12.04, lon = -77.05))
+
+        invokeRunPauseWatchdogTick()
+
+        assertTrue(getField("insidePauseZone"))
+        assertEquals(anchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `a far probe fix on a restored pause neither ends the pause nor becomes the anchor`() {
+        val anchor = pausedAtHomeWithAnchor()
+        probeReturns(mockLocation(lat = -12.04, lon = -77.05))
+
+        invokeSetupLocationUpdates()
+
+        assertTrue(getField("insidePauseZone"))
+        assertEquals(anchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `a far last-known fix at a start does not become the anchor`() {
+        val anchor = homeAnchor()
+        setField("lastKnownLocation", anchor)
+        lastKnownReturns(mockLocation(lat = -12.04, lon = -77.05))
+
+        invokeSetupLocationUpdates()
+
+        assertEquals(anchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `a far last-known fix on a zone recheck outside a pause does not become the anchor`() {
+        val anchor = homeAnchor()
+        setField("lastKnownLocation", anchor)
+        lastKnownReturns(mockLocation(lat = -12.04, lon = -77.05))
+
+        invokeHandleZoneRecheckAction()
+
+        assertEquals(anchor, getField<Location?>("lastKnownLocation"))
     }
 
     // =========================================================================
