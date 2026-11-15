@@ -464,6 +464,7 @@ User taps "Start" → TrackingProvider.startTracking()
 - **Corner radii** - the `radius` scale
 - **Spacing and sizes** - the `space` grid, the `size` extents of controls and icons, and `STATE_LAYER_ALPHA` for pressed states
 - **Types** - `ThemeColors` interface and `ThemeMode` type
+- **Links** - the repository, issues, discussions, releases, privacy policy, support and store URLs, used by the app's Settings and About screens and by the docs navbar, footer and landing page
 - **Setup links** - the values a `colota://setup` link may carry (API templates, HTTP methods, Dawarich modes, accuracy modes, sync conditions, auth types, profile conditions, Overland batch bounds) and its encoding, used by the app's importer and share screens and by the docs link generator
 
 Both the mobile app and docs site import from `@colota/shared`. The package compiles TypeScript to `dist/` via `tsc` so Docusaurus can consume it without a custom webpack loader.

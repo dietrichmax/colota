@@ -3,6 +3,7 @@ import clsx from "clsx"
 import Link from "@docusaurus/Link"
 import Layout from "@theme/Layout"
 import Heading from "@theme/Heading"
+import { FDROID_URL, IZZYONDROID_URL, PLAY_STORE_WEB_URL } from "@colota/shared"
 import ScreenshotGallery from "../components/ScreenshotGallery"
 
 import styles from "./index.module.css"
@@ -21,7 +22,7 @@ function HomepageHeader() {
             Your data, your server, your rules.
           </p>
           <div className={styles.buttons}>
-            <Link className="button button--secondary button--lg" href="https://f-droid.org/packages/com.Colota/">
+            <Link className="button button--secondary button--lg" href={FDROID_URL}>
               Get it on F-Droid
             </Link>
             <Link className={clsx("button button--lg", styles.outlineButton)} to="/docs/introduction">
@@ -30,14 +31,11 @@ function HomepageHeader() {
           </div>
           <div className={styles.downloadLinks}>
             <span className={styles.downloadLabel}>Also available on</span>
-            <Link className={styles.downloadLink} href="https://apt.izzysoft.de/packages/com.Colota/">
+            <Link className={styles.downloadLink} href={IZZYONDROID_URL}>
               IzzyOnDroid
             </Link>{" "}
             and
-            <Link
-              className={styles.downloadLink}
-              href="https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
-            >
+            <Link className={styles.downloadLink} href={PLAY_STORE_WEB_URL}>
               Google Play
             </Link>
           </div>
