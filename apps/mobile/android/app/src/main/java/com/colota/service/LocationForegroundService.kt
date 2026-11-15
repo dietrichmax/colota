@@ -1060,8 +1060,8 @@ class LocationForegroundService : Service() {
 
         lastKnownLocation = location
 
-        if (config.reportsGeofences) geofenceTransitions.evaluate(location)
-        val inRegions = geofenceTransitions.insideNames
+        val transitions = if (config.followsGeofences) geofenceTransitions.evaluate(location) else emptyList()
+        val inRegions = if (config.reportsGeofences) geofenceTransitions.insideNames else emptyList()
 
         val zone = geofenceHelper.getPauseZone(location)
         if (zone != null && insidePauseZone && zone.name == currentZoneName) {
@@ -1069,6 +1069,7 @@ class LocationForegroundService : Service() {
             // Send position to UI so the map stays current while paused
             val (bat, batStatus) = deviceInfoHelper.getCachedBatteryStatus()
             LocationServiceModule.sendLocationEvent(location, bat, batStatus)
+            if (transitions.isNotEmpty()) serviceScope?.launch { sendTransitions(transitions, location, inRegions, bat, batStatus) }
             return
         }
         val anchorJob = applyZoneTransition(zone)
@@ -1097,9 +1098,30 @@ class LocationForegroundService : Service() {
             val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat, inRegions)
 
             syncManager.queueAndSend(locationId, payload)
+            sendTransitions(transitions, location, inRegions, battery, batteryStatus)
 
             withContext(Dispatchers.Main) { updateNotification() }
         }
+    }
+
+    /** A leave is dated by the first fix outside, so it carries no inregions. */
+    private suspend fun sendTransitions(
+        transitions: List<GeofenceTransitions.Transition>,
+        fix: Location,
+        inRegions: List<String>,
+        battery: Int,
+        batteryStatus: Int,
+    ) {
+        if (transitions.isEmpty() || !config.reportsTransitions) return
+        val payloads = transitions.map { transition ->
+            val point = PayloadBuilder.buildLocationPayload(
+                transition.location, transition.location.time / 1000, battery, batteryStatus,
+                payloadFieldMap, payloadCustomFields, config.apiFormat,
+                if (transition.location === fix) inRegions else emptyList()
+            )
+            PayloadBuilder.buildTransitionPayload(point, transition.event.wireName, transition.region.name, transition.region.createdAt)
+        }
+        syncManager.queueTransitions(payloads)
     }
 
     /**
@@ -1758,7 +1780,8 @@ class LocationForegroundService : Service() {
             authHeaders = secureStorage.getAuthHeaders(),
             httpMethod = config.httpMethod,
             apiFormat = effectiveFormat,
-            overlandBatchSize = config.overlandBatchSize
+            overlandBatchSize = config.overlandBatchSize,
+            sendsTransitions = config.reportsTransitions
         )
     }
 
@@ -1787,7 +1810,7 @@ class LocationForegroundService : Service() {
         payloadFieldMap = parsedFieldMap
         payloadCustomFields = parsedCustomFields
 
-        if (config.reportsGeofences) geofenceTransitions.restore() else geofenceTransitions.clear()
+        if (config.followsGeofences) geofenceTransitions.restore() else geofenceTransitions.clear()
 
         AppLogger.d(TAG, buildString {
             append("Config loaded: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, accuracy=${config.accuracyThreshold}m, accuracyMode=${config.accuracyMode.wireName}")

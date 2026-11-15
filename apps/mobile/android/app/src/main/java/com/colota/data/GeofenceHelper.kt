@@ -38,6 +38,7 @@ class GeofenceHelper(private val context: Context) {
         val lat: Double,
         val lon: Double,
         val radius: Double,
+        val createdAt: Long = 0L,
     )
 
     companion object {
@@ -109,7 +110,7 @@ class GeofenceHelper(private val context: Context) {
             val regions = mutableListOf<Region>()
             dbHelper.readableDatabase.query(
                 DatabaseHelper.TABLE_GEOFENCES,
-                arrayOf("id", "name", "latitude", "longitude", "radius"),
+                arrayOf("id", "name", "latitude", "longitude", "radius", "created_at"),
                 "enabled = 1",
                 null, null, null,
                 "id ASC"
@@ -119,6 +120,7 @@ class GeofenceHelper(private val context: Context) {
                 val latIdx = cursor.getColumnIndexOrThrow("latitude")
                 val lonIdx = cursor.getColumnIndexOrThrow("longitude")
                 val radIdx = cursor.getColumnIndexOrThrow("radius")
+                val createdIdx = cursor.getColumnIndexOrThrow("created_at")
 
                 while (cursor.moveToNext()) {
                     regions.add(Region(
@@ -127,6 +129,7 @@ class GeofenceHelper(private val context: Context) {
                         lat = cursor.getDouble(latIdx),
                         lon = cursor.getDouble(lonIdx),
                         radius = cursor.getDouble(radIdx),
+                        createdAt = cursor.getLong(createdIdx),
                     ))
                 }
             }

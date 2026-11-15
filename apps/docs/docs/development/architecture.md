@@ -156,7 +156,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Pause zone detection (geofencing)
 - Geofence entry delay - keeps recording for 3.5× the configured tracking interval before pausing on zone entry, logging real arrival points for backends like GeoPulse
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
-- Geofence reporting - with Send current geofences on (a field-mapped POST or an Overland batch, `ServiceConfig.reportsGeofences`), `GeofenceTransitions` follows every enabled geofence on each fix that passed the filters, before the in-zone drop, and its names ride on each payload as `inregions`
+- Geofence reporting - with Send current geofences or Send enter and leave events on (a field-mapped POST or an Overland batch, `ServiceConfig.followsGeofences`), `GeofenceTransitions` follows every enabled geofence on each fix that passed the filters, before the in-zone drop. Its names ride on each payload as `inregions` while current geofences are on, and its enters and leaves go out as events while those are on
 - Battery critical shutdown (below 5% while unplugged), detected via a battery-broadcast receiver so it fires even while GPS is paused in a zone
 - Location accuracy filtering (profiles switch on what the global filter passes; an active profile's own threshold decides what is recorded) and the global positioning accuracy mode
 - Stationary detection - slows GPS to the profile's interval after 60s of fixes without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). It keeps working inside a pause zone and during an entry delay, since fixes reach `ProfileManager` before the in-zone drop; only a hold that stops the stream can prevent a verdict.
@@ -183,7 +183,7 @@ Handles all notification logic for the tracking service:
 
 ### DatabaseHelper
 
-SQLite database singleton with six tables:
+SQLite database singleton with seven tables:
 
 | Table                     | Purpose                                      |
 | ------------------------- | -------------------------------------------- |
@@ -193,6 +193,7 @@ SQLite database singleton with six tables:
 | `geofences`               | Pause zone definitions                       |
 | `tracking_profiles`       | Condition-based tracking profile definitions |
 | `trip_boundary_overrides` | Manual trip merges and splits                |
+| `transitions`             | Geofence events pending upload               |
 
 Uses WAL (Write-Ahead Logging) mode and prepared statements for performance.
 
@@ -211,7 +212,7 @@ Orchestrates batch location uploads with:
 - Configurable batch size (50 items per batch, 10 concurrent HTTP requests)
 - Exponential backoff on failure
 - A pass stops on a 429, and nothing is sent until its `Retry-After` wait is over (60 s without one, capped at 15 min): the periodic tick, a manual or zone-entry flush and an instant send all hold. In the per-point format a pass also stops on a 5xx or a network error once a group of 10 requests got nothing through, so an unreachable server costs one group of requests. A batch upload stops on its first 429, 5xx or network error
-- Overland batch uploads go through `OverlandBatchSender`, which halves a batch the server rejects with a 4xx until the refused row is alone. The per-point format goes through `PointSender`, 10 requests at a time, and `SyncSchedule` times the periodic tick and the backoff. The rate-limit wait lives in `SyncState`, so it outlives the service that met the 429
+- Overland batch uploads go through `OverlandBatchSender`, which halves a batch the server rejects with a 4xx until the refused row is alone. The per-point format goes through `PointSender`, 10 requests at a time, the geofence events through `TransitionSender` after them, and `SyncSchedule` times the periodic tick and the backoff. The rate-limit wait lives in `SyncState`, so it outlives the service that met the 429
 - Periodic sync scheduling. A new interval (a profile switch) applies to the wait already running, measured from when it began; a send or a backoff in progress finishes first
 - Manual flush support
 - One pass at a time: a periodic tick and a manual flush wait for the running pass. An instant send leaves its row queued while a pass runs, and a pass skips rows an instant send is still posting
@@ -264,7 +265,7 @@ When both WiFi and motionless pause are enabled, GPS only resumes when both cond
 
 ### GeofenceTransitions
 
-Which enabled geofences the device is in, for reporting only: pausing never reads it, so the report cannot move a pause. Enter is the first fix within the radius. Leave takes two fixes in a row further out than radius + accuracy and is dated by the first, so one wild fix cannot report a departure. The state is a JSON map of geofence id to inside under the `geofence_state` setting, so a restart neither repeats an enter nor misses a leave; a geofence missing from it is seeded silently, which covers turning the report on and creating a zone where the device stands. `loadConfigFromIntent` restores it while the report is on and clears it while it is off. During a WiFi or motionless hold no fixes arrive, so the leave lands on the first fix after GPS resumes. Heartbeat and anchor points sit at a zone centre and take their names from `namesAt`: the enabled geofences whose radius holds that centre. A hold that began before the report saw a fix still names its zone.
+Which enabled geofences the device is in, for reporting only: pausing never reads it, so the report cannot move a pause. Enter is the first fix within the radius. Leave takes two fixes in a row further out than radius + accuracy and is dated by the first, so one wild fix cannot report a departure. The state is a JSON map of geofence id to inside under the `geofence_state` setting, so a restart neither repeats an enter nor misses a leave; a geofence missing from it is seeded silently, which covers turning the report on and creating a zone where the device stands. `loadConfigFromIntent` restores it while the report is on and clears it while it is off. During a WiFi or motionless hold no fixes arrive, so the leave lands on the first fix after GPS resumes. Heartbeat and anchor points sit at a zone centre and take their names from `namesAt`: the enabled geofences whose radius holds that centre. A hold that began before the report saw a fix still names its zone. `evaluate` returns the enters and leaves of a fix. With Send enter and leave events on (`ServiceConfig.reportsTransitions`), the service turns each into an OwnTracks transition built from the payload of the point it happened at. It hands them to `SyncManager.queueTransitions`, which stores them in the `transitions` table and runs a flush, so they go out at once and after the points queued before them. `TransitionSender` sends them, oldest first, after the location rows of a pass that neither stopped nor hit the batch cap: one POST each for a field-mapped endpoint, one request with an empty `locations` for an Overland batch. `SyncManager` learns the switch through `updateConfig`; while it is off, or the format has no shape for events, the waiting ones are dropped, so they cannot fail every pass.
 
 ### ProfileManager
 

@@ -685,6 +685,49 @@ class PayloadBuilderTest {
     }
 
     @Test
+    fun `buildTransitionPayload repeats the point's payload, so a server storing it as a point stores the same values`() {
+        val point = JSONObject().apply {
+            put("_type", "location"); put("tid", "AA")
+            put("latitude", 51.5); put("lon", -0.04); put("acc", 12); put("batt", 85); put("tst", 1704067200L)
+        }
+
+        val transition = PayloadBuilder.buildTransitionPayload(point, "leave", "Home", 1700000000L)
+
+        // Compared as stored: the queue keeps payloads as text
+        val stored = JSONObject(point.toString())
+        stored.keys().forEach { key -> if (key != "_type") assertEquals(stored.get(key), transition.get(key)) }
+        assertEquals("transition", transition.getString("_type"))
+        assertEquals("leave", transition.getString("event"))
+        assertEquals("Home", transition.getString("desc"))
+        assertEquals("c", transition.getString("t"))
+        assertEquals(1700000000L, transition.getLong("wtst"))
+        assertEquals("location", point.getString("_type"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload puts events beside the locations and keeps their keys off the envelope`() {
+        val point = JSONObject().apply {
+            put("lat", 51.5); put("lon", -0.04); put("acc", 12); put("tst", 1704067200L); put("device_id", "phone")
+        }
+        val transition = PayloadBuilder.buildTransitionPayload(point, "enter", "Home", 1700000000L)
+
+        val result = PayloadBuilder.buildOverlandBatchPayload(
+            emptyList(), PayloadBuilder.extractEnvelopeCustomFields(transition), listOf(transition)
+        )
+
+        assertEquals(0, result.getJSONArray("locations").length())
+        val feature = result.getJSONArray("transitions").getJSONObject(0)
+        val properties = feature.getJSONObject("properties")
+        assertEquals("enter", properties.getString("event"))
+        assertEquals("Home", properties.getString("geofence"))
+        assertEquals("2024-01-01T00:00:00Z", properties.getString("timestamp"))
+        assertEquals(12, properties.getInt("horizontal_accuracy"))
+        assertEquals(-0.04, feature.getJSONObject("geometry").getJSONArray("coordinates").getDouble(0), 0.001)
+        assertEquals("phone", result.getString("device_id"))
+        listOf("_type", "event", "desc", "t", "wtst").forEach { assertFalse(it, result.has(it)) }
+    }
+
+    @Test
     fun `buildOverlandBatchPayload uses GeoJSON lon-lat coordinate order`() {
         val flat = JSONObject().apply {
             put("lat", 51.5); put("lon", -0.04); put("tst", 1704067200L)

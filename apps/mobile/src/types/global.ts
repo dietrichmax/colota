@@ -329,6 +329,7 @@ export interface Settings {
   dawarichMode: DawarichMode
   overlandBatchSize: number
   sendInRegions: boolean
+  sendTransitions: boolean
 
   // Sync & Upload
   syncInterval: number
@@ -361,7 +362,8 @@ export const DEFAULT_SETTINGS: Settings = {
   httpMethod: "POST",
   dawarichMode: "single",
   overlandBatchSize: 50,
-  sendInRegions: false
+  sendInRegions: false,
+  sendTransitions: false
 } as const
 
 // ============================================================================

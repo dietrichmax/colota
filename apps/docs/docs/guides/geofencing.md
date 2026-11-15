@@ -83,9 +83,9 @@ See the [Deep Link Setup](deep-link-setup.md#geofences) guide for the full paylo
 Colota can tell your server which zones each point is in, pause zones and plain zones alike.
 
 1. Go to **Settings → Connection → Request format**
-2. Turn on **Send current geofences** under **Geofences**
+2. Turn on **Send current geofences**, **Send enter and leave events** or both under **Geofences**
 
-Every point then carries `inregions` with the zone names. See [API Reference](/docs/api-reference#geofences) for the format.
+Current geofences put `inregions` with the zone names on every point. Enter and leave events go to the same endpoint as messages of their own. See [API Reference](/docs/api-reference#geofences) for the formats.
 
 ## How It Works
 

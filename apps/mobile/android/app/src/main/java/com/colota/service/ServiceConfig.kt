@@ -33,15 +33,25 @@ data class ServiceConfig(
     val httpMethod: String = "POST",
     val apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
     val overlandBatchSize: Int = 50,
-    val sendInRegions: Boolean = false
+    val sendInRegions: Boolean = false,
+    val sendTransitions: Boolean = false
 ) {
-    /** Current geofences have a shape only in a field-mapped POST body or an Overland batch. */
-    val reportsGeofences: Boolean
-        get() = sendInRegions && when (apiFormat) {
+    /** Geofence data has a shape only in a field-mapped POST body or an Overland batch. */
+    private val carriesGeofences: Boolean
+        get() = when (apiFormat) {
             ApiFormat.OVERLAND_BATCH -> true
             ApiFormat.FIELD_MAPPED -> httpMethod.equals("POST", ignoreCase = true)
             ApiFormat.TRACCAR_JSON -> false
         }
+
+    val reportsGeofences: Boolean
+        get() = sendInRegions && carriesGeofences
+
+    val reportsTransitions: Boolean
+        get() = sendTransitions && carriesGeofences
+
+    val followsGeofences: Boolean
+        get() = reportsGeofences || reportsTransitions
 
     companion object {
         internal fun deriveApiFormat(apiTemplate: String, httpMethod: String, dawarichMode: String): ApiFormat = when {
@@ -75,7 +85,8 @@ data class ServiceConfig(
                 httpMethod = httpMethod,
                 apiFormat = apiFormat,
                 overlandBatchSize = saved["overlandBatchSize"]?.toIntOrNull()?.coerceIn(1, 500) ?: 50,
-                sendInRegions = saved["sendInRegions"]?.toBoolean() ?: false
+                sendInRegions = saved["sendInRegions"]?.toBoolean() ?: false,
+                sendTransitions = saved["sendTransitions"]?.toBoolean() ?: false
             )
         }
 
@@ -124,7 +135,8 @@ data class ServiceConfig(
                 httpMethod = httpMethod,
                 apiFormat = apiFormat,
                 overlandBatchSize = (config.getIntOrNull("overlandBatchSize") ?: dbConfig.overlandBatchSize).coerceIn(1, 500),
-                sendInRegions = config.getBooleanOrNull("sendInRegions") ?: dbConfig.sendInRegions
+                sendInRegions = config.getBooleanOrNull("sendInRegions") ?: dbConfig.sendInRegions,
+                sendTransitions = config.getBooleanOrNull("sendTransitions") ?: dbConfig.sendTransitions
             )
         }
 
@@ -153,7 +165,8 @@ data class ServiceConfig(
                     ApiFormat.fromWire(extras.getString("apiFormat"))
                 else dbConfig.apiFormat,
                 overlandBatchSize = extras.getIntOrDefault("overlandBatchSize", dbConfig.overlandBatchSize).coerceIn(1, 500),
-                sendInRegions = extras.getBooleanOrDefault("sendInRegions", dbConfig.sendInRegions)
+                sendInRegions = extras.getBooleanOrDefault("sendInRegions", dbConfig.sendInRegions),
+                sendTransitions = extras.getBooleanOrDefault("sendTransitions", dbConfig.sendTransitions)
             )
         }
     }
@@ -177,6 +190,7 @@ data class ServiceConfig(
             putExtra("apiFormat", apiFormat.wireName)
             putExtra("overlandBatchSize", overlandBatchSize)
             putExtra("sendInRegions", sendInRegions)
+            putExtra("sendTransitions", sendTransitions)
         }
     }
 }

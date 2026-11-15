@@ -103,6 +103,59 @@ With **Send current geofences** on, every point carries `inregions`, the key Own
 - Anchor and heartbeat points name the geofences whose radius holds the zone centre
 - Turning the switch on, or creating a zone where you stand, names the zone from the next point on
 
+### Enter and Leave Events
+
+With **Send enter and leave events** on, Colota sends an event each time the device enters or leaves an enabled geofence. Events go out at once whatever the sync interval, after the points queued before them.
+
+A field-mapped POST sends each event as its own request in the OwnTracks transition format. It carries the fields of the fix the event happened at, custom fields included, and adds the event keys:
+
+```json
+{
+  "_type": "transition",
+  "lat": 48.1351,
+  "lon": 11.582,
+  "acc": 12,
+  "tst": 1704067200,
+  "event": "leave",
+  "desc": "Home",
+  "t": "c",
+  "wtst": 1700000000
+}
+```
+
+| Key     | Value                                          |
+| ------- | ---------------------------------------------- |
+| `event` | `enter` or `leave`                             |
+| `desc`  | The geofence name                              |
+| `t`     | `c`, a circular region                         |
+| `wtst`  | When the geofence was created, in Unix seconds |
+
+An Overland batch sends the events after the points, in a request of their own: `locations` is empty and `transitions` holds the events, oldest first.
+
+```json
+{
+  "locations": [],
+  "transitions": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [11.582, 48.1351] },
+      "properties": {
+        "event": "leave",
+        "geofence": "Home",
+        "timestamp": "2024-01-01T00:00:00Z",
+        "horizontal_accuracy": 12
+      }
+    }
+  ]
+}
+```
+
+- An enter is the first fix inside the radius
+- A leave takes two fixes in a row further out than the radius plus their accuracy and is dated by the first
+- Turning the switch on, or creating a zone where you stand, sends no enter for the zone you are already in
+- A server that ignores `_type` stores an event as a point, at the time and place of the point it repeats
+- Turning the switch off drops the events still waiting, and so does **Delete queued locations** in Data management
+
 ### Custom fields
 
 Custom static fields (configured in Request format) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.

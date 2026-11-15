@@ -309,6 +309,54 @@ class ServiceConfigTest {
         assertFalse(ServiceConfig(sendInRegions = false, apiFormat = ApiFormat.OVERLAND_BATCH).reportsGeofences)
     }
 
+    // --- sendTransitions ---
+
+    @Test
+    fun `fromDatabase keeps enter and leave events off on an install that never stored the key`() {
+        assertFalse(ServiceConfig.fromDatabase(mockDbHelper(baseSettings)).sendTransitions)
+        assertTrue(ServiceConfig.fromDatabase(mockDbHelper(baseSettings + ("sendTransitions" to "true"))).sendTransitions)
+    }
+
+    @Test
+    fun `fromReadableMap reads sendTransitions and falls back to db when the key is absent`() {
+        val stored = mockDbHelper(baseSettings + ("sendTransitions" to "true"))
+        val map = JavaOnlyMap().apply { putBoolean("sendTransitions", false) }
+
+        assertFalse(ServiceConfig.fromReadableMap(map, stored).sendTransitions)
+        assertTrue(ServiceConfig.fromReadableMap(JavaOnlyMap(), stored).sendTransitions)
+    }
+
+    @Test
+    fun `sendTransitions survives the intent a restart is sent with`() {
+        val out = mockk<Intent>(relaxed = true)
+        ServiceConfig(sendTransitions = true).toIntent(out)
+        verify { out.putExtra("sendTransitions", true) }
+
+        val bundle = mockk<Bundle> {
+            every { getString("endpoint") } returns null
+            every { containsKey(any()) } returns false
+            every { containsKey("sendTransitions") } returns true
+            every { getBoolean("sendTransitions") } returns true
+        }
+        val intent = mockk<Intent> { every { extras } returns bundle }
+
+        assertTrue(ServiceConfig.fromIntent(intent, mockDbHelper(baseSettings)).sendTransitions)
+    }
+
+    @Test
+    fun `events go out only in a wire format that has a shape for them, and either switch follows the geofences`() {
+        assertTrue(ServiceConfig(sendTransitions = true, apiFormat = ApiFormat.FIELD_MAPPED, httpMethod = "POST").reportsTransitions)
+        assertTrue(ServiceConfig(sendTransitions = true, apiFormat = ApiFormat.OVERLAND_BATCH).reportsTransitions)
+        assertFalse(ServiceConfig(sendTransitions = true, apiFormat = ApiFormat.FIELD_MAPPED, httpMethod = "GET").reportsTransitions)
+        assertFalse(ServiceConfig(sendTransitions = true, apiFormat = ApiFormat.TRACCAR_JSON).reportsTransitions)
+
+        // Events alone still need the state, but must not put inregions on points
+        val eventsOnly = ServiceConfig(sendTransitions = true)
+        assertTrue(eventsOnly.followsGeofences)
+        assertFalse(eventsOnly.reportsGeofences)
+        assertFalse(ServiceConfig().followsGeofences)
+    }
+
     // --- data class defaults ---
 
     @Test
@@ -410,6 +458,7 @@ class ServiceConfigTest {
             every { getString("apiFormat") } returns "traccar_json"
             every { getInt("overlandBatchSize") } returns 50
             every { getBoolean("sendInRegions") } returns true
+            every { getBoolean("sendTransitions") } returns true
         }
         val intent = mockk<Intent> {
             every { extras } returns bundle
@@ -431,6 +480,7 @@ class ServiceConfigTest {
         assertEquals("GET", config.httpMethod)
         assertEquals(ApiFormat.TRACCAR_JSON, config.apiFormat)
         assertTrue(config.sendInRegions)
+        assertTrue(config.sendTransitions)
     }
 
     // --- toIntent ---

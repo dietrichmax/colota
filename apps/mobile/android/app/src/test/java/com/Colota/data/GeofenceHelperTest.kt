@@ -194,7 +194,9 @@ class GeofenceHelperTest {
         val regions = helper.getEnabledRegions()!!
 
         assertEquals(listOf(home, office), regions.map { it.id })
-        assertEquals(GeofenceHelper.Region(office, "Office", 52.6, 13.5, 80.0), regions[1])
+        assertEquals(GeofenceHelper.Region(office, "Office", 52.6, 13.5, 80.0), regions[1].copy(createdAt = 0L))
+        // An OwnTracks transition carries the geofence's creation time as wtst
+        assertTrue(regions[1].createdAt > 0L)
     }
 
     @Test

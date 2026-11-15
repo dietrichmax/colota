@@ -8,6 +8,7 @@ package com.Colota.data
 import android.database.sqlite.SQLiteDatabase
 import com.Colota.data.DatabaseHelper.Companion.CREATE_BOUNDARY_OVERRIDES_TABLE
 import com.Colota.data.DatabaseHelper.Companion.CREATE_PROFILES_INDEX
+import com.Colota.data.DatabaseHelper.Companion.CREATE_TRANSITIONS_TABLE
 import com.Colota.data.DatabaseHelper.Companion.DATABASE_VERSION
 import com.Colota.data.DatabaseHelper.Companion.TABLE_GEOFENCES
 import com.Colota.data.DatabaseHelper.Companion.TABLE_LOCATIONS
@@ -110,6 +111,9 @@ object DatabaseMigrations {
         }
         if (oldVersion < 10) {
             db.execSQL("ALTER TABLE $TABLE_PROFILES ADD COLUMN accuracy_threshold REAL")
+        }
+        if (oldVersion < 11) {
+            db.execSQL(CREATE_TRANSITIONS_TABLE)
         }
     }
 }
