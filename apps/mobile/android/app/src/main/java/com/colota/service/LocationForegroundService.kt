@@ -72,9 +72,15 @@ class LocationForegroundService : Service() {
     @Volatile private var lastFixEpochMs: Long = 0L
     private val startedAtMs: Long = System.currentTimeMillis()
     @Volatile private var motionDetector: MotionStateDetector? = null
+    /** A new anchor starts a new impossible-travel run, since a run counts rejections against one anchor. */
     @Volatile private var lastKnownLocation: Location? = null
+        set(value) {
+            field = value
+            clearImpossibleJumpRun()
+        }
     /** First fix of the current run of impossible-travel rejections; null while fixes are plausible. */
     private var impossibleJumpRunStart: Location? = null
+    private var impossibleJumpRejections = 0
 
     // Rate-limit the fresh-fix probe so repeated rechecks/resumes don't spin up GNSS. Main-thread only.
     @Volatile private var lastFreshProbeAtMs: Long? = null
@@ -172,6 +178,8 @@ class LocationForegroundService : Service() {
         private const val MAX_PLAUSIBLE_GROUND_SPEED_MPS = 400f
         /** A run of impossible fixes this long means the anchor itself is wrong, so the newest fix replaces it. */
         private const val IMPOSSIBLE_JUMP_REANCHOR_MS = 15 * 60_000L
+        /** Fewest rejections before a re-anchor, so one far fix after a long gap cannot replace the anchor. */
+        private const val IMPOSSIBLE_JUMP_REANCHOR_MIN_REJECTIONS = 3
 
         /** Timeout for the active fresh-fix probe (ms). */
         private const val FRESH_FIX_TIMEOUT_MS = 30_000L
@@ -588,7 +596,7 @@ class LocationForegroundService : Service() {
             val restoredPause = insidePauseZone
             if (restoredPause) {
                 requestFreshOrLastLocation { location, _ ->
-                    if (location != null) {
+                    if (location != null && isPlausibleAnchor(location)) {
                         lastKnownLocation = location
                         recheckZoneWithLocation(location)
                     }
@@ -597,7 +605,7 @@ class LocationForegroundService : Service() {
                 locationProvider.getLastLocation(
                     onSuccess = { location ->
                         if (insidePauseZone) return@getLastLocation
-                        if (location != null && isFixFresh(location)) {
+                        if (location != null && isFixFresh(location) && isPlausibleAnchor(location)) {
                             lastKnownLocation = location
                             geofenceHelper.getPauseZone(location)?.let { zone ->
                                 if (skipEntryDelay) enterPauseZone(zone)
@@ -633,6 +641,7 @@ class LocationForegroundService : Service() {
         stopPauseWatchdog()
         locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
         locationUpdateCallback = null
+        clearImpossibleJumpRun()
     }
 
     /**
@@ -803,7 +812,7 @@ class LocationForegroundService : Service() {
         AppLogger.i(TAG, "Pause watchdog: stream quiet ${sinceLastFix / 1000}s - re-evaluating zone")
         requestFreshOrLastLocation { location, _ ->
             // Act only on a usable fix - a stale/absent one leaves the pause untouched (no home false-exits).
-            location?.let {
+            location?.takeIf { isPlausibleAnchor(it) }?.let {
                 lastKnownLocation = it
                 recheckZoneWithLocation(it)
             }
@@ -827,8 +836,10 @@ class LocationForegroundService : Service() {
             }
             requestFreshOrLastLocation { location, probed ->
                 if (location != null) {
-                    lastKnownLocation = location
-                    recheckZoneWithLocation(location)
+                    if (isPlausibleAnchor(location)) {
+                        lastKnownLocation = location
+                        recheckZoneWithLocation(location)
+                    }
                 } else if (probed) {
                     // Only a genuine probe that found nothing exits. A throttled stale fallback must
                     // not fabricate a departure while genuinely at home (eg an edit right after a watchdog probe).
@@ -847,7 +858,7 @@ class LocationForegroundService : Service() {
         } else {
             locationProvider.getLastLocation(
                 onSuccess = { location ->
-                    if (location != null) {
+                    if (location != null && isPlausibleAnchor(location)) {
                         lastKnownLocation = location
                         recheckZoneWithLocation(location)
                     }
@@ -967,28 +978,38 @@ class LocationForegroundService : Service() {
         else to.time - from.time
 
     /**
-     * True when reaching [location] from [prev] takes more than [MAX_PLAUSIBLE_GROUND_SPEED_MPS].
-     * Both accuracy radii widen the allowance so a coarse fix can't trip it. Rejected fixes leave
-     * [prev] as the anchor, so a run of them can't walk the track away; a run lasting
-     * [IMPOSSIBLE_JUMP_REANCHOR_MS] means the anchor is the bad fix and the newest one is accepted.
+     * True when reaching [location] from [prev] takes more than [MAX_PLAUSIBLE_GROUND_SPEED_MPS], widened by both
+     * accuracy radii. Rejections leave [prev] as the anchor; [IMPOSSIBLE_JUMP_REANCHOR_MIN_REJECTIONS] of them over
+     * [IMPOSSIBLE_JUMP_REANCHOR_MS] mean the anchor is the bad fix, so the newest one passes.
      */
     private fun isImpossibleTravel(prev: Location, location: Location): Boolean {
         val gapSec = maxOf(fixGapMs(prev, location), 0L) / 1000f
         val allowance = MAX_PLAUSIBLE_GROUND_SPEED_MPS * gapSec + prev.accuracy + location.accuracy
         val distance = prev.distanceTo(location)
         if (distance <= allowance) {
-            impossibleJumpRunStart = null
+            clearImpossibleJumpRun()
             return false
         }
         val runStart = impossibleJumpRunStart ?: location.also { impossibleJumpRunStart = it }
         val runMs = fixGapMs(runStart, location)
-        if (runMs >= IMPOSSIBLE_JUMP_REANCHOR_MS) {
+        if (runMs >= IMPOSSIBLE_JUMP_REANCHOR_MS && impossibleJumpRejections >= IMPOSSIBLE_JUMP_REANCHOR_MIN_REJECTIONS) {
             AppLogger.w(TAG, "Impossible travel for ${runMs / 1000}s - re-anchoring on the newest fix")
-            impossibleJumpRunStart = null
             return false
         }
+        impossibleJumpRejections++
         AppLogger.w(TAG, "Location filtered: impossible travel ${String.format(Locale.US, "%.0f", distance)}m in ${String.format(Locale.US, "%.0f", gapSec)}s")
         return true
+    }
+
+    private fun clearImpossibleJumpRun() {
+        impossibleJumpRunStart = null
+        impossibleJumpRejections = 0
+    }
+
+    /** A probe or last-known fix may become the anchor only where a streamed fix would. */
+    private fun isPlausibleAnchor(location: Location): Boolean {
+        val prev = lastKnownLocation ?: return true
+        return !isImpossibleTravel(prev, location)
     }
 
     private fun handleLocationUpdate(location: Location) {
