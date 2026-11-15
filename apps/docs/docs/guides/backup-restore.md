@@ -47,13 +47,13 @@ A random 16-character password from a password manager, or a 4-5 word passphrase
 
 > [!WARNING] No password recovery
 >
-> No password recovery If you lose the password, the backup cannot be opened. Ever. There is no recovery code, no email reset, no developer override. Store the password somewhere you trust before you create the backup.
+> If you lose the password, the backup cannot be opened. Ever. There is no recovery code, no email reset, no developer override. Store the password somewhere you trust before you create the backup.
 
 ## Restoring from a Backup
 
 > [!DANGER] Data will be overwritten
 >
-> Replaces all current data Restoring overwrites every location, setting, geofence and credential currently on the device. There is no merge mode and no undo. Take a backup of the current device first if you might want to roll back.
+> Restoring overwrites every location, setting, geofence and credential currently on the device. There is no merge mode and no undo. Take a backup of the current device first if you might want to roll back.
 
 1. Go to **Settings → Backup & restore**
 2. Tap **Choose a backup file** and pick the `.colota` file
