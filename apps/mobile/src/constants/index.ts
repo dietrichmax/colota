@@ -114,11 +114,6 @@ export const MAP_STYLE_URL_LIGHT = "https://maps.mxd.codes/styles/bright/style.j
 export const MAP_STYLE_URL_DARK = "https://maps.mxd.codes/styles/dark/style.json"
 
 // URLs
-export const REPO_URL = "https://github.com/dietrichmax/colota"
-export const ISSUES_URL = `${REPO_URL}/issues`
-export const PRIVACY_POLICY_URL = "https://colota.app/privacy-policy"
-export const RELEASES_URL = "https://colota.app/releases"
-export const SUPPORT_URL = "https://mxd.codes/support"
+export { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL, RELEASES_URL, SUPPORT_URL, PLAY_STORE_WEB_URL } from "@colota/shared"
 /** market:// opens the Play app straight on the listing; the https form is the fallback. */
 export const PLAY_STORE_MARKET_URL = "market://details?id=com.Colota"
-export const PLAY_STORE_WEB_URL = "https://play.google.com/store/apps/details?id=com.Colota"

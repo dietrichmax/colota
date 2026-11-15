@@ -1,6 +1,16 @@
 import { themes as prismThemes } from "prism-react-renderer"
 import type { Config } from "@docusaurus/types"
 import type * as Preset from "@docusaurus/preset-classic"
+import {
+  DISCUSSIONS_URL,
+  FDROID_URL,
+  GITHUB_RELEASES_URL,
+  ISSUES_URL,
+  IZZYONDROID_URL,
+  PLAY_STORE_WEB_URL,
+  REPO_URL,
+  SUPPORT_URL
+} from "@colota/shared"
 const config: Config = {
   title: "Colota",
   tagline: "Self-hosted GPS tracking for Android",
@@ -43,7 +53,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/dietrichmax/colota/tree/main/apps/docs/"
+          editUrl: `${REPO_URL}/tree/main/apps/docs/`
         },
         blog: false,
         theme: {
@@ -100,7 +110,7 @@ const config: Config = {
           position: "left"
         },
         {
-          href: "https://github.com/dietrichmax/colota",
+          href: REPO_URL,
           label: "GitHub",
           position: "right"
         }
@@ -114,15 +124,15 @@ const config: Config = {
           items: [
             {
               label: "Google Play",
-              href: "https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
+              href: PLAY_STORE_WEB_URL
             },
             {
               label: "F-Droid",
-              href: "https://f-droid.org/packages/com.Colota/"
+              href: FDROID_URL
             },
             {
               label: "IzzyOnDroid",
-              href: "https://apt.izzysoft.de/packages/com.Colota/"
+              href: IZZYONDROID_URL
             }
           ]
         },
@@ -152,19 +162,19 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/dietrichmax/colota"
+              href: REPO_URL
             },
             {
               label: "Issues",
-              href: "https://github.com/dietrichmax/colota/issues"
+              href: ISSUES_URL
             },
             {
               label: "Discussions",
-              href: "https://github.com/dietrichmax/colota/discussions"
+              href: DISCUSSIONS_URL
             },
             {
               label: "GitHub Releases",
-              href: "https://github.com/dietrichmax/colota/releases"
+              href: GITHUB_RELEASES_URL
             }
           ]
         },
@@ -173,7 +183,7 @@ const config: Config = {
           items: [
             {
               label: "Donate",
-              href: "https://mxd.codes/support"
+              href: SUPPORT_URL
             }
           ]
         }

@@ -11,6 +11,18 @@ export type { RadiusName } from "./radius"
 export { space } from "./space"
 export { size } from "./size"
 export {
+  REPO_URL,
+  ISSUES_URL,
+  DISCUSSIONS_URL,
+  GITHUB_RELEASES_URL,
+  PRIVACY_POLICY_URL,
+  RELEASES_URL,
+  SUPPORT_URL,
+  PLAY_STORE_WEB_URL,
+  FDROID_URL,
+  IZZYONDROID_URL
+} from "./links"
+export {
   API_TEMPLATE_NAMES,
   HTTP_METHODS,
   DAWARICH_MODES,
