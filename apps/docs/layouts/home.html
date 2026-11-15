@@ -14,7 +14,18 @@
           {{- range .Params.facts }}<li>{{ . }}</li>{{ end }}
         </ul>
       </div>
-      {{ partial "ride.html" . }}
+      <div class="hero-shots">
+        {{- range .Params.heroShots }}
+          {{- $parts := split . "|" }}
+          {{- $file := printf "static/img/screenshots/%s.png" (index $parts 0) }}
+          {{- if not (fileExists $file) }}{{ errorf "content/_index.md: no screenshot %s" $file }}{{ end }}
+          {{- $img := imageConfig $file }}
+          <figure>
+            <img src="/img/screenshots/{{ index $parts 0 }}.png" alt="Colota {{ index $parts 1 }}" width="{{ $img.Width }}" height="{{ $img.Height }}" />
+            <figcaption>{{ index $parts 1 }}</figcaption>
+          </figure>
+        {{- end }}
+      </div>
     </section>
     <section class="features" aria-label="Features">
       {{- range .Params.features }}

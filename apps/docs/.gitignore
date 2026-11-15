@@ -11,7 +11,5 @@
 /assets/css/tokens.css
 /data/links.json
 
-# Generated from screenshots/demo-track.gpx by scripts/ride.mjs
-/data/ride.json
 
 .DS_Store
