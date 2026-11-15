@@ -339,6 +339,15 @@ button { font: inherit; color: inherit; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-sm); min-height: var(--size-touch); padding: 0 var(--space-xl); font-weight: 600; }
 .btn-pill { border-radius: var(--radius-pill); background: var(--color-primary); color: var(--color-text-on-primary); box-shadow: var(--shadow-floating); }
 .btn-secondary { border-radius: var(--radius-sm); background: var(--color-primary-container); color: var(--color-on-primary-container); }
+/* State layer, the app's ripple colour: the control's own content colour over its fill, doubled while pressed */
+.btn:hover, .gen-add:hover, .gen-primary:hover, .gen-secondary:hover {
+  --layer: color-mix(in srgb, currentColor calc(var(--state-layer-alpha) * 100%), transparent);
+  background-image: linear-gradient(var(--layer), var(--layer));
+}
+.btn:active, .gen-add:active, .gen-primary:active, .gen-secondary:active {
+  --layer: color-mix(in srgb, currentColor calc(var(--state-layer-alpha) * 200%), transparent);
+  background-image: linear-gradient(var(--layer), var(--layer));
+}
 .hero-more { margin: var(--space-lg) 0 0; font-size: var(--fs-body); color: var(--color-text-secondary); }
 .hero-more a { color: var(--color-link); text-decoration: underline; text-underline-offset: 3px; }
 .hero-shots { display: flex; gap: var(--space-lg); align-items: flex-start; justify-self: center; }
