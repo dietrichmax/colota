@@ -19,7 +19,7 @@ function getSnapshot(): string {
 export function useTranslation(): { t: (key: TranslationKey, options?: Record<string, unknown>) => string } {
   const language = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
   const t = useCallback(
-    (key: TranslationKey, options?: Record<string, unknown>) => i18next.getFixedT(language)(key, options) as string,
+    (key: TranslationKey, options?: Record<string, unknown>) => i18next.getFixedT(language)(key, options ?? {}) as string,
     [language]
   )
   return { t }
