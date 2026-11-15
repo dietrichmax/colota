@@ -16,7 +16,7 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 | Control | What it does |
 | --- | --- |
-| **Sync now** | Uploads the queued locations immediately, whatever [Sync only on](/docs/configuration/sync-presets) says. A sync already running finishes first. The tracking notification appears for a moment if tracking was off, and nothing is recorded |
+| **Sync now** | Uploads the queued locations immediately, whatever [Sync only on](/docs/configuration/tracking-sync#sync-condition) says. A sync already running finishes first. The tracking notification appears for a moment if tracking was off, and nothing is recorded |
 | **Compact database** | Rewrites the database to give unused space back. It deletes nothing. Deleting trips and points from Location History leaves gaps that only this reclaims, so press it after a round of track editing |
 | **Delete queued locations** | Deletes the locations waiting to upload, not their pending uploads. Nothing else holds a copy, so they leave Location History too. Geofence enter and leave events still waiting go with them |
 | **Delete synced locations** | Deletes locations already on your server. Those days leave Location History, notes included, and imported locations count as synced. Copies on your server stay |
@@ -25,7 +25,7 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 Each delete row names its own count before you press it, and Delete all takes the Locations figure at the top. No age is chosen when the screen opens, so nothing is counted until you pick one. Every delete asks you to confirm, and none can be undone.
 
-In [offline mode](/docs/configuration/server-settings#offline-mode) nothing new is queued, so Sync now and both sync-scoped deletes leave the screen. Locations queued before you turned it on are still there, and the age delete and Delete all still reach them.
+In [offline mode](/docs/configuration/connection#offline-mode) nothing new is queued, so Sync now and both sync-scoped deletes leave the screen. Locations queued before you turned it on are still there, and the age delete and Delete all still reach them.
 
 Location History deletes single points and whole trips, see below. Export lives on its own screen, see [Data Export](data-export.md), and so does import, see [Data Import](data-import.md).
 

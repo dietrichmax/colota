@@ -39,7 +39,7 @@ After you change the wallpaper, the new colors appear the next time you return t
 
 Until you pick one, Colota uses imperial when the device language is English and metric for every other language.
 
-The distance fields in tracking settings follow this choice. See [Tracking Settings](./tracking-settings).
+The distance fields in tracking settings follow this choice. See [Tracking & sync](./tracking-sync).
 
 ## Time Format
 

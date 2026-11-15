@@ -10,7 +10,7 @@ No. The app stores location history locally. Server sync is optional.
 
 ### What data does the app send?
 
-Only GPS data to your configured server: coordinates, accuracy, altitude, speed, bearing, battery status and timestamp, plus any [custom fields](/docs/configuration/field-mapping) you add yourself. The only other outbound traffic is map tile requests to the tile server set in **Settings → Appearance**.
+Only GPS data to your configured server: coordinates, accuracy, altitude, speed, bearing, battery status and timestamp, plus any [custom fields](/docs/configuration/request-format) you add yourself. The only other outbound traffic is map tile requests to the tile server set in **Settings → Appearance**.
 
 ### Is this compatible with Google Timeline?
 
@@ -40,9 +40,9 @@ To ensure modifications stay open source, especially server-side components.
 
 ### How accurate is the tracking?
 
-3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/tracking-settings#accuracy-filter) helps remove poor fixes.
+3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/tracking-sync#accuracy-filter) helps remove poor fixes.
 
-Set [Positioning accuracy](/docs/configuration/tracking-settings#positioning-accuracy) to **Lower accuracy** to trade fix precision for battery.
+Set [Positioning accuracy](/docs/configuration/tracking-sync#positioning-accuracy) to **Lower accuracy** to trade fix precision for battery.
 
 ### Can I use maps without internet?
 

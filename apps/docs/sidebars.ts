@@ -3,26 +3,29 @@ import type { SidebarsConfig } from "@docusaurus/plugin-content-docs"
 const sidebars: SidebarsConfig = {
   docsSidebar: [
     {
-      type: "doc",
-      id: "introduction",
-      label: "Introduction"
+      type: "category",
+      label: "Getting started",
+      items: ["introduction", "getting-started/installation", "getting-started/quick-start"]
     },
     {
       type: "category",
-      label: "Getting Started",
-      items: ["getting-started/installation", "getting-started/quick-start", "getting-started/build-from-source"]
-    },
-    {
-      type: "category",
-      label: "Configuration",
+      label: "Tracking",
       items: [
-        "configuration/sync-presets",
-        "configuration/tracking-settings",
-        "configuration/server-settings",
-        "configuration/field-mapping",
+        "configuration/tracking-sync",
+        "guides/tracking-profiles",
+        "guides/geofencing",
+        "guides/automation",
+        "guides/battery-optimization"
+      ]
+    },
+    {
+      type: "category",
+      label: "Connection",
+      items: [
+        "configuration/connection",
+        "configuration/request-format",
         "configuration/authentication",
-        "configuration/mtls",
-        "configuration/appearance"
+        "configuration/mtls"
       ]
     },
     {
@@ -30,7 +33,6 @@ const sidebars: SidebarsConfig = {
       label: "Integrations",
       items: [
         "integrations/overview",
-        "integrations/api-templates",
         "integrations/dawarich",
         "integrations/geopulse",
         "integrations/home-assistant",
@@ -44,22 +46,31 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "category",
-      label: "Guides",
+      label: "History and data",
       items: [
-        "guides/geofencing",
-        "guides/tracking-profiles",
-        "guides/automation",
-        "guides/data-import",
-        "guides/data-export",
-        "guides/data-management",
+        "guides/location-history",
         "guides/editing-trips",
+        "guides/data-export",
+        "guides/data-import",
+        "guides/data-management",
         "guides/backup-restore",
-        "guides/deep-link-setup",
-        "guides/battery-optimization",
-        "guides/offline-maps",
-        "guides/tile-server",
-        "guides/troubleshooting"
+        "guides/deep-link-setup"
       ]
+    },
+    {
+      type: "category",
+      label: "Display",
+      items: ["configuration/appearance", "guides/offline-maps", "guides/tile-server"]
+    },
+    {
+      type: "category",
+      label: "Help",
+      items: ["guides/troubleshooting", "faq"]
+    },
+    {
+      type: "category",
+      label: "Reference",
+      items: ["api-reference", "development/permissions", "security", "alternatives"]
     },
     {
       type: "category",
@@ -67,34 +78,10 @@ const sidebars: SidebarsConfig = {
       items: [
         "development/architecture",
         "development/local-setup",
-        "development/permissions",
-        "development/translations"
+        "getting-started/build-from-source",
+        "development/translations",
+        "contributing"
       ]
-    },
-    {
-      type: "doc",
-      id: "api-reference",
-      label: "API Reference"
-    },
-    {
-      type: "doc",
-      id: "alternatives",
-      label: "Alternatives"
-    },
-    {
-      type: "doc",
-      id: "security",
-      label: "Security"
-    },
-    {
-      type: "doc",
-      id: "faq",
-      label: "FAQ"
-    },
-    {
-      type: "doc",
-      id: "contributing",
-      label: "Contributing"
     }
   ]
 }

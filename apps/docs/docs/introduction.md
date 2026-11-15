@@ -28,39 +28,6 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Dark Mode** - Full light and dark theme support, optionally coloured from the Android wallpaper.
 - **Languages** - English, Spanish and Simplified Chinese. [Help translate](/docs/development/translations).
 
-## App Screens
-
-Colota has twenty-seven screens, each focused on a specific task:
-
-| Screen | Purpose |
-| --- | --- |
-| **Dashboard** | Live map with current coordinates, today's track overlay, tracking controls, database stats, and geofence status |
-| **Settings** | The hub: Tracking, Display, Data, Help and About, each row showing the value it holds |
-| **Connection** | Server endpoint URL, offline mode toggle and connection test |
-| **Tracking & sync** | GPS polling interval, distance filter, positioning accuracy, accuracy threshold and sync strategy preset |
-| **Appearance** | Light/dark theme, wallpaper colors, unit system, time format and custom map tile URLs |
-| **Request format** | How the request is shaped: the backend template, the HTTP method, the field names and any custom fields |
-| **Backend template** | Pick the backend Colota formats its payload for, each option describing what it sends |
-| **Authentication** | Endpoint authentication (None, Basic auth, Bearer token) and custom HTTP headers |
-| **Client certificate** | Client certificate from the device store or a .p12, and the trusted server CA |
-| **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
-| **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
-| **Place zone** | Pick a zone's centre on a map with its radius drawn live, handing it back to the editor |
-| **Offline maps** | Download map areas to the device for use without an internet connection |
-| **Tracking profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
-| **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
-| **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats; tap a point to add a note or delete it |
-| **Trip Detail** | Full trip view with dedicated map, stat rows (distance, duration, avg speed, elevation), speed and elevation profile charts, export and delete |
-| **Location Summary** | Distance, trips, active days and average per day for a week or a month, stepped with chevrons, with each day opening in Location History |
-| **Export & import** | Write locations to CSV, GeoJSON, GPX or KML, and read them back from GeoJSON, Google Timeline, GPX, KML or CSV with a preview before committing |
-| **Auto-export** | Configure scheduled exports: directory, format, frequency, time of day (with weekday or day-of-month for weekly/monthly), export range and file retention |
-| **Data management** | Delete by sync state or age, compact the database |
-| **Backup & restore** | Create or restore a single password-encrypted `.colota` archive of all data (locations, settings, geofences, credentials) |
-| **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
-| **Share setup** | Build a `colota://setup` link or QR code from selected settings to configure another device |
-| **Logging** | In-app activity log viewer (level filtering, search, export) plus opt-in persistent file logging |
-| **About** | Version and build, then the privacy policy, licence and source code |
-
 ## Screenshots
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'

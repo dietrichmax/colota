@@ -1,14 +1,14 @@
 ---
-sidebar_position: 2
+sidebar_position: 1
 ---
 
-# Tracking Settings
+# Tracking & sync
 
-Found under **Settings → Tracking & sync → Recording**. **Positioning accuracy** and **Accuracy filter** have their own groups further down the same screen.
+Found under **Settings → Tracking & sync**. The screen holds five groups in this order: **Recording**, **Sync interval**, **Sync only on**, **Positioning accuracy** and **Accuracy filter**. The server address and offline mode live on [Connection](./connection).
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingSettings.png", label: "Tracking & sync" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/SyncPresets.png", label: "Sync presets" }, { src: "/img/screenshots/TrackingSettings.png", label: "Tracking & sync" }, ]} />
 
 ## Available Settings
 
@@ -16,6 +16,8 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 | --- | --- | --- | --- |
 | Interval | Time between GPS fixes | 5 seconds | ≥ 1 s |
 | Movement threshold | Minimum movement to keep a fix | 0 | ≥ 0 |
+| Sync interval | Time between uploads | Instant (0) | Instant, 1 min, 5 min, 15 min or Custom |
+| Sync only on | Networks Colota uploads over | Any network | See [Sync Condition](#sync-condition) |
 | Positioning accuracy | High-precision or battery-saving fixes | High accuracy | High accuracy / Lower accuracy |
 | Filter inaccurate locations | Enable/disable accuracy filtering | Off | On/Off |
 | Accuracy threshold | Drop fixes rated worse than this | 50 | ≥ 1 |
@@ -28,7 +30,20 @@ If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies i
 
 :::
 
-## Interval
+## Recording
+
+Colota includes built-in presets that configure interval, movement threshold, sync interval and retry interval together. Each row on the screen prints its fix rate, its sync cadence and what it costs.
+
+| Preset          | Interval | Distance | Sync interval | Retry interval | Cost                             |
+| --------------- | -------- | -------- | ------------- | -------------- | -------------------------------- |
+| **Instant**     | 5 s      | 0 m      | Each fix      | 30 s           | Most battery, finest track       |
+| **Balanced**    | 30 s     | 2 m      | 5 min         | 5 min          | Moderate battery, fewer wake-ups |
+| **Power saver** | 60 s     | 2 m      | 15 min        | 15 min         | Least battery, coarser track     |
+| **Custom**      | 1 s-∞    | 0 m-∞    | 0 s-∞         | last preset's  | Printed from the numbers you set |
+
+Select a preset in **Settings → Tracking & sync → Recording** or choose **Custom** to set the interval and movement threshold under it. A preset owns those four values and nothing else: choosing a row in **Sync interval** or typing an interval there moves the preset to Custom, while the sync condition, the network name, the batch size and the accuracy filter leave it alone. The retry interval is how long a failed sync waits before the next attempt; Custom keeps whichever preset held it last.
+
+### Interval
 
 How often the app requests a GPS fix. Shorter intervals keep the GPS awake more of the time and record more points.
 
@@ -36,12 +51,44 @@ How often the app requests a GPS fix. Shorter intervals keep the GPS awake more 
 - **15-30 seconds**: Good balance for walking or commuting
 - **60+ seconds**: Low battery usage, suitable for long trips
 
-## Movement Threshold
+### Movement Threshold
 
 Only records a new location if you've moved at least this far since the last recorded point. Both the interval and this distance must pass before a fix is kept, so a higher threshold saves storage and sync data rather than battery. It is not applied inside a pause zone or by a stationary profile.
 
 - **0**: Record every GPS fix (default)
 - **10-50 m**: Skip stationary updates, good for daily use
+
+## Sync Interval
+
+How often queued locations are uploaded. Locations are always recorded and queued locally first.
+
+- **Instant (0s)**: Each location is sent immediately after recording
+- **Batch (1 min, 5 min, 15 min, or Custom)**: Locations are queued and sent in batches at the configured interval
+
+With the Overland template, or the Dawarich template in batch mode, a **Batch size** field appears in this group. See [Batch Sync Behavior](/docs/api-reference#batch-sync-behavior).
+
+If a [tracking profile](/docs/guides/tracking-profiles) is active it supplies its own sync interval, and the **Sync interval** group opens with a line naming the profile and the cadence in force.
+
+## Sync Condition
+
+Controls when Colota uploads locations. Locations are always recorded and queued locally regardless of this setting.
+
+| Option                     | Behavior                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| **Any network**            | Syncs over mobile data as well as Wi-Fi, counting against your plan (default) |
+| **Wi-Fi or Ethernet**      | Syncs only on unmetered networks; fixes wait on mobile data                   |
+| **Specific Wi-Fi network** | Syncs only on the network you name; nothing syncs until one is named          |
+| **VPN**                    | Syncs only while a VPN is up                                                  |
+
+This is useful for:
+
+- **Limited mobile data** - Avoid using cellular bandwidth for location uploads
+- **Private backends** - Only sync when on your home network or VPN
+- **Roaming** - Prevent expensive data charges while traveling abroad
+
+Configure this in **Settings → Tracking & sync → Sync only on**. For a specific network, type the name as shown in Wi-Fi settings, or take the one the phone is on from the button under the field.
+
+In [offline mode](/docs/configuration/connection#offline-mode), the Sync interval and Sync only on groups are hidden since no syncing occurs, and the retry interval in the preset table is not used. Preset rows show only their recording values. For displaying the maps network requests are still made to maps.mxd.codes. See [Offline maps](/docs/guides/offline-maps) for predownloading maps.
 
 ## Positioning Accuracy
 
@@ -74,6 +121,6 @@ A second check drops any fix that could only be reached faster than an airliner 
 
 ## See also
 
-- [Sync Presets](sync-presets.md) - how often the queue is flushed to your server, and on which connections
+- [Connection](./connection) - the server address, offline mode and what happens when a sync fails
 - [Tracking profiles](/docs/guides/tracking-profiles) - switch interval and movement threshold automatically on charging, speed or a stationary phone
 - [Geofencing](/docs/guides/geofencing) - pause GPS entirely inside a zone

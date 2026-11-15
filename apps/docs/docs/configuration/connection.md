@@ -1,21 +1,19 @@
 ---
-sidebar_position: 3
+sidebar_position: 1
 ---
 
-# Server Settings
+# Connection
 
-Found under **Settings → Connection**. The Server card opens with a line that says what sync is doing now (Synced, Not synced yet, Sync failing with the server's own sentence, No network, No server, Offline mode), then the settings that produced it. The Server details card below it opens Request format, Authentication and Client certificate, each row showing its stored value.
+Found under **Settings → Connection**. The Server card opens with a line that says what sync is doing now (Synced, Not synced yet, Sync failing with the server's own sentence, No network, No server, Offline mode), then the settings that produced it. The Server details card below it opens [Request format](./request-format), [Authentication](./authentication) and [Client certificate](./mtls), each row showing its stored value. How often Colota syncs, and over which networks, is set in [Tracking & sync](./tracking-sync).
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 <ScreenshotGallery screenshots={[ { src: "/img/screenshots/ConnectionSettings.png", label: "Connection" }, ]} />
 
-| Setting         | Description                            | Default         | Range       |
-| --------------- | -------------------------------------- | --------------- | ----------- |
-| Server endpoint | HTTP(S) URL of your server             | Empty (offline) | --          |
-| HTTP method     | POST (JSON body) or GET (query params) | POST            | POST / GET  |
-| Sync interval   | Batch mode interval                    | Instant (0)     | 0s - Custom |
-| Offline mode    | Disable all network activity           | Disabled        | On/Off      |
+| Setting         | Description                  | Default         | Range  |
+| --------------- | ---------------------------- | --------------- | ------ |
+| Server endpoint | HTTP(S) URL of your server   | Empty (offline) | --     |
+| Offline mode    | Disable all network activity | Disabled        | On/Off |
 
 ## Endpoint URL
 
@@ -46,12 +44,6 @@ You can use template variables in your endpoint URL for hive-style partitioning 
 **Example:** `https://example.com/locations/%YEAR/%MONTH/%DAY` resolves to `https://example.com/locations/2026/04/07`.
 
 This is useful for backends that organize data by date (e.g. S3 with hive partitioning).
-
-## Sync Modes
-
-- **Instant (0s)**: Each location is sent immediately after recording
-- **Batch (1 min, 5 min, 15 min, or Custom)**: Locations are queued and sent in batches at the configured interval
-- **Offline**: No network activity - data is stored locally only. See [Offline Mode](#offline-mode) below.
 
 ## Offline Mode
 
