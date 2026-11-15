@@ -8,5 +8,5 @@ import type { TranslationKey } from "./options"
 
 /** For non-React callers. Side-effect free, unlike `index.ts`, so importing it runs no device detection. */
 export function t(key: TranslationKey, options?: Record<string, unknown>): string {
-  return i18next.t(key, options) as string
+  return i18next.t(key, options ?? {}) as string
 }
