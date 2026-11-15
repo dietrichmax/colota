@@ -149,8 +149,3 @@ Other notes:
 - If a file of the same name already exists, Android adds a counter (`… (1).gpx`). Colota still recognises those as its own.
 
 Manual exports and trip exports are unaffected. Those go through the Android share sheet, where you name the file yourself.
-
-## Storage Reference
-
-- ~200 bytes per location
-- ~2 MB per 10,000 locations

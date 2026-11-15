@@ -11,7 +11,7 @@ Minimal setup to start tracking:
 3. Grant notification permission - optional. On Android 13 and later, refusing it hides the tracking status notification
 4. Disable battery optimization for Colota in Android settings (otherwise background tracking won't work reliably)
 5. Press **Start Tracking**
-6. View live coordinates on the dashboard
+6. Watch the Dashboard map follow your position and draw today's track
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
@@ -21,7 +21,7 @@ The app works completely offline. Server setup is optional.
 
 ## Next Steps
 
-- [Configure tracking settings](/docs/configuration/tracking-settings) to adjust tracking intervals
-- [Set up a server](/docs/configuration/server-settings) to sync location data
+- [Adjust Tracking & sync](/docs/configuration/tracking-sync) to change how often Colota records and syncs
+- [Set up a server](/docs/configuration/connection) to sync location data
 - [Create geofences](/docs/guides/geofencing) to save battery at home or work
 - [Battery optimization tips](/docs/guides/battery-optimization) to reduce power usage

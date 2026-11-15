@@ -59,7 +59,12 @@ const config: Config = {
       {
         redirects: [
           { from: "/docs/guides/app-shortcuts", to: "/docs/guides/automation" },
-          { from: "/docs/configuration/gps-settings", to: "/docs/configuration/tracking-settings" },
+          { from: "/docs/configuration/gps-settings", to: "/docs/configuration/tracking-sync" },
+          { from: "/docs/configuration/tracking-settings", to: "/docs/configuration/tracking-sync" },
+          { from: "/docs/configuration/sync-presets", to: "/docs/configuration/tracking-sync" },
+          { from: "/docs/configuration/server-settings", to: "/docs/configuration/connection" },
+          { from: "/docs/configuration/field-mapping", to: "/docs/configuration/request-format" },
+          { from: "/docs/integrations/api-templates", to: "/docs/configuration/request-format" },
           // Short, shareable install URL. The docs page is the single source for install channels.
           { from: "/download", to: "/docs/getting-started/installation" }
         ]
@@ -125,20 +130,20 @@ const config: Config = {
           title: "Docs",
           items: [
             {
-              label: "Getting Started",
+              label: "Getting started",
               to: "/docs/getting-started/installation"
             },
             {
-              label: "Configuration",
-              to: "/docs/configuration/sync-presets"
+              label: "Tracking",
+              to: "/docs/configuration/tracking-sync"
             },
             {
               label: "Integrations",
-              to: "/docs/integrations/api-templates"
+              to: "/docs/integrations/overview"
             },
             {
-              label: "Guides",
-              to: "/docs/guides/geofencing"
+              label: "History and data",
+              to: "/docs/guides/location-history"
             }
           ]
         },

@@ -26,7 +26,7 @@ Additional headers may be included based on your [authentication](/docs/configur
 
 **Body:**
 
-This is the body for the default field-mapped format. The Traccar POST and Overland templates and Dawarich in batch mode, send a different shape entirely. Those formats use fixed field names, so the [field mapping](/docs/configuration/field-mapping) does not apply to them and both add a `device_id` key. See [API templates](/docs/integrations/api-templates) for the exact bodies.
+This is the body for the default field-mapped format. The Traccar POST and Overland templates and Dawarich in batch mode, send a different shape entirely. Those formats use fixed field names, so the [field mapping](/docs/configuration/request-format) does not apply to them and both add a `device_id` key. See [API templates](/docs/configuration/request-format#backend-templates) for the exact bodies.
 
 ```json
 {
@@ -52,7 +52,7 @@ GET https://your-server.com:5055/?id=colota&lat=48.135124&lon=11.581981&accuracy
 
 Values are URL-encoded. If the endpoint URL already contains query parameters, additional parameters are appended with `&`.
 
-All field names are [customizable](/docs/configuration/field-mapping).
+All field names are [customizable](/docs/configuration/request-format).
 
 ### Field Types
 
@@ -239,7 +239,7 @@ Failed items stay in the queue indefinitely until they succeed. The queue can be
 - **HTTPS required** for all public endpoints
 - **HTTP allowed** for private/local addresses - enforced via DNS resolution at both sync time and Test connection
 - Non-standard ports are supported (e.g., `https://my-server.com:8443/api`)
-- Self-signed certificates are supported - see [Server Settings](/docs/configuration/server-settings#endpoint-url) for setup instructions
+- Self-signed certificates are supported - see [Connection](/docs/configuration/connection#endpoint-url) for setup instructions
 
 ## Connectivity Check
 
