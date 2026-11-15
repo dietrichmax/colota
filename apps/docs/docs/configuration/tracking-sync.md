@@ -1,14 +1,14 @@
 ---
-sidebar_position: 1
+title: "Tracking & sync"
+aliases:
+  - /docs/configuration/gps-settings/
+  - /docs/configuration/tracking-settings/
+  - /docs/configuration/sync-presets/
 ---
-
-# Tracking & sync
 
 Found under **Settings → Tracking & sync**. The screen holds five groups in this order: **Recording**, **Sync interval**, **Sync only on**, **Positioning accuracy** and **Accuracy filter**. The server address and offline mode live on [Connection](./connection).
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/SyncPresets.png", label: "Sync presets" }, { src: "/img/screenshots/TrackingSettings.png", label: "Tracking & sync" }, ]} />
+{{< screenshots "SyncPresets|Sync presets" "TrackingSettings|Tracking & sync" >}}
 
 ## Available Settings
 
@@ -24,11 +24,9 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 The interval and movement threshold sit under **Custom** in the Recording group; picking a preset sets both. The two distance settings use whichever unit you picked in **Settings → Appearance**, so they read as meters or feet. Every number field takes whole numbers only and states its minimum under its label; a value below it is set to the minimum when you leave the field. There is no upper limit on any of the three numbers.
 
-:::info[Tracking profiles override two of these]
-
-If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies its own interval, movement threshold and sync interval, and its own accuracy filter if it has one, for as long as its condition holds. The Recording and Sync interval groups then open with a line naming the profile and the values in force, as does the Accuracy filter card when the profile has its own filter, and the rows below stay the defaults the app falls back to when no profile applies. A profile is the usual reason fixes arrive at a different rate than the one set here.
-
-:::
+> [!INFO] Tracking profiles override two of these
+>
+> If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies its own interval, movement threshold and sync interval, and its own accuracy filter if it has one, for as long as its condition holds. The Recording and Sync interval groups then open with a line naming the profile and the values in force, as does the Accuracy filter card when the profile has its own filter, and the rows below stay the defaults the app falls back to when no profile applies. A profile is the usual reason fixes arrive at a different rate than the one set here.
 
 ## Recording
 

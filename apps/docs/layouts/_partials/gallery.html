@@ -1,0 +1,18 @@
+{{- /* (dict "page" .Page "items" (slice "Name|Label") "where" "position for errors"): static/img/screenshots/Name.png, failing the build on a missing file. */ -}}
+{{- .page.Store.Set "gallery" true }}
+<div class="gallery" data-gallery>
+  {{- range .items }}
+    {{- $parts := split . "|" }}
+    {{- $src := printf "/img/screenshots/%s.png" (index $parts 0) }}
+    {{- $label := index $parts 1 }}
+    {{- $file := printf "static%s" $src }}
+    {{- if not (fileExists $file) }}{{ errorf "%s: no screenshot %s" $.where $src }}{{ end }}
+    {{- $img := imageConfig $file }}
+    <figure>
+      <button class="gallery-item" type="button" data-src="{{ $src }}" data-label="{{ $label }}" aria-label="Open {{ $label }}">
+        <img src="{{ $src }}" alt="{{ $label }}" width="{{ $img.Width }}" height="{{ $img.Height }}" loading="lazy" />
+      </button>
+      <figcaption>{{ $label }}</figcaption>
+    </figure>
+  {{- end }}
+</div>

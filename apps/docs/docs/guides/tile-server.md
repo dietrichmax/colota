@@ -1,8 +1,6 @@
 ---
-sidebar_position: 6
+title: "Map Tile Server"
 ---
-
-# Map Tile Server
 
 By default, Colota loads maps from [maps.mxd.codes](https://maps.mxd.codes) - a self-hosted tile server I run for this app. You can swap it out for your own if needed.
 
@@ -22,19 +20,15 @@ Free to use. Normal usage means map tiles loading as you pan and zoom within the
 
 If the default server is unavailable or you run into issues, you can either configure a custom tile server (see below) or open an issue on [GitHub](https://github.com/dietrichmax/colota/issues).
 
-:::tip[Support the server]
-
-If you find Colota useful and want to help keep the default server running, contributions are welcome - the hosting runs at 17,94€/month. [mxd.codes/support](https://mxd.codes/support)
-
-:::
+> [!TIP] Support the server
+>
+> If you find Colota useful and want to help keep the default server running, contributions are welcome - the hosting runs at 17,94€/month. [mxd.codes/support](https://mxd.codes/support)
 
 ## Using a Custom Server
 
-:::note[Offline maps]
-
-Offline map packs are downloaded from the **light** style URL, whichever tile server that points at. Filling only the dark field leaves downloads coming from the default server. Switching servers won't affect packs you've already downloaded, but new downloads will come from the new one. A pack downloaded under a different light style URL is marked **Map style changed** in Offline maps; **Download again** fetches it from the current one.
-
-:::
+> [!NOTE] Offline maps
+>
+> Offline map packs are downloaded from the **light** style URL, whichever tile server that points at. Filling only the dark field leaves downloads coming from the default server. Switching servers won't affect packs you've already downloaded, but new downloads will come from the new one. A pack downloaded under a different light style URL is marked **Map style changed** in Offline maps; **Download again** fetches it from the current one.
 
 1. Open **Settings**
 2. Open **Appearance** and tap **Map Tile Server**
@@ -57,11 +51,9 @@ Any [MapLibre GL style](https://maplibre.org/maplibre-style-spec/) endpoint work
 
 For a light/dark pair, use `bright` or `liberty` for light mode and `fiord` for dark mode.
 
-:::note[Attribution]
-
-When using the default server, the map shows **© OpenMapTiles · © OpenStreetMap contributors · © maps.mxd.codes** attribution. With a custom server, the credits come from its style JSON or from the TileJSON a source points to. A server that publishes none is credited with its host name.
-
-:::
+> [!NOTE] Attribution
+>
+> When using the default server, the map shows **© OpenMapTiles · © OpenStreetMap contributors · © maps.mxd.codes** attribution. With a custom server, the credits come from its style JSON or from the TileJSON a source points to. A server that publishes none is credited with its host name.
 
 ## Self-hosting tileserver-gl
 

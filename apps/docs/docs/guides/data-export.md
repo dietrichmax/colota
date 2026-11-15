@@ -1,16 +1,12 @@
 ---
-sidebar_position: 2
+title: "Data Export"
 ---
-
-# Data Export
 
 Export your location history in multiple formats.
 
-:::tip[Looking for a full archive?]
-
-Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) of your location history. If you instead want a single password-encrypted archive of **everything** - locations, settings, geofences and credentials - for device migration or offsite storage, use [Backup & restore](backup-restore.md).
-
-:::
+> [!TIP] Looking for a full archive?
+>
+> Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) of your location history. If you instead want a single password-encrypted archive of **everything** - locations, settings, geofences and credentials - for device migration or offsite storage, use [Backup & restore](backup-restore.md).
 
 ## Supported Formats
 
@@ -21,11 +17,9 @@ Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) 
 | **GPX** | `.gpx` | GPS devices, hiking apps |
 | **KML** | `.kml` | Google Earth, mapping |
 
-:::note[GeoJSON file size]
-
-Each recording is written as its own feature so mapping tools can read one row and one timestamp per point. That repeats the attribute names on every point, which makes a GeoJSON export roughly twice the size of the other formats. A database of a few million points produces a file of several hundred megabytes. Compressing it recovers most of the difference.
-
-:::
+> [!NOTE] GeoJSON file size
+>
+> Each recording is written as its own feature so mapping tools can read one row and one timestamp per point. That repeats the attribute names on every point, which makes a GeoJSON export roughly twice the size of the other formats. A database of a few million points produces a file of several hundred megabytes. Compressing it recovers most of the difference.
 
 ## How to Export
 
@@ -52,9 +46,7 @@ Trip exports include a `trip` column/property so each location is tagged with it
 
 To remove trips or single points instead of exporting them, see [Data management](data-management.md#deleting-from-location-history).
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-export" }, ]} />
+{{< screenshots "ExportData|Export Data" "AutoExport|Auto-export" >}}
 
 ## Scheduled Export (Auto-export)
 
@@ -89,13 +81,11 @@ Retention counts the files your **file name template** matches, which is what de
 
 Changing the template also means files exported under the previous one are no longer managed, since retention only recognises names the current template could have produced. Delete those once by hand. The one exception is switching away from the default `colota_export_{date}_{time}`, whose files stay managed unless the new template contains `{device}`.
 
-:::warning[Several devices, one folder]
-
-If several devices export into the same folder and none of the templates include `{device}`, their files are indistinguishable, so each device counts and deletes the others' exports. Add `{device}` to the file name to separate them.
-
-`{device}` expands to the device **model**, not a unique identifier, so two phones of the same model still share a name and still delete each other's exports. Give them distinct prefixes in the template if you run identical models.
-
-:::
+> [!WARNING] Several devices, one folder
+>
+> If several devices export into the same folder and none of the templates include `{device}`, their files are indistinguishable, so each device counts and deletes the others' exports. Add `{device}` to the file name to separate them.
+>
+> `{device}` expands to the device **model**, not a unique identifier, so two phones of the same model still share a name and still delete each other's exports. Give them distinct prefixes in the template if you run identical models.
 
 ### How it works
 
@@ -112,11 +102,9 @@ If several devices export into the same folder and none of the templates include
 - A notification is shown after each export with the file name and location count
 - Old export files beyond the retention limit are cleaned up after each successful export. Cleanup only considers files matching Colota's own export naming pattern, so unrelated files and subfolders in the directory are never touched
 
-:::note[Frequency]
-
-**Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. If the chosen day-of-month doesn't exist in a given month (e.g. day 31 in February), the export runs on the last day of that month instead. **Daily**, **Weekly** and **Monthly** intervals fire at the chosen wall-clock time via Android AlarmManager. Typical accuracy is within minutes.
-
-:::
+> [!NOTE] Frequency
+>
+> **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. If the chosen day-of-month doesn't exist in a given month (e.g. day 31 in February), the export runs on the last day of that month instead. **Daily**, **Weekly** and **Monthly** intervals fire at the chosen wall-clock time via Android AlarmManager. Typical accuracy is within minutes.
 
 ### File naming
 

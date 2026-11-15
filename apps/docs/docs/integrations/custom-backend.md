@@ -1,8 +1,6 @@
 ---
-sidebar_position: 5
+title: "Custom Backend"
 ---
-
-# Custom Backend
 
 Colota works with any backend that accepts HTTP requests (POST with JSON body or GET with query parameters).
 

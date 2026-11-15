@@ -1,0 +1,49 @@
+baseURL = "https://colota.app/"
+title = "Colota"
+locale = "en"
+disableKinds = ["taxonomy", "term", "rss"]
+enableRobotsTXT = false
+
+[params]
+  description = "Colota is a self-hosted GPS tracking app for Android. Send your location to your own server, work offline, and keep your data private."
+  editBase = "/tree/main/apps/docs/"
+
+[outputs]
+  home = ["html"]
+  section = ["html"]
+  page = ["html"]
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.parser]
+      autoHeadingIDType = "github"
+    [markup.goldmark.extensions.typographer]
+      disable = true
+  [markup.highlight]
+    noClasses = false
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 2
+
+[module]
+  [[module.mounts]]
+    source = "content"
+    target = "content"
+  [[module.mounts]]
+    source = "docs"
+    target = "content/docs"
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "assets"
+    target = "assets"
+  [[module.mounts]]
+    source = "../../packages/shared/src"
+    target = "assets/shared"
+  [[module.mounts]]
+    source = "data"
+    target = "data"
+  [[module.mounts]]
+    source = "static"
+    target = "static"

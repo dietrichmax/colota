@@ -1,8 +1,6 @@
 ---
-sidebar_position: 8
+title: "Contributing"
 ---
-
-# Contributing
 
 ## Reporting Issues
 

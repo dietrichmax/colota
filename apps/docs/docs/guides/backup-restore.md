@@ -1,8 +1,6 @@
 ---
-sidebar_position: 3
+title: "Backup & restore"
 ---
-
-# Backup & restore
 
 Bundle your locations, settings and credentials into a single password-encrypted file you can store anywhere - cloud drive, USB stick, another device.
 
@@ -25,9 +23,7 @@ The auth credentials Colota uses to reach your tracking endpoint (Basic Auth, Be
 
 ## Creating a Backup
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Backup.png", label: "Backup & restore" }, ]} />
+{{< screenshots "Backup|Backup & restore" >}}
 
 1. Go to **Settings → Backup & restore**
 2. Enter a password (12 characters minimum) and confirm it
@@ -48,19 +44,15 @@ Both are hard limits. The line under the password field is the same verdict the 
 
 A random 16-character password from a password manager, or a 4-5 word passphrase, both clear the bar comfortably. Common words and short tweaks of dictionary words do not. The password fields are marked for autofill, so a password manager can fill them in.
 
-:::warning[No password recovery]
-
-No password recovery If you lose the password, the backup cannot be opened. Ever. There is no recovery code, no email reset, no developer override. Store the password somewhere you trust before you create the backup.
-
-:::
+> [!WARNING] No password recovery
+>
+> No password recovery If you lose the password, the backup cannot be opened. Ever. There is no recovery code, no email reset, no developer override. Store the password somewhere you trust before you create the backup.
 
 ## Restoring from a Backup
 
-:::danger[Data will be overwritten]
-
-Replaces all current data Restoring overwrites every location, setting, geofence and credential currently on the device. There is no merge mode and no undo. Take a backup of the current device first if you might want to roll back.
-
-:::
+> [!DANGER] Data will be overwritten
+>
+> Replaces all current data Restoring overwrites every location, setting, geofence and credential currently on the device. There is no merge mode and no undo. Take a backup of the current device first if you might want to roll back.
 
 1. Go to **Settings → Backup & restore**
 2. Tap **Choose a backup file** and pick the `.colota` file

@@ -1,14 +1,10 @@
 ---
-sidebar_position: 7
+title: "Appearance"
 ---
-
-# Appearance
 
 Found under **Settings → Appearance**. A choice applies as soon as you tap it. The map style URLs are saved when you leave the field.
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/AppearanceSettings.png", label: "Appearance" }, ]} />
+{{< screenshots "AppearanceSettings|Appearance" >}}
 
 | Setting          | Options                           | Default                  |
 | ---------------- | --------------------------------- | ------------------------ |

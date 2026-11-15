@@ -40,9 +40,10 @@ apps/mobile/android/gradle/
 *.gif
 *.ico
 
-# Docs build output
-apps/docs/build/
-apps/docs/.docusaurus/
+# Docs build output and the vendored QR encoder
+apps/docs/public/
+apps/docs/resources/
+apps/docs/assets/js/vendor/
 
 # Other
 screenshots/

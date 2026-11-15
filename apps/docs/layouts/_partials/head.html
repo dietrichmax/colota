@@ -1,0 +1,22 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+{{- $title := cond .IsHome (printf "%s | %s" site.Title .Title) (printf "%s | %s" .Title site.Title) }}
+<title>{{ $title }}</title>
+<meta name="description" content="{{ or .Description .Summary site.Params.description | plainify | truncate 160 }}" />
+<link rel="canonical" href="{{ .Permalink }}" />
+<link rel="icon" href="/img/favicon.png" />
+<link rel="alternate" type="application/rss+xml" title="Colota Releases" href="https://colota.app/releases.xml" />
+<meta property="og:title" content="{{ $title }}" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ .Permalink }}" />
+<script>
+  try {
+    var theme = localStorage.getItem("theme")
+    if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme
+  } catch (e) {}
+</script>
+{{- $css := slice (resources.Get "css/tokens.css") (resources.Get "css/site.css") | resources.Concat "css/site.css" | minify | fingerprint }}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}" />
+{{- range slice "regular" "semibold" }}
+  <link rel="preload" href="/fonts/inter-{{ . }}.woff" as="font" type="font/woff" crossorigin />
+{{- end }}

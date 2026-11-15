@@ -1,14 +1,10 @@
 ---
-sidebar_position: 1
+title: "Location history"
 ---
-
-# Location history
 
 The **History** tab shows one day of recordings at a time: the track on a map, the day's trips and every point. It reads the database on the phone, so it works without a server.
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/LocationHistory.png", label: "Location history" }, { src: "/img/screenshots/Trips.png", label: "Trips" }, { src: "/img/screenshots/TripDetails.png", label: "Trip detail" }, ]} />
+{{< screenshots "LocationHistory|Location history" "Trips|Trips" "TripDetails|Trip detail" >}}
 
 ## Picking a Day
 

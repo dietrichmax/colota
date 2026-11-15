@@ -1,8 +1,8 @@
 ---
-sidebar_position: 1
+title: "Installation"
+aliases:
+  - /download/
 ---
-
-# Installation
 
 ## From Google Play
 

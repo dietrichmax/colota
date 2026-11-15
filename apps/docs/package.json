@@ -2,49 +2,10 @@
   "name": "@colota/docs",
   "private": true,
   "scripts": {
-    "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "prestart": "node scripts/generate-releases.mjs",
-    "build": "docusaurus build",
-    "prebuild": "node scripts/generate-releases.mjs",
-    "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
-    "clear": "docusaurus clear",
-    "serve": "docusaurus serve",
-    "write-translations": "docusaurus write-translations",
-    "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
-  },
-  "dependencies": {
-    "@colota/shared": "*",
-    "@docusaurus/core": "3.10.2",
-    "@docusaurus/faster": "3.10.2",
-    "@docusaurus/plugin-client-redirects": "3.10.2",
-    "@docusaurus/preset-classic": "3.10.2",
-    "clsx": "^2.1.1",
-    "prism-react-renderer": "^2.4.1",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "uqr": "^0.1.3"
-  },
-  "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.10.2",
-    "@docusaurus/tsconfig": "3.10.2",
-    "@docusaurus/types": "3.10.2"
-  },
-  "browserslist": {
-    "production": [
-      ">0.5%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 3 chrome version",
-      "last 3 firefox version",
-      "last 5 safari version"
-    ]
-  },
-  "engines": {
-    "node": ">=20.0"
+    "inputs": "node scripts/generate-releases.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/tokens.mjs",
+    "start": "npm run inputs && scripts/install-hugo.sh && .bin/hugo server",
+    "build": "npm run inputs && scripts/install-hugo.sh && .bin/hugo --gc --minify --cleanDestinationDir && node scripts/check-site.mjs",
+    "icons": "node scripts/icons.mjs",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/*.test.mjs"
   }
 }

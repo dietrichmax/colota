@@ -1,8 +1,6 @@
 ---
-sidebar_position: 2
+title: "Quick Start"
 ---
-
-# Quick Start
 
 Minimal setup to start tracking:
 
@@ -13,9 +11,7 @@ Minimal setup to start tracking:
 5. Press **Start Tracking**
 6. Watch the Dashboard map follow your position and draw today's track
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, ]} />
+{{< screenshots "Dashboard|Dashboard" >}}
 
 The app works completely offline. Server setup is optional.
 

@@ -1,8 +1,8 @@
 ---
-sidebar_position: 3
+title: "Automation"
+aliases:
+  - /docs/guides/app-shortcuts/
 ---
-
-# Automation
 
 Trigger Colota from outside the app - useful for hands-free workflows like starting tracking when your phone connects to car Bluetooth.
 

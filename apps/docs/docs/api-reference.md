@@ -1,8 +1,6 @@
 ---
-sidebar_position: 6
+title: "API Reference"
 ---
-
-# API Reference
 
 Reference for the HTTP requests Colota sends to your server.
 

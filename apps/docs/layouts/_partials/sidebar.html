@@ -1,0 +1,11 @@
+{{- $current := .RelPermalink }}
+<nav class="side" aria-label="Docs">
+  {{- range partialCached "docs-order.html" . }}
+    <div class="side-group">
+      <p class="side-label">{{ .label }}</p>
+      {{- range .pages }}
+        <a class="side-item{{ if eq .RelPermalink $current }} on{{ end }}" href="{{ .RelPermalink }}"{{ if eq .RelPermalink $current }} aria-current="page"{{ end }}>{{ .Title }}</a>
+      {{- end }}
+    </div>
+  {{- end }}
+</nav>

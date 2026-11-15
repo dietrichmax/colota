@@ -1,0 +1,50 @@
+{{ define "bodyClass" }}page page-home{{ end }}
+{{ define "main" }}
+  {{- $links := hugo.Data.links }}
+  <main id="main">
+    <section class="hero">
+      <div class="hero-text">
+        <h1 class="hero-name">Colota</h1>
+        <p class="hero-tagline">{{ .Params.tagline }}</p>
+        <p class="hero-subline">{{ .Params.subline }}</p>
+        <div class="hero-actions">
+          <a class="btn btn-pill" href="{{ $links.FDROID_URL }}">{{ partial "icon.html" (dict "name" "download") }}Get it on F-Droid</a>
+          <a class="btn btn-secondary" href="/docs/introduction/">Get started</a>
+        </div>
+        <p class="hero-more">Also available on <a href="{{ $links.IZZYONDROID_URL }}">IzzyOnDroid</a> and <a href="{{ $links.PLAY_STORE_WEB_URL }}">Google Play</a></p>
+      </div>
+      <div class="hero-shots">
+        {{- range .Params.heroShots }}
+          {{- $parts := split . "|" }}
+          {{- $file := printf "static/img/screenshots/%s.png" (index $parts 0) }}
+          {{- if not (fileExists $file) }}{{ errorf "content/_index.md: no screenshot %s" $file }}{{ end }}
+          {{- $img := imageConfig $file }}
+          <img src="/img/screenshots/{{ index $parts 0 }}.png" alt="{{ index $parts 1 }}" width="{{ $img.Width }}" height="{{ $img.Height }}" />
+        {{- end }}
+      </div>
+    </section>
+    <section class="features" aria-label="Features">
+      {{- range .Params.features }}
+        <div class="feature">
+          {{ partial "icon.html" (dict "name" .icon "class" "lg") }}
+          <h3>{{ .title }}</h3>
+          <p>{{ .text }}</p>
+        </div>
+      {{- end }}
+    </section>
+    <section class="works-with" aria-label="Works with">
+      <p class="works-label">Works with</p>
+      <div class="works-list">
+        {{- range .Params.integrations }}
+          {{- $p := site.GetPage (printf "/docs/integrations/%s" (index . 1)) }}
+          {{- if not $p }}{{ errorf "content/_index.md: no integration page %s" (index . 1) }}{{ end }}
+          <a href="{{ $p.RelPermalink }}">{{ index . 0 }}</a>
+        {{- end }}
+      </div>
+    </section>
+    <section class="home-shots">
+      <h2>Screenshots</h2>
+      {{ partial "gallery.html" (dict "page" . "items" .Params.screenshots "where" "content/_index.md") }}
+    </section>
+  </main>
+{{ end }}

@@ -1,8 +1,6 @@
 ---
-sidebar_position: 1
+title: "Architecture"
 ---
-
-# Architecture
 
 Colota is a monorepo with three workspace packages:
 
@@ -10,7 +8,7 @@ Colota is a monorepo with three workspace packages:
 colota/
 ├── apps/
 │   ├── mobile/       # React Native + Kotlin Android app
-│   └── docs/         # Docusaurus documentation site
+│   └── docs/         # Hugo documentation site
 └── packages/
     └── shared/       # Shared colors, typography, types
 ```
@@ -467,4 +465,4 @@ User taps "Start" → TrackingProvider.startTracking()
 - **Links** - the repository, issues, discussions, releases, privacy policy, support and store URLs, used by the app's Settings and About screens and by the docs navbar, footer and landing page
 - **Setup links** - the values a `colota://setup` link may carry (API templates, HTTP methods, Dawarich modes, accuracy modes, sync conditions, auth types, profile conditions, Overland batch bounds) and its encoding, used by the app's importer and share screens and by the docs link generator
 
-Both the mobile app and docs site import from `@colota/shared`. The package compiles TypeScript to `dist/` via `tsc` so Docusaurus can consume it without a custom webpack loader.
+The mobile app imports `@colota/shared`, which compiles TypeScript to `dist/` via `tsc`. The docs site reads the source files directly: `scripts/tokens.mjs` turns the tokens and links into CSS variables and Hugo data, and Hugo bundles `setupSchema.ts` into the link generator.

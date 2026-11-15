@@ -1,14 +1,13 @@
 ---
-sidebar_position: 2
+title: "Request format"
+aliases:
+  - /docs/configuration/field-mapping/
+  - /docs/integrations/api-templates/
 ---
-
-# Request format
-
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 Found under **Settings → Connection → Request format**. It shapes every request: the backend template, the HTTP method, the field names and any custom fields.
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ApiFieldMapping.png", label: "Request format" }, { src: "/img/screenshots/BackendTemplates.png", label: "Backend template" }, ]} />
+{{< screenshots "ApiFieldMapping|Request format" "BackendTemplates|Backend template" >}}
 
 ## Backend Templates
 

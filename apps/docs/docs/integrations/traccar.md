@@ -1,8 +1,6 @@
 ---
-sidebar_position: 6
+title: "Traccar"
 ---
-
-# Traccar
 
 [Traccar](https://www.traccar.org/) is an open source GPS tracking platform. Colota supports two Traccar protocols:
 

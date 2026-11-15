@@ -38,7 +38,7 @@ tests:
           - '**/*Test.kt'
 
 # ============================
-# Documentation (Docusaurus site + repo markdown)
+# Documentation (Hugo site + repo markdown)
 # ============================
 docs:
   - changed-files:

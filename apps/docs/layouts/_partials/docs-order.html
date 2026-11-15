@@ -1,0 +1,17 @@
+{{- /* Returns the sidebar as a slice of (dict "label" "id" "pages"), failing the build on a missing or unlisted page. */ -}}
+{{- $groups := slice }}
+{{- $listed := slice }}
+{{- range hugo.Data.sidebar }}
+  {{- $pages := slice }}
+  {{- range .pages }}
+    {{- $p := site.GetPage (printf "/docs/%s" .) }}
+    {{- if not $p }}{{ errorf "data/sidebar.yaml lists %q, but docs/%s.md does not exist" . . }}{{ end }}
+    {{- $pages = $pages | append $p }}
+    {{- $listed = $listed | append $p.RelPermalink }}
+  {{- end }}
+  {{- $groups = $groups | append (dict "label" .label "id" (anchorize .label) "pages" $pages) }}
+{{- end }}
+{{- range (site.GetPage "/docs").RegularPagesRecursive }}
+  {{- if not (in $listed .RelPermalink) }}{{ errorf "%s is not listed in data/sidebar.yaml" .File.Path }}{{ end }}
+{{- end }}
+{{- return $groups }}

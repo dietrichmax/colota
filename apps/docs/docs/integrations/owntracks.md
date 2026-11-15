@@ -1,8 +1,6 @@
 ---
-sidebar_position: 3
+title: "OwnTracks"
 ---
-
-# OwnTracks
 
 [OwnTracks](https://owntracks.org/) is an open-source location tracking platform.
 

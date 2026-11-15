@@ -7,8 +7,8 @@ const here = dirname(fileURLToPath(import.meta.url))
 const docsRoot = join(here, "..")
 const repoRoot = join(docsRoot, "..", "..")
 const changelogDir = join(repoRoot, "fastlane", "metadata", "android", "en-US", "changelogs")
-// A standalone page, not a doc: this is a changelog, and it mirrors src/pages/privacy-policy.md.
-const out = join(docsRoot, "src", "pages", "releases.md")
+// A standalone page, not a doc: this is a changelog, and it mirrors content/privacy-policy.md.
+const out = join(docsRoot, "content", "releases.md")
 const feedOut = join(docsRoot, "static", "releases.xml")
 const SITE = "https://colota.app"
 const REPO = "https://github.com/dietrichmax/colota"
@@ -79,7 +79,7 @@ const compareUrl = (entry, i) => {
 }
 
 const sections = entries.map((entry, i) => {
-  const notes = entry.notes.replace(/([\\{}])/g, "\\$1")
+  const notes = entry.notes.replace(/([\\{}])/g, "\\$1").replace(/</g, "&lt;")
 
   return [
     `## ${entry.version}`,
@@ -98,11 +98,9 @@ const page = [
   `description: Release highlights for every published version of Colota.`,
   `---`,
   ``,
-  `# Releases`,
-  ``,
   `Highlights for each published version, the same notes shown in Google Play and F-Droid.`,
   `Every entry links to the full commit range on GitHub.`,
-  `Subscribe with the [RSS feed](pathname:///releases.xml).`,
+  `Subscribe with the [RSS feed](/releases.xml).`,
   ``,
   sections.join("\n\n"),
   ``,
@@ -110,7 +108,7 @@ const page = [
 
 writeFileSync(out, page)
 
-// Docusaurus slugs "## 1.15.0" to "1150", and that anchor is the item guid.
+// The site slugs "## 1.15.0" to "1150", and that anchor is the item guid.
 const anchor = (version) => `${SITE}/releases#${version.replace(/\./g, "")}`
 const xmlEscape = (text) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")

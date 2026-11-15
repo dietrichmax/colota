@@ -1,8 +1,6 @@
 ---
-sidebar_position: 2
+title: "GeoPulse"
 ---
-
-# GeoPulse
 
 [GeoPulse](https://github.com/tess1o/geopulse) is a self-hosted location tracking and visualization platform.
 

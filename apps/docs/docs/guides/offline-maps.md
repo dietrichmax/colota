@@ -1,14 +1,10 @@
 ---
-sidebar_position: 5
+title: "Offline maps"
 ---
-
-# Offline maps
 
 Download map areas to your device so the map works without an internet connection. Useful when tracking in areas with poor cell coverage - remote trails, backcountry routes, etc.
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/OfflineMaps.png", label: "Offline maps" }, ]} />
+{{< screenshots "OfflineMaps|Offline maps" >}}
 
 ## Downloading an Area
 
