@@ -61,14 +61,15 @@ class NetworkManager(private val context: Context, private val networkMonitor: N
         customFields: Map<String, String>,
         endpoint: String,
         extraHeaders: Map<String, String> = emptyMap(),
+        transitions: List<JSONObject> = emptyList(),
     ): BatchResult = withContext(Dispatchers.IO) {
-        if (items.isEmpty()) return@withContext BatchResult.Success
+        val first = items.firstOrNull() ?: transitions.firstOrNull() ?: return@withContext BatchResult.Success
         if (endpoint.isBlank()) {
             AppLogger.d(TAG, "Empty endpoint provided")
             return@withContext BatchResult.NetworkError
         }
 
-        val resolvedEndpoint = EndpointUrl.resolveUrlVariables(endpoint, items.first())
+        val resolvedEndpoint = EndpointUrl.resolveUrlVariables(endpoint, first)
 
         val url = try {
             URL(resolvedEndpoint)
@@ -87,7 +88,7 @@ class NetworkManager(private val context: Context, private val networkMonitor: N
             return@withContext BatchResult.NetworkError
         }
 
-        val envelope = PayloadBuilder.buildOverlandBatchPayload(items, customFields)
+        val envelope = PayloadBuilder.buildOverlandBatchPayload(items, customFields, transitions)
 
         var connection: HttpURLConnection? = null
         try {

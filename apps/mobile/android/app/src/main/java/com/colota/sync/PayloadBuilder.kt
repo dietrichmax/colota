@@ -23,12 +23,15 @@ object PayloadBuilder {
     // to envelope level via extractEnvelopeCustomFields.
     private val canonicalLocationKeys = setOf("lat", "lon", "acc", "alt", "vel", "batt", "bs", "tst", "bear", "inregions")
 
+    private val transitionKeys = setOf("_type", "event", "desc", "t", "wtst")
+
     fun extractEnvelopeCustomFields(payload: JSONObject): Map<String, String> {
         val fields = mutableMapOf<String, String>()
+        val skipped = if (payload.optString("_type") == "transition") canonicalLocationKeys + transitionKeys else canonicalLocationKeys
         val keys = payload.keys()
         while (keys.hasNext()) {
             val key = keys.next()
-            if (key !in canonicalLocationKeys) {
+            if (key !in skipped) {
                 fields[key] = payload.optString(key, "")
             }
         }
@@ -75,6 +78,16 @@ object PayloadBuilder {
         }
     }
 
+    /** The point's payload plus the event keys, so a server storing it as a point stores the same values. */
+    fun buildTransitionPayload(locationPayload: JSONObject, event: String, geofenceName: String, geofenceCreatedAt: Long): JSONObject =
+        JSONObject(locationPayload.toString()).apply {
+            put("_type", "transition")
+            put("event", event)
+            put("desc", geofenceName)
+            put("t", "c")
+            put("wtst", geofenceCreatedAt)
+        }
+
     fun parseFieldMap(jsonString: String?): Map<String, String>? {
         if (jsonString.isNullOrBlank()) return null
 
@@ -98,6 +111,7 @@ object PayloadBuilder {
     fun buildOverlandBatchPayload(
         items: List<JSONObject>,
         customFields: Map<String, String>,
+        transitions: List<JSONObject> = emptyList(),
     ): JSONObject {
         val locations = org.json.JSONArray()
         for (flat in items) {
@@ -105,10 +119,13 @@ object PayloadBuilder {
         }
         return JSONObject().apply {
             put("locations", locations)
-            customFields.forEach { (key, value) ->
-                if (key != "device_id" && key != "locations") put(key, value)
+            if (transitions.isNotEmpty()) {
+                put("transitions", org.json.JSONArray(transitions.map(::flatToOverlandTransition)))
             }
-            val firstPayload = items.firstOrNull() ?: JSONObject()
+            customFields.forEach { (key, value) ->
+                if (key != "device_id" && key != "locations" && key != "transitions") put(key, value)
+            }
+            val firstPayload = items.firstOrNull() ?: transitions.firstOrNull() ?: JSONObject()
             val deviceId = customFields["device_id"]?.ifBlank { null }
                 ?: firstPayload.optString("device_id", "").ifBlank { null }
                 ?: firstPayload.optString("tid", "").ifBlank { null }
@@ -148,6 +165,17 @@ object PayloadBuilder {
             put("geometry", geometry)
             put("properties", properties)
         }
+    }
+
+    private fun flatToOverlandTransition(flat: JSONObject): JSONObject {
+        val feature = flatToOverlandFeature(flat)
+        val properties = JSONObject().apply {
+            put("event", flat.optString("event"))
+            put("geofence", flat.optString("desc"))
+            put("timestamp", feature.getJSONObject("properties").getString("timestamp"))
+            if (flat.has("acc")) put("horizontal_accuracy", flat.optInt("acc"))
+        }
+        return feature.put("properties", properties)
     }
 
     /** Traccar 6.7.0+ JSON spec: https://www.traccar.org/osmand/ */

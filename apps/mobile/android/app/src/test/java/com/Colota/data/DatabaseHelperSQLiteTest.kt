@@ -165,7 +165,7 @@ class DatabaseHelperSQLiteTest {
         DatabaseMigrations.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
-            assertEquals(10, migrated.version)
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
             migrated.rawQuery(
                 "SELECT speed_threshold, accuracy_threshold FROM tracking_profiles WHERE name = 'Driving'",
                 null
@@ -220,7 +220,7 @@ class DatabaseHelperSQLiteTest {
         DatabaseMigrations.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
-            assertEquals(10, migrated.version)
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
             migrated.rawQuery(
                 "SELECT wifi_ssid, bluetooth_address, bluetooth_name FROM tracking_profiles WHERE name = 'Home'",
                 null
@@ -277,7 +277,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(10, migrated.version)
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
             migrated.rawQuery("PRAGMA table_info(tracking_profiles)", null).use { cursor ->
                 val columns = mutableSetOf<String>()
                 while (cursor.moveToNext()) columns.add(cursor.getString(1))
@@ -337,7 +337,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(10, migrated.version)
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
             // migrateCandidate stamps the version unconditionally, so the version alone proves
             // nothing about the v7 step. This is the restore-an-older-backup path.
             assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
@@ -378,7 +378,7 @@ class DatabaseHelperSQLiteTest {
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
             // passes for any value and stops forcing a migration arm when the version moves.
-            assertEquals(10, migrated.version)
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
             assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
             migrated.rawQuery("PRAGMA table_info(locations)", null).use { locCursor ->
                 val locCols = mutableSetOf<String>()
@@ -683,6 +683,63 @@ class DatabaseHelperSQLiteTest {
         db.addToQueue(locId, """{"lat":52.0}""")
 
         assertEquals(2, db.getQueuedCount())
+    }
+
+    // ========================================================================
+    // Geofence enter and leave events
+    // ========================================================================
+
+    @Test
+    fun `queued events are read strictly oldest first`() {
+        val leave = db.addTransition("""{"event":"leave"}""")
+        val enter = db.addTransition("""{"event":"enter"}""")
+        assertEquals(listOf(leave, enter), db.getQueuedTransitions(10).map { it.id })
+
+        db.removeTransitions(listOf(leave))
+
+        assertEquals(listOf(enter), db.getQueuedTransitions(10).map { it.id })
+    }
+
+    @Test
+    fun `waiting events are not counted as locations, and Delete queued locations drops them with the points`() {
+        val locId = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
+        db.addToQueue(locId, """{"lat":52.0}""")
+        db.addTransition("""{"event":"leave"}""")
+
+        assertEquals(1, db.getQueuedCount())
+        assertEquals(1, db.getStats().queued)
+        assertEquals(1, db.getQueuedTransitionCount())
+
+        assertEquals(1, db.clearQueue())
+
+        assertEquals(0, db.getQueuedTransitionCount())
+    }
+
+    @Test
+    fun `clearAllLocations drops waiting events too`() {
+        db.addTransition("""{"event":"leave"}""")
+
+        db.clearAllLocations()
+
+        assertTrue(db.getQueuedTransitions(10).isEmpty())
+    }
+
+    @Test
+    fun `migration from v10 creates the events table`() {
+        val candidate = File.createTempFile("candidate-v10", ".db").also { it.delete() }
+        SQLiteDatabase.openOrCreateDatabase(candidate, null).use { old -> old.version = 10 }
+
+        DatabaseMigrations.migrateCandidate(candidate)
+
+        SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
+            migrated.rawQuery("PRAGMA table_info(transitions)", null).use { cursor ->
+                val columns = buildList { while (cursor.moveToNext()) add(cursor.getString(1)) }
+                assertEquals(listOf("id", "payload"), columns)
+            }
+        }
+
+        candidate.delete()
     }
 
     // ========================================================================

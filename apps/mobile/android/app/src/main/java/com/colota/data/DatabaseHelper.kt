@@ -31,7 +31,7 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         const val DATABASE_NAME = "Colota.db"
-        const val DATABASE_VERSION = 10
+        const val DATABASE_VERSION = 11
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
@@ -39,6 +39,7 @@ class DatabaseHelper private constructor(context: Context) :
         const val TABLE_GEOFENCES = "geofences"
         const val TABLE_PROFILES = "tracking_profiles"
         const val TABLE_BOUNDARY_OVERRIDES = "trip_boundary_overrides"
+        const val TABLE_TRANSITIONS = "transitions"
 
         const val BOUNDARY_ACTION_MERGE = 0
         const val BOUNDARY_ACTION_SPLIT = 1
@@ -82,6 +83,14 @@ class DatabaseHelper private constructor(context: Context) :
                 action INTEGER NOT NULL,
                 created_at INTEGER NOT NULL,
                 PRIMARY KEY (before_timestamp, after_timestamp)
+            )
+        """
+
+        // Apart from the queue: an event belongs to no location row
+        internal const val CREATE_TRANSITIONS_TABLE = """
+            CREATE TABLE IF NOT EXISTS $TABLE_TRANSITIONS (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                payload TEXT NOT NULL
             )
         """
 
@@ -179,6 +188,7 @@ class DatabaseHelper private constructor(context: Context) :
 
         db.execSQL(CREATE_PROFILES_TABLE)
         db.execSQL(CREATE_BOUNDARY_OVERRIDES_TABLE)
+        db.execSQL(CREATE_TRANSITIONS_TABLE)
 
         db.execSQL("CREATE INDEX idx_queue_created ON $TABLE_QUEUE(created_at)")
         db.execSQL("CREATE INDEX idx_queue_location ON $TABLE_QUEUE(location_id)")
@@ -214,7 +224,8 @@ class DatabaseHelper private constructor(context: Context) :
             "httpMethod" to "POST",
             "dawarichMode" to "single",
             "overlandBatchSize" to "50",
-            "sendInRegions" to "false"
+            "sendInRegions" to "false",
+            "sendTransitions" to "false"
         )
 
         db.beginTransaction()
@@ -586,6 +597,46 @@ class DatabaseHelper private constructor(context: Context) :
         )
     }
 
+    fun addTransition(payload: String): Long {
+        requireNotRestoring()
+        val values = ContentValues().apply { put("payload", payload) }
+        return writableDatabase.insert(TABLE_TRANSITIONS, null, values)
+    }
+
+    /** By id only: a presence server must see a leave before the enter after it. */
+    fun getQueuedTransitions(limit: Int): List<QueuedTransition> {
+        val transitions = mutableListOf<QueuedTransition>()
+        readableDatabase.query(
+            TABLE_TRANSITIONS,
+            arrayOf("id", "payload"),
+            null, null, null, null,
+            "id ASC",
+            limit.toString()
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                transitions.add(QueuedTransition(id = cursor.getLong(0), payload = cursor.getString(1)))
+            }
+        }
+        return transitions
+    }
+
+    fun removeTransitions(ids: List<Long>) {
+        requireNotRestoring()
+        if (ids.isEmpty()) return
+        val placeholders = ids.joinToString(",") { "?" }
+        writableDatabase.delete(TABLE_TRANSITIONS, "id IN ($placeholders)", ids.map { it.toString() }.toTypedArray())
+    }
+
+    fun getQueuedTransitionCount(): Int =
+        readableDatabase.rawQuery("SELECT COUNT(*) FROM $TABLE_TRANSITIONS", null).use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
+
+    fun clearTransitions(): Int {
+        requireNotRestoring()
+        return writableDatabase.delete(TABLE_TRANSITIONS, null, null)
+    }
+
 
     data class Stats(val queued: Int, val sent: Int, val total: Int, val today: Int)
 
@@ -679,6 +730,7 @@ class DatabaseHelper private constructor(context: Context) :
     fun clearQueue(): Int {
         requireNotRestoring()
         AppLogger.d(TAG, "Clearing queue")
+        writableDatabase.delete(TABLE_TRANSITIONS, null, null)
         // Deleting locations cascades to their queue entries via FK ON DELETE CASCADE
         return writableDatabase.delete(
             TABLE_LOCATIONS,
@@ -690,6 +742,7 @@ class DatabaseHelper private constructor(context: Context) :
     fun clearAllLocations(): Int {
         requireNotRestoring()
         writableDatabase.delete(TABLE_QUEUE, null, null) // FK constraint: queue references locations
+        writableDatabase.delete(TABLE_TRANSITIONS, null, null)
         writableDatabase.delete(TABLE_BOUNDARY_OVERRIDES, null, null) // derived state, no point keeping
         return writableDatabase.delete(TABLE_LOCATIONS, null, null)
     }
@@ -948,6 +1001,8 @@ class DatabaseHelper private constructor(context: Context) :
         LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
 
 }
+
+data class QueuedTransition(val id: Long, val payload: String)
 
 /**
  * Data container for queued location records.

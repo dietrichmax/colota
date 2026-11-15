@@ -403,18 +403,45 @@ describe("ApiSettingsScreen", () => {
     })
 
     it("is blocked under GET and says why on its own row", () => {
-      const { getByTestId, getByText } = renderScreen({ httpMethod: "GET", sendInRegions: true })
+      const { getByTestId, getAllByText } = renderScreen({ httpMethod: "GET", sendInRegions: true })
 
       expect(getByTestId("inregions-toggle").props.accessibilityState).toEqual({ checked: false, disabled: true })
-      expect(getByText("Needs the POST method, not GET")).toBeTruthy()
+      // Both geofence rows carry the reason, each under its own switch
+      expect(getAllByText("Needs the POST method, not GET")).toHaveLength(2)
     })
 
     it("is blocked for Traccar JSON, which has no field for it", () => {
-      const { getByTestId, getByText } = renderWithTemplate("traccar")
+      const { getByTestId, getAllByText } = renderWithTemplate("traccar")
       fireEvent.press(getByTestId("http-method-post"))
 
       expect(getByTestId("inregions-toggle").props.accessibilityState.disabled).toBe(true)
-      expect(getByText("The Traccar format has no field for it")).toBeTruthy()
+      expect(getByTestId("transitions-toggle").props.accessibilityState.disabled).toBe(true)
+      expect(getAllByText("The Traccar format has no field for it")).toHaveLength(2)
+    })
+  })
+
+  describe("enter and leave events", () => {
+    it("is off until the user turns it on, since a server may store an event as a point", () => {
+      const { getByTestId } = renderScreen()
+
+      expect(getByTestId("transitions-toggle").props.accessibilityState.checked).toBe(false)
+    })
+
+    it("saves its own key and leaves current geofences as they were", async () => {
+      const { getByTestId } = renderScreen()
+
+      fireEvent.press(getByTestId("transitions-toggle"))
+
+      await mockImmediateSaveAndRestart.mock.calls[0][0]()
+      expect(mockSetSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ sendTransitions: true, sendInRegions: false })
+      )
+    })
+
+    it("is blocked under GET, which has no shape for an event", () => {
+      const { getByTestId } = renderScreen({ httpMethod: "GET", sendTransitions: true })
+
+      expect(getByTestId("transitions-toggle").props.accessibilityState).toEqual({ checked: false, disabled: true })
     })
   })
 })

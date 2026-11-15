@@ -111,6 +111,46 @@ class NetworkManagerTest {
         }
     }
 
+    // With no points the events must still make a request; a silent Success would drop them unsent
+    @Test
+    fun `an Overland request with events and no points still goes out, with an empty locations`() {
+        val server = java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))
+        val body = java.util.concurrent.CompletableFuture<String>()
+        val serving = Thread {
+            try {
+                server.accept().use { socket ->
+                    val input = socket.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+                    val lines = generateSequence { input.readLine() }.takeWhile { it.isNotEmpty() }.toList()
+                    val length = lines.first { it.startsWith("Content-Length", ignoreCase = true) }.substringAfter(":").trim().toInt()
+                    body.complete(String(CharArray(length) { input.read().toChar() }))
+                    socket.getOutputStream().write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n".toByteArray())
+                }
+            } catch (e: Exception) {
+                body.completeExceptionally(e)
+            }
+        }.apply { start() }
+        try {
+            val monitor = mockk<NetworkMonitor>()
+            every { monitor.isNetworkAvailable() } returns true
+            val event = JSONObject().put("_type", "transition").put("event", "enter").put("desc", "Home")
+                .put("lat", 52.0).put("lon", 13.0).put("tst", 1704067200L)
+
+            val result = kotlinx.coroutines.runBlocking {
+                NetworkManager(mockk<Context>(relaxed = true), monitor).sendBatchToEndpoint(
+                    emptyList(), emptyMap(), "http://127.0.0.1:${server.localPort}/", emptyMap(), listOf(event)
+                )
+            }
+
+            assertEquals(BatchResult.Success, result)
+            val sent = JSONObject(body.get(5, java.util.concurrent.TimeUnit.SECONDS))
+            assertEquals(0, sent.getJSONArray("locations").length())
+            assertEquals("enter", sent.getJSONArray("transitions").getJSONObject(0).getJSONObject("properties").getString("event"))
+        } finally {
+            serving.join(5000)
+            server.close()
+        }
+    }
+
     private fun newManager(): NetworkManager {
         return NetworkManager(mockk<Context>(relaxed = true), mockk<NetworkMonitor>(relaxed = true))
     }

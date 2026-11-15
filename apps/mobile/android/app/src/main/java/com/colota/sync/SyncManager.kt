@@ -37,6 +37,7 @@ class SyncManager(
 
     private val batchSender = OverlandBatchSender(dbHelper, networkManager, ::noteRateLimit)
     private val pointSender = PointSender(dbHelper, networkManager, ::noteRateLimit)
+    private val transitionSender = TransitionSender(dbHelper, networkManager, ::noteRateLimit)
     private val schedule = SyncSchedule(clock)
 
     @Volatile private var endpoint: String = ""
@@ -49,6 +50,7 @@ class SyncManager(
     @Volatile private var httpMethod: String = "POST"
     @Volatile private var apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
     @Volatile private var overlandBatchSize: Int = 50
+    @Volatile private var sendsTransitions: Boolean = false
 
     private var syncJob: Job? = null
     @Volatile var lastSuccessfulSyncTime: Long = 0
@@ -85,6 +87,7 @@ class SyncManager(
         httpMethod: String = "POST",
         apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
         overlandBatchSize: Int = 50,
+        sendsTransitions: Boolean = false,
     ) {
         this.endpoint = endpoint
         val intervalDiffers = syncIntervalSeconds != this.syncIntervalSeconds
@@ -98,6 +101,7 @@ class SyncManager(
         this.httpMethod = httpMethod
         this.apiFormat = apiFormat
         this.overlandBatchSize = overlandBatchSize.coerceIn(1, 500)
+        this.sendsTransitions = sendsTransitions
     }
 
     fun startPeriodicSync() {
@@ -125,7 +129,7 @@ class SyncManager(
                     continue
                 }
 
-                if (endpoint.isNotBlank() && queued > 0) {
+                if (endpoint.isNotBlank() && (queued > 0 || dbHelper.getQueuedTransitionCount() > 0)) {
                     if (syncMutex.isLocked) AppLogger.d(TAG, "Sync tick waiting for the running sync")
                     val errorMessage: String? = syncMutex.withLock {
                         try {
@@ -242,6 +246,12 @@ class SyncManager(
         }
     }
 
+    suspend fun queueTransitions(payloads: List<JSONObject>) {
+        if (payloads.isEmpty() || isOfflineMode) return
+        payloads.forEach { dbHelper.addTransition(it.toString()) }
+        if (endpoint.isNotBlank() && isSyncAllowed()) manualFlush()
+    }
+
     fun isSyncAllowed(): Boolean {
         if (isOfflineMode || !networkMonitor.isNetworkAvailable()) return false
         val allowed = when (syncCondition) {
@@ -260,10 +270,12 @@ class SyncManager(
 
     fun invalidateQueueCache() = queueCountCache.invalidate()
 
+    private fun pendingCount(): Int = dbHelper.getQueuedCount() + dbHelper.getQueuedTransitionCount()
+
     private suspend fun performSyncAndCheckSuccess(): Boolean {
-        val countBefore = dbHelper.getQueuedCount()
+        val countBefore = pendingCount()
         val pass = syncQueue(onProgress = null)
-        val countAfter = dbHelper.getQueuedCount()
+        val countAfter = pendingCount()
 
         invalidateQueueCache()
 
@@ -308,6 +320,7 @@ class SyncManager(
         var batchNumber = 1
         // Rows that failed without a bump stay at the head of the queue, so a later fetch would post them again
         val keptInPlace = mutableSetOf<Long>()
+        var passStopped = false
 
         // Every chunk reports, sent or not: silence reads as a dead service and frees Sync Now mid-pass
         fun reportProgress() {
@@ -341,6 +354,7 @@ class SyncManager(
                 }
                 if (result.stop) {
                     AppLogger.d(TAG, "Sync pass stopped: the server is unreachable, failing or rate limiting")
+                    passStopped = true
                     break
                 }
             } else {
@@ -360,6 +374,7 @@ class SyncManager(
                 }
                 if (stopped != null) {
                     AppLogger.d(TAG, "Sync pass stopped: $stopped")
+                    passStopped = true
                     break
                 }
             }
@@ -376,9 +391,23 @@ class SyncManager(
             AppLogger.w(TAG, "Sync paused: reached batch limit. Remaining items will sync next cycle.")
         }
 
+        var eventsSent = 0
+        if (!sendsTransitions) {
+            // Unsendable events would count as pending forever and fail every pass
+            val dropped = dbHelper.clearTransitions()
+            if (dropped > 0) AppLogger.d(TAG, "Dropped $dropped geofence events that are no longer sent")
+        } else if (!passStopped && batchNumber <= MAX_BATCHES_PER_SYNC && isActive) {
+            // A capped pass leaves points queued, and an event must not overtake its point
+            eventsSent = if (currentApiFormat == ApiFormat.OVERLAND_BATCH) {
+                transitionSender.sendAlone(currentEndpoint, currentAuthHeaders)
+            } else {
+                transitionSender.sendEach(currentEndpoint, currentAuthHeaders, currentHttpMethod)
+            }
+        }
+
         invalidateQueueCache()
 
-        if (totalSucceeded > 0) {
+        if (totalSucceeded > 0 || eventsSent > 0) {
             markSuccess()
         }
 
@@ -387,7 +416,7 @@ class SyncManager(
 
     private fun calculateNextSyncDelay(resumingWait: Boolean): Long {
         if (syncIntervalSeconds <= 0) {
-            return if (getCachedQueuedCount() > 0) {
+            return if (getCachedQueuedCount() > 0 || dbHelper.getQueuedTransitionCount() > 0) {
                 retryIntervalSeconds.toLong()
             } else {
                 30L

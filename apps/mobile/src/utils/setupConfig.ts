@@ -296,6 +296,16 @@ export function validateConfig(raw: unknown): ValidationResult {
     })
   }
 
+  if ("sendTransitions" in obj && typeof obj.sendTransitions === "boolean") {
+    settings.sendTransitions = obj.sendTransitions
+    entries.push({
+      field: "sendTransitions",
+      label: t("setup.field.sendTransitions"),
+      value: obj.sendTransitions ? t("common.yes") : t("common.no"),
+      category: "api"
+    })
+  }
+
   if ("fieldMap" in obj && typeof obj.fieldMap === "object" && obj.fieldMap !== null) {
     const fm = obj.fieldMap as Record<string, unknown>
     const validFieldMap: Partial<FieldMap> = {}

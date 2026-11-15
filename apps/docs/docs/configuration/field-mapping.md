@@ -61,4 +61,12 @@ Configure in **Settings → Connection → Request format → Geofences**.
 
 See [API Reference](/docs/api-reference#geofences) for the format.
 
+## Enter and Leave Events
+
+Turn on **Send enter and leave events** to send an event each time you enter or leave a geofence: an OwnTracks transition of its own, or for an Overland batch a request with the events in `transitions`. It has the same limits as current geofences.
+
+Configure in **Settings → Connection → Request format → Geofences**.
+
+See [API Reference](/docs/api-reference#enter-and-leave-events) for the format.
+
 **Note:** Custom field values are always sent as strings. Custom fields are added to the payload before location fields - if a custom field key matches a location field key, the location field takes precedence.

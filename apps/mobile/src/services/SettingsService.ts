@@ -49,6 +49,7 @@ export const SettingsService = {
       case "filterInaccurateLocations":
       case "isOfflineMode":
       case "sendInRegions":
+      case "sendTransitions":
         // Boolean → "true"/"false"
         stringValue = String(value)
         break

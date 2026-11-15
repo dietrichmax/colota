@@ -90,6 +90,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
   const [localHttpMethod, setLocalHttpMethod] = useState<HttpMethod>(settings.httpMethod || "POST")
   const [localDawarichMode, setLocalDawarichMode] = useState<DawarichMode>(settings.dawarichMode || "single")
   const [localSendInRegions, setLocalSendInRegions] = useState(settings.sendInRegions)
+  const [localSendTransitions, setLocalSendTransitions] = useState(settings.sendTransitions)
   const [copied, setCopied] = useState(false)
   const isInstantSync = settings.syncInterval === 0
   const isGetMethod = localHttpMethod === "GET"
@@ -100,11 +101,12 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
     : t("requestFormat.dawarich.batch.needsPost")
   const inRegionsAvailable = supportsGeofenceReporting(localTemplate, localHttpMethod, localDawarichMode)
   const inRegionsOn = inRegionsAvailable && localSendInRegions
-  const inRegionsHint = inRegionsAvailable
-    ? t("requestFormat.inRegions.hint")
-    : isTraccarJsonFormat(localTemplate, localHttpMethod)
-      ? t("requestFormat.geofences.noTraccar")
-      : t("requestFormat.geofences.needsPost")
+  const transitionsOn = inRegionsAvailable && localSendTransitions
+  const geofencesDisabledReason = isTraccarJsonFormat(localTemplate, localHttpMethod)
+    ? t("requestFormat.geofences.noTraccar")
+    : t("requestFormat.geofences.needsPost")
+  const inRegionsHint = inRegionsAvailable ? t("requestFormat.inRegions.hint") : geofencesDisabledReason
+  const transitionsHint = inRegionsAvailable ? t("requestFormat.transitions.hint") : geofencesDisabledReason
   const copiedTimeout = useTimeout()
   const {
     saving,
@@ -254,10 +256,11 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
         apiTemplate: newTemplate,
         httpMethod: newHttpMethod,
         dawarichMode: newDawarichMode,
-        sendInRegions: localSendInRegions
+        sendInRegions: localSendInRegions,
+        sendTransitions: localSendTransitions
       }
     },
-    [settings, localSendInRegions]
+    [settings, localSendInRegions, localSendTransitions]
   )
 
   /**
@@ -472,9 +475,10 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
     [localFieldMap, localCustomFields, localTemplate, localHttpMethod, saveImmediately]
   )
 
-  const handleInRegionsChange = useCallback(
-    (value: boolean) => {
-      setLocalSendInRegions(value)
+  const handleGeofenceToggle = useCallback(
+    (key: "sendInRegions" | "sendTransitions", value: boolean) => {
+      if (key === "sendInRegions") setLocalSendInRegions(value)
+      else setLocalSendTransitions(value)
       const base = buildSanitizedSettings(
         localFieldMap,
         localCustomFields,
@@ -483,7 +487,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
         localDawarichMode
       )
       if (!base) return
-      const next = { ...base, sendInRegions: value }
+      const next = { ...base, [key]: value }
       immediateSaveAndRestart(
         () => setSettings(next),
         () => restartTracking(next)
@@ -735,8 +739,17 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
                 accessibilityLabel={t("requestFormat.inRegions")}
                 value={inRegionsOn}
                 disabled={!inRegionsAvailable}
-                onValueChange={handleInRegionsChange}
+                onValueChange={(value) => handleGeofenceToggle("sendInRegions", value)}
                 testID="inregions-toggle"
+              />
+            </SettingRow>
+            <SettingRow label={t("requestFormat.transitions")} hint={transitionsHint} disabled={!inRegionsAvailable}>
+              <Toggle
+                accessibilityLabel={t("requestFormat.transitions")}
+                value={transitionsOn}
+                disabled={!inRegionsAvailable}
+                onValueChange={(value) => handleGeofenceToggle("sendTransitions", value)}
+                testID="transitions-toggle"
               />
             </SettingRow>
           </Card>

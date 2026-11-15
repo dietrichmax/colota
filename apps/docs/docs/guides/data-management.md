@@ -18,7 +18,7 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 | --- | --- |
 | **Sync now** | Uploads the queued locations immediately, whatever [Sync only on](/docs/configuration/sync-presets) says. A sync already running finishes first. The tracking notification appears for a moment if tracking was off, and nothing is recorded |
 | **Compact database** | Rewrites the database to give unused space back. It deletes nothing. Deleting trips and points from Location History leaves gaps that only this reclaims, so press it after a round of track editing |
-| **Delete queued locations** | Deletes the locations waiting to upload, not their pending uploads. Nothing else holds a copy, so they leave Location History too |
+| **Delete queued locations** | Deletes the locations waiting to upload, not their pending uploads. Nothing else holds a copy, so they leave Location History too. Geofence enter and leave events still waiting go with them |
 | **Delete synced locations** | Deletes locations already on your server. Those days leave Location History, notes included, and imported locations count as synced. Copies on your server stay |
 | **Delete older locations** | Deletes every location recorded before the age you pick: 30 days, 90 days, 1 year or a custom number of days. Sync state is ignored, so queued locations go with the rest |
 | **Delete all locations** | Deletes every location and every manual trip split and merge you made. Geofences, profiles and settings stay |

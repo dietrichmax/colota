@@ -26,6 +26,7 @@ const settings = {
   dawarichMode: "single",
   overlandBatchSize: 50,
   sendInRegions: true,
+  sendTransitions: true,
   syncInterval: 0,
   retryInterval: 30,
   isOfflineMode: false,
@@ -116,6 +117,7 @@ describe("setupLink", () => {
     expect(result.config.settings.apiTemplate).toBe("custom")
     expect(result.config.settings.fieldMap).toEqual({ lat: "latitude" })
     expect(result.config.settings.sendInRegions).toBe(true)
+    expect(result.config.settings.sendTransitions).toBe(true)
     // credentials map authType -> type and keep secrets + headers
     expect(result.config.auth?.authType).toBe("basic")
     expect(result.config.auth?.password).toBe("secret")
@@ -177,6 +179,16 @@ describe("setupLink", () => {
     expect(validateConfig({ interval: 10, sendInRegions: "true" }).config.settings.sendInRegions).toBeUndefined()
 
     const entry = validateConfig({ interval: 10, sendInRegions: true }).entries.find((e) => e.field === "sendInRegions")
+    expect(entry).toMatchObject({ value: "Yes", category: "api" })
+  })
+
+  it("takes enter and leave events only as a boolean, so a stray string cannot switch them on", () => {
+    expect(validateConfig({ interval: 10, sendTransitions: false }).config.settings.sendTransitions).toBe(false)
+    expect(validateConfig({ interval: 10, sendTransitions: "true" }).config.settings.sendTransitions).toBeUndefined()
+
+    const entry = validateConfig({ interval: 10, sendTransitions: true }).entries.find(
+      (e) => e.field === "sendTransitions"
+    )
     expect(entry).toMatchObject({ value: "Yes", category: "api" })
   })
 

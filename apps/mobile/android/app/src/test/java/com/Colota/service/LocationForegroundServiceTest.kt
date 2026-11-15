@@ -292,6 +292,76 @@ class LocationForegroundServiceTest {
         verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), listOf("Home")) }
     }
 
+    /** The report knew the device was outside Home, so the next fix inside it is an enter. */
+    private fun outsideHomeBefore(config: ServiceConfig) {
+        setField("config", config)
+        every { geofenceHelper.getEnabledRegions() } returns listOf(GeofenceHelper.Region(1, "Home", 52.52, 13.405, 100.0, createdAt = 1_700_000_000L))
+        every { dbHelper.getSetting(SettingsKeys.GEOFENCE_STATE) } returns "{\"1\":false}"
+        getField<GeofenceTransitions>("geofenceTransitions").restore()
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+    }
+
+    @Test
+    fun `an enter goes out after the point it happened at, when enter and leave events are sent`() = testScope.runTest {
+        outsideHomeBefore(ServiceConfig(endpoint = "https://example.com", sendTransitions = true))
+
+        invokeHandleLocationUpdate(mockLocation())
+
+        coVerifyOrder {
+            syncManager.queueAndSend(1L, any())
+            syncManager.queueTransitions(match { it.single().getString("event") == "enter" && it.single().getString("desc") == "Home" })
+        }
+    }
+
+    @Test
+    fun `enter and leave events alone put no inregions on the points`() = testScope.runTest {
+        outsideHomeBefore(ServiceConfig(endpoint = "https://example.com", sendTransitions = true))
+
+        invokeHandleLocationUpdate(mockLocation())
+
+        verify { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any(), emptyList()) }
+    }
+
+    @Test
+    fun `current geofences alone send no enter and leave events`() = testScope.runTest {
+        outsideHomeBefore(ServiceConfig(endpoint = "https://example.com", sendInRegions = true))
+
+        invokeHandleLocationUpdate(mockLocation())
+
+        coVerify(exactly = 0) { syncManager.queueTransitions(any()) }
+    }
+
+    @Test
+    fun `an enter at a fix dropped inside the active pause zone still goes out`() = testScope.runTest {
+        outsideHomeBefore(ServiceConfig(endpoint = "https://example.com", sendTransitions = true))
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        every { geofenceHelper.getPauseZone(any()) } returns homeGeofence
+
+        invokeHandleLocationUpdate(mockLocation())
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        coVerify { syncManager.queueTransitions(match { it.single().getString("event") == "enter" }) }
+    }
+
+    @Test
+    fun `a leave is dated by the first fix outside, which the second one confirms`() = testScope.runTest {
+        setField("config", ServiceConfig(endpoint = "https://example.com", sendTransitions = true))
+        every { geofenceHelper.getEnabledRegions() } returns listOf(GeofenceHelper.Region(1, "Home", 52.52, 13.405, 100.0))
+        every { dbHelper.getSetting(SettingsKeys.GEOFENCE_STATE) } returns "{\"1\":true}"
+        getField<GeofenceTransitions>("geofenceTransitions").restore()
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        val now = System.currentTimeMillis()
+        val firstOutside = mockLocation(lat = 52.6, time = now - 30_000)
+
+        invokeHandleLocationUpdate(firstOutside)
+        invokeHandleLocationUpdate(mockLocation(lat = 52.61, time = now))
+
+        coVerify(exactly = 1) { syncManager.queueTransitions(match { it.single().getString("event") == "leave" }) }
+        // Once for its own point, once for the leave it dates
+        verify(exactly = 2) { PayloadBuilder.buildLocationPayload(firstOutside, (now - 30_000) / 1000, any(), any(), any(), any(), any(), any()) }
+    }
+
     @Test
     fun `handleLocationUpdate leaves geofences out of a GET request, which has no shape for them`() = testScope.runTest {
         setField("config", ServiceConfig(endpoint = "https://example.com", sendInRegions = true, httpMethod = "GET"))
@@ -1027,6 +1097,17 @@ class LocationForegroundServiceTest {
         invokeHandleZoneRecheckAction()
 
         assertEquals(freshLocation, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `SyncManager learns whether events are sent, so a switch turned off or a GET request drops the waiting ones`() {
+        setField("config", ServiceConfig(endpoint = "https://example.com", sendTransitions = true))
+        invokePushConfigToSyncManager()
+        verify { syncManager.updateConfig(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), sendsTransitions = true) }
+
+        setField("config", ServiceConfig(endpoint = "https://example.com", sendTransitions = true, httpMethod = "GET"))
+        invokePushConfigToSyncManager()
+        verify { syncManager.updateConfig(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), sendsTransitions = false) }
     }
 
     @Test

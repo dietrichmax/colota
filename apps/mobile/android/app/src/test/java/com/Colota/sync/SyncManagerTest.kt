@@ -3,6 +3,7 @@ package com.Colota.sync
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.QueuedLocation
+import com.Colota.data.QueuedTransition
 import com.Colota.sync.ApiFormat
 import com.Colota.util.AppLogger
 import io.mockk.*
@@ -1712,5 +1713,192 @@ class SyncManagerTest {
         val field = SyncManager::class.java.getDeclaredField(name)
         field.isAccessible = true
         return field.get(syncManager)
+    }
+
+    // --- geofence enter and leave events ---
+
+    private fun configureForEvents(
+        apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
+        syncIntervalSeconds: Int = 900,
+        isOfflineMode: Boolean = false,
+        sendsTransitions: Boolean = true,
+    ) {
+        every { networkMonitor.isNetworkAvailable() } returns true
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = syncIntervalSeconds,
+            retryIntervalSeconds = 30,
+            isOfflineMode = isOfflineMode,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = apiFormat,
+            sendsTransitions = sendsTransitions,
+        )
+    }
+
+    private val leaveHome = JSONObject().put("_type", "transition").put("event", "leave").put("desc", "Home").put("lat", 52.0).put("tst", 1704067200L)
+    private val enterWork = JSONObject(leaveHome.toString()).put("event", "enter").put("desc", "Work")
+
+    private fun isEvent(json: JSONObject) = json.optString("_type") == "transition"
+
+    private fun pointRow(id: Long) = QueuedLocation(id, id + 10, JSONObject().put("lat", 52.0).put("tst", 1704067200L).toString(), 0)
+
+    @Test
+    fun `an event is stored and sent at once, even on a 15 minute sync interval`() = scope.runTest {
+        configureForEvents(syncIntervalSeconds = 900)
+        every { dbHelper.addTransition(any()) } returns 7L
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()))
+        coEvery { networkManager.sendToEndpoint(match { isEvent(it) }, any(), any(), any(), any()) } returns BatchResult.Success
+
+        syncManager.queueTransitions(listOf(leaveHome))
+
+        verify { dbHelper.addTransition(leaveHome.toString()) }
+        verify { dbHelper.removeTransitions(listOf(7L)) }
+    }
+
+    @Test
+    fun `offline mode keeps no events, as it keeps no queued points`() = scope.runTest {
+        configureForEvents(isOfflineMode = true)
+
+        syncManager.queueTransitions(listOf(leaveHome))
+
+        verify(exactly = 0) { dbHelper.addTransition(any()) }
+    }
+
+    @Test
+    fun `a pass sends the events after its points, so a server keeping one record per time keeps the point`() = scope.runTest {
+        configureForEvents()
+        every { dbHelper.getQueuedLocations(any()) } returnsMany listOf(listOf(pointRow(1L)), emptyList())
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()))
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
+
+        syncManager.manualFlush()
+
+        coVerifyOrder {
+            networkManager.sendToEndpoint(match { !isEvent(it) }, any(), any(), any(), any())
+            networkManager.sendToEndpoint(match { isEvent(it) }, any(), any(), any(), any())
+        }
+        verify { dbHelper.removeTransitions(listOf(7L)) }
+    }
+
+    @Test
+    fun `a pass capped by the batch limit holds the events back, so they cannot overtake the points still queued`() = scope.runTest {
+        configureForEvents()
+        every { dbHelper.getQueuedLocations(any()) } answers { listOf(pointRow(System.nanoTime())) }
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()))
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(match { isEvent(it) }, any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a pass that found the server unreachable keeps the events for the next one`() = scope.runTest {
+        configureForEvents()
+        every { dbHelper.getQueuedLocations(any()) } returnsMany listOf(listOf(pointRow(1L)), emptyList())
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()))
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(match { isEvent(it) }, any(), any(), any(), any()) }
+        verify(exactly = 0) { dbHelper.removeTransitions(any()) }
+    }
+
+    @Test
+    fun `a refused event waits in place while the next one still goes out`() = scope.runTest {
+        configureForEvents()
+        every { dbHelper.getQueuedLocations(any()) } returns emptyList()
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()), QueuedTransition(8L, enterWork.toString()))
+        coEvery { networkManager.sendToEndpoint(match { it.optString("desc") == "Home" }, any(), any(), any(), any()) } returns BatchResult.ClientError(422)
+        coEvery { networkManager.sendToEndpoint(match { it.optString("desc") == "Work" }, any(), any(), any(), any()) } returns BatchResult.Success
+
+        syncManager.manualFlush()
+
+        verify { dbHelper.removeTransitions(listOf(8L)) }
+        verify(exactly = 0) { dbHelper.removeTransitions(listOf(7L)) }
+    }
+
+    @Test
+    fun `a server error stops the events in order, so a later leave cannot go out before an earlier enter`() = scope.runTest {
+        configureForEvents()
+        every { dbHelper.getQueuedLocations(any()) } returns emptyList()
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, enterWork.toString()), QueuedTransition(8L, leaveHome.toString()))
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.ServerError(500)
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a rate limit on an event holds every upload, like one on a point`() = scope.runTest {
+        configureForEvents()
+        every { dbHelper.getQueuedLocations(any()) } returns emptyList()
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()), QueuedTransition(8L, enterWork.toString()))
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.RateLimited(120)
+
+        syncManager.manualFlush()
+
+        assertTrue(syncManager.rateLimitWaitSeconds() > 0)
+        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `turning the switch off drops the waiting events, which would otherwise fail every pass`() = scope.runTest {
+        configureForEvents(sendsTransitions = false)
+        every { dbHelper.getQueuedLocations(any()) } returns emptyList()
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()))
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify { dbHelper.clearTransitions() }
+    }
+
+    @Test
+    fun `waiting events alone start a periodic pass`() = scope.runTest {
+        configureForEvents(syncIntervalSeconds = 1)
+        every { dbHelper.getQueuedCount() } returns 0
+        every { dbHelper.getQueuedTransitionCount() } returns 1
+        every { dbHelper.getQueuedLocations(any()) } returns emptyList()
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()))
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
+
+        syncManager.startPeriodicSync()
+        advanceTimeBy(1_500)
+        syncManager.stopPeriodicSync()
+
+        verify { dbHelper.removeTransitions(listOf(7L)) }
+    }
+
+    @Test
+    fun `Overland events go in a request of their own after the points, in the order they happened`() = scope.runTest {
+        configureForEvents(apiFormat = ApiFormat.OVERLAND_BATCH)
+        every { dbHelper.getQueuedLocations(any()) } returnsMany listOf(listOf(pointRow(1L)), emptyList())
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()), QueuedTransition(8L, enterWork.toString()))
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
+
+        syncManager.manualFlush()
+
+        coVerifyOrder {
+            networkManager.sendBatchToEndpoint(match { it.size == 1 }, any(), any(), any(), emptyList())
+            networkManager.sendBatchToEndpoint(emptyList(), any(), any(), any(), match { events -> events.map { it.getString("desc") } == listOf("Home", "Work") })
+        }
+        verify { dbHelper.removeTransitions(listOf(7L, 8L)) }
+    }
+
+    @Test
+    fun `a failed Overland event request keeps the events for the next pass`() = scope.runTest {
+        configureForEvents(apiFormat = ApiFormat.OVERLAND_BATCH)
+        every { dbHelper.getQueuedLocations(any()) } returns emptyList()
+        every { dbHelper.getQueuedTransitions(any()) } returns listOf(QueuedTransition(7L, leaveHome.toString()))
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.ServerError(500)
+
+        syncManager.manualFlush()
+
+        verify(exactly = 0) { dbHelper.removeTransitions(any()) }
     }
 }

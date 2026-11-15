@@ -1,4 +1,5 @@
 - Option to tell your server which geofences each point is in
+- Option to send an event to your server each time you enter or leave a geofence
 - Password managers can now fill in the backup password
 - Fixed impossible position jumps, like a phone at home showing up on another continent under GPS spoofing, being recorded
 - Tracking profiles can set their own accuracy filter, looser or stricter than the one in Tracking & sync

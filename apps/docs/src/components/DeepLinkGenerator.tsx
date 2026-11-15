@@ -76,6 +76,7 @@ export default function DeepLinkGenerator() {
   const [dawarichMode, setDawarichMode] = useState("")
   const [overlandBatchSize, setOverlandBatchSize] = useState("")
   const [sendInRegions, setSendInRegions] = useState("")
+  const [sendTransitions, setSendTransitions] = useState("")
 
   // Tracking
   const [interval, setInterval_] = useState("")
@@ -120,6 +121,7 @@ export default function DeepLinkGenerator() {
     if (dawarichMode) obj.dawarichMode = dawarichMode
     if (overlandBatchSize && Number(overlandBatchSize) > 0) obj.overlandBatchSize = Number(overlandBatchSize)
     if (sendInRegions) obj.sendInRegions = sendInRegions === "true"
+    if (sendTransitions) obj.sendTransitions = sendTransitions === "true"
 
     if (interval) obj.interval = Number(interval)
     if (distance) obj.distance = Number(distance)
@@ -233,6 +235,7 @@ export default function DeepLinkGenerator() {
     dawarichMode,
     overlandBatchSize,
     sendInRegions,
+    sendTransitions,
     interval,
     distance,
     accuracyThreshold,
@@ -445,6 +448,18 @@ export default function DeepLinkGenerator() {
           <div className={styles.field}>
             <label className={styles.label}>Current geofences</label>
             <select className={styles.select} value={sendInRegions} onChange={(e) => setSendInRegions(e.target.value)}>
+              <option value="">-- not set --</option>
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Enter and leave events</label>
+            <select
+              className={styles.select}
+              value={sendTransitions}
+              onChange={(e) => setSendTransitions(e.target.value)}
+            >
               <option value="">-- not set --</option>
               <option value="true">Enabled</option>
               <option value="false">Disabled</option>

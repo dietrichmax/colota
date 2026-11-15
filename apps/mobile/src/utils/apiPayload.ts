@@ -8,7 +8,7 @@ export function isOverlandFormat(apiTemplate: string, dawarichMode: string): boo
   return apiTemplate === "overland" || (apiTemplate === "dawarich" && dawarichMode === "batch")
 }
 
-/** Mirrors ServiceConfig.reportsGeofences: geofence data has a place only in a POST body or an Overland batch. */
+/** Mirrors ServiceConfig.reportsGeofences and reportsTransitions: only a POST body or an Overland batch has a place for them. */
 export function supportsGeofenceReporting(apiTemplate: string, httpMethod: string, dawarichMode: string): boolean {
   if (isOverlandFormat(apiTemplate, dawarichMode)) return true
   return httpMethod === "POST" && !isTraccarJsonFormat(apiTemplate, httpMethod)

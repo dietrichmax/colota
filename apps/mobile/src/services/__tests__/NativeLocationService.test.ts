@@ -137,6 +137,7 @@ describe("NativeLocationService", () => {
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
         sendInRegions: false,
+        sendTransitions: false,
         hasCompletedSetup: false
       }
 
@@ -173,6 +174,7 @@ describe("NativeLocationService", () => {
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
         sendInRegions: false,
+        sendTransitions: false,
         hasCompletedSetup: false
       }
 
@@ -181,7 +183,7 @@ describe("NativeLocationService", () => {
       expect(nativeMock.startService).toHaveBeenCalledWith(expect.objectContaining({ accuracyMode: "balanced" }))
     })
 
-    it("forwards the current geofences switch, the only way a running service learns it", async () => {
+    it("forwards both geofence switches, the only way a running service learns them", async () => {
       const settings = {
         interval: 5,
         distance: 10,
@@ -202,12 +204,15 @@ describe("NativeLocationService", () => {
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
         sendInRegions: true,
+        sendTransitions: true,
         hasCompletedSetup: false
       }
 
       await NativeLocationService.start(settings)
 
-      expect(nativeMock.startService).toHaveBeenCalledWith(expect.objectContaining({ sendInRegions: true }))
+      expect(nativeMock.startService).toHaveBeenCalledWith(
+        expect.objectContaining({ sendInRegions: true, sendTransitions: true })
+      )
     })
 
     it("passes apiTemplate and httpMethod GET to native for traccar template", async () => {
@@ -231,6 +236,7 @@ describe("NativeLocationService", () => {
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
         sendInRegions: false,
+        sendTransitions: false,
         hasCompletedSetup: false
       }
 
@@ -265,6 +271,7 @@ describe("NativeLocationService", () => {
         dawarichMode: "single" as const,
         overlandBatchSize: 50,
         sendInRegions: false,
+        sendTransitions: false,
         hasCompletedSetup: false
       }
 
