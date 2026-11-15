@@ -10,6 +10,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const NAMES = [
+  "archive",
   "arrow-right",
   "arrow-up-right",
   "battery-charging",
@@ -19,6 +20,7 @@ const NAMES = [
   "chevron-left",
   "chevron-right",
   "circle-question-mark",
+  "cloud-upload",
   "code-xml",
   "copy",
   "download",
@@ -31,6 +33,7 @@ const NAMES = [
   "languages",
   "life-buoy",
   "lightbulb",
+  "mail",
   "messages-square",
   "moon",
   "octagon-alert",

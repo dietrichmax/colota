@@ -4,14 +4,22 @@
  */
 
 const root = document.documentElement
+const darkScheme = matchMedia("(prefers-color-scheme: dark)")
+const isDark = () => root.dataset.theme === "dark" || (!root.dataset.theme && darkScheme.matches)
+
+// A <source data-dark-source> follows the system theme by its media query; a theme chosen in the header overrides it.
+function syncDarkSources() {
+  const media = { dark: "all", light: "not all" }[root.dataset.theme] ?? "(prefers-color-scheme: dark)"
+  for (const source of document.querySelectorAll("source[data-dark-source]")) source.media = media
+}
 
 function initTheme() {
-  const dark = matchMedia("(prefers-color-scheme: dark)")
-  const isDark = () => root.dataset.theme === "dark" || (!root.dataset.theme && dark.matches)
+  syncDarkSources()
   for (const button of document.querySelectorAll("[data-theme-toggle]")) {
     button.addEventListener("click", () => {
       const next = isDark() ? "light" : "dark"
       root.dataset.theme = next
+      syncDarkSources()
       try {
         localStorage.setItem("theme", next)
       } catch {}
@@ -31,7 +39,7 @@ function initLightbox() {
   const show = (i) => {
     index = (i + items.length) % items.length
     const item = items[index]
-    img.src = item.dataset.src
+    img.src = (isDark() && item.dataset.srcDark) || item.dataset.src
     img.alt = item.dataset.label
     label.textContent = item.dataset.label
     count.textContent = items.length > 1 ? `${index + 1} / ${items.length}` : ""

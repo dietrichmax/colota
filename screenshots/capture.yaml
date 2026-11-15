@@ -194,6 +194,40 @@ ${DRIVE}
 - takeScreenshot: Import
 - scrollUntilVisible:
     element:
+      id: "import-discard-btn"
+- tapOn:
+    id: "import-discard-btn"
+- back
+- scrollUntilVisible:
+    element:
+      id: "nav-appearance"
+    direction: UP
+- tapOn:
+    id: "nav-appearance"
+- tapOn:
+    id: "theme-dark"
+- back
+- scrollUntilVisible:
+    element:
+      id: "nav-export-import"
+- tapOn:
+    id: "nav-export-import"
+- tapOn:
+    id: "import-file-row"
+- runFlow:
+    when:
+      notVisible: "colota-demo-timeline.json"
+    commands:
+      - tapOn: "Show roots"
+      - tapOn: "Downloads"
+- tapOn: "colota-demo-timeline.json"
+- extendedWaitUntil:
+    visible:
+      id: "preview-state"
+    timeout: 30000
+- takeScreenshot: ImportDark
+- scrollUntilVisible:
+    element:
       id: "import-commit-btn"
 - tapOn:
     id: "import-commit-btn"
@@ -205,8 +239,20 @@ ${DRIVE}
     visible: "Imported .*"
     timeout: 60000
 - back
+- scrollUntilVisible:
+    element:
+      id: "nav-appearance"
+    direction: UP
+- tapOn:
+    id: "nav-appearance"
+- tapOn:
+    id: "theme-system"
+- back
 
 - tapOn: "History"
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
 - tapOn:
     id: "day-previous"
 - extendedWaitUntil:
@@ -301,12 +347,170 @@ ${DRIVE}
 
 - scrollUntilVisible:
     element:
+      id: "nav-backup-restore"
+    direction: UP
+- tapOn:
+    id: "nav-backup-restore"
+- tapOn:
+    id: "backup-password"
+- inputText: "glacier-lantern-orbit-73"
+- tapOn:
+    id: "backup-password-confirm"
+- inputText: "glacier-lantern-orbit-73"
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: Backup
+- back
+
+- scrollUntilVisible:
+    element:
       id: "nav-appearance"
     direction: UP
 - tapOn:
     id: "nav-appearance"
 - tapOn:
     id: "theme-dark"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: AppearanceSettingsDark
+- back
+- scrollUntilVisible:
+    element:
+      id: "nav-connection"
+    direction: UP
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: SettingsDark
+- tapOn:
+    id: "nav-connection"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ConnectionSettingsDark
+- scrollUntilVisible:
+    element:
+      id: "nav-request-format"
+- tapOn:
+    id: "nav-request-format"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ApiFieldMappingDark
+- scrollUntilVisible:
+    element:
+      id: "nav-backend-template"
+- tapOn:
+    id: "nav-backend-template"
+- extendedWaitUntil:
+    visible: "Traccar"
+    timeout: 10000
+- takeScreenshot: BackendTemplatesDark
+- back
+- back
+- scrollUntilVisible:
+    element:
+      id: "nav-auth-settings"
+- tapOn:
+    id: "nav-auth-settings"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: AuthenticationDark
+- back
+- scrollUntilVisible:
+    element:
+      id: "nav-mtls-settings"
+- tapOn:
+    id: "nav-mtls-settings"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: MtlsSettingsDark
+- back
+- back
+
+- tapOn:
+    id: "nav-tracking-sync"
+- tapOn:
+    id: "preset-balanced"
+- extendedWaitUntil:
+    notVisible: "Tracking restarted|Saving.*"
+    timeout: 15000
+- takeScreenshot: SyncPresetsDark
+- tapOn:
+    id: "preset-custom"
+- scrollUntilVisible:
+    element:
+      text: "Movement threshold"
+- extendedWaitUntil:
+    notVisible: "Tracking restarted|Saving.*"
+    timeout: 15000
+- takeScreenshot: TrackingSettingsDark
+- scrollUntilVisible:
+    element:
+      id: "preset-balanced"
+    direction: UP
+- tapOn:
+    id: "preset-balanced"
+- back
+
+- tapOn:
+    id: "nav-tracking-profiles"
+- extendedWaitUntil:
+    visible: "Driving"
+    timeout: 10000
+- takeScreenshot: TrackingProfilesDark
+- tapOn: "Driving"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ProfileEditorDark
+- back
+- back
+
+- scrollUntilVisible:
+    element:
+      id: "nav-offline-maps"
+- tapOn:
+    id: "nav-offline-maps"
+- tapOn:
+    id: "area-name-input"
+- inputText: ${AREA_NAME}
+- hideKeyboard
+- extendedWaitUntil:
+    visible: ".*estimated.*"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: OfflineMapsDark
+- back
+
+- scrollUntilVisible:
+    element:
+      id: "nav-data-management"
+- tapOn:
+    id: "nav-data-management"
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    id: "sync-now-row"
+- extendedWaitUntil:
+    visible: "Sent .*"
+    timeout: 60000
+- takeScreenshot: DataManagementDark
+- back
+- scrollUntilVisible:
+    element:
+      id: "nav-export-import"
+- tapOn:
+    id: "nav-export-import"
+- extendedWaitUntil:
+    visible:
+      id: "stat-locations"
+    timeout: 10000
+- takeScreenshot: ExportDataDark
+- tapOn:
+    id: "nav-auto-export"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: AutoExportDark
+- back
 - back
 - scrollUntilVisible:
     element:
@@ -322,9 +526,108 @@ ${DRIVE}
 - hideKeyboard
 - waitForAnimationToEnd:
     timeout: 5000
-- takeScreenshot: Backup
+- takeScreenshot: BackupDark
 - back
+- scrollUntilVisible:
+    element:
+      id: "nav-share-setup"
+- tapOn:
+    id: "nav-share-setup"
+- tapOn:
+    id: "share-api"
+- tapOn:
+    id: "share-geofences"
+- tapOn:
+    id: "share-profiles"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ShareSetupDark
+- back
+- scrollUntilVisible:
+    element:
+      id: "nav-logging"
+- tapOn:
+    id: "nav-logging"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: LoggingDark
+- back
+
+- openLink: ${SETUP_LINK}
+- extendedWaitUntil:
+    visible: "Apply configuration"
+    timeout: 30000
+- takeScreenshot: SetupImportDark
+- back
+
 - tapOn: "Dashboard"
 - waitForAnimationToEnd:
     timeout: 10000
-- takeScreenshot: DarkMode
+- takeScreenshot: DashboardDark
+- tapOn: "History"
+- tapOn: "Map"
+- extendedWaitUntil:
+    visible: "Today|Yesterday"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Today"
+    commands:
+      - tapOn:
+          id: "day-previous"
+- extendedWaitUntil:
+    visible:
+      id: "dock-legend"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: LocationHistoryDark
+- tapOn: "Trips"
+- extendedWaitUntil:
+    visible:
+      id: "trip-row-.*"
+    timeout: 10000
+- takeScreenshot: TripsDark
+- longPressOn:
+    id: "trip-row-.*"
+    index: 0
+- tapOn:
+    id: "trip-row-.*"
+    index: 1
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: MergeTripsDark
+- tapOn:
+    id: "exit-selection-btn"
+- tapOn:
+    id: "trip-row-.*"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: TripDetailsDark
+- tapOn:
+    point: "${SPLIT_POINT}"
+- extendedWaitUntil:
+    visible:
+      id: "point-split"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: SplitTripDark
+- tapOn:
+    id: "point-close"
+- back
+
+- tapOn: "Geofences"
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: GeofencesDark
+- tapOn:
+    id: "edit-geofence-.*"
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: GeofenceEditorDark
+- back

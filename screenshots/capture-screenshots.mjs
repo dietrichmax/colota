@@ -112,6 +112,7 @@ function prepareDevice() {
   adb("emu", "power", "ac", "off")
   adb("emu", "power", "status", "discharging")
   adb("emu", "power", "capacity", "90")
+  adb("shell", "cmd", "uimode", "night", "no")
   adb("shell", "settings", "put", "global", "sysui_demo_allowed", "1")
   demo("enter")
   demo("clock", "-e", "hhmm", "0941")

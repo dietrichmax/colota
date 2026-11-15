@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "inputs": "node scripts/generate-releases.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/tokens.mjs",
-    "start": "npm run inputs && scripts/install-hugo.sh && .bin/hugo server",
+    "start": "npm run inputs && scripts/install-hugo.sh && .bin/hugo server --renderToMemory",
     "build": "npm run inputs && scripts/install-hugo.sh && scripts/install-pagefind.sh && .bin/hugo --gc --minify --cleanDestinationDir && .bin/pagefind --site public --quiet && node scripts/check-site.mjs",
     "preview": "npm run build && .bin/pagefind --site public --quiet --serve",
     "icons": "node scripts/icons.mjs",
