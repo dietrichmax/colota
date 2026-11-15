@@ -1,0 +1,21 @@
+{{- /* A front matter row (label or labelKey from the app's en.json; page or link from links.json; optional sub and icon) to (dict "label" "sub" "href" "icon" "external"), failing the build on a key or page that does not exist. */ -}}
+{{- $label := .label }}
+{{- with .labelKey }}
+  {{- $label = index hugo.Data.app.en . }}
+  {{- if not $label }}{{ errorf "no %q in apps/mobile/src/i18n/locales/en.json" . }}{{ end }}
+{{- end }}
+{{- $row := dict "label" $label "icon" .icon "sub" .sub "external" false }}
+{{- with .page }}
+  {{- $u := urls.Parse . }}
+  {{- $p := site.GetPage (strings.TrimSuffix "/" $u.Path) }}
+  {{- if not $p }}{{ errorf "a row links %q, which is no page" . }}{{ end }}
+  {{- $row = merge $row (dict "href" (printf "%s%s" $p.RelPermalink (cond (ne $u.Fragment "") (printf "#%s" $u.Fragment) ""))) }}
+  {{- if not $row.sub }}{{ $row = merge $row (dict "sub" $p.Description) }}{{ end }}
+{{- end }}
+{{- with .link }}
+  {{- $url := index hugo.Data.links . }}
+  {{- if not $url }}{{ errorf "no %q in packages/shared/src/links.ts" . }}{{ end }}
+  {{- $row = merge $row (dict "href" $url "external" true) }}
+  {{- if not $row.sub }}{{ $row = merge $row (dict "sub" (strings.TrimPrefix "https://" $url | strings.TrimSuffix "/")) }}{{ end }}
+{{- end }}
+{{- return $row }}

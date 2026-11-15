@@ -1,5 +1,6 @@
 ---
 title: "Dawarich"
+description: "Single points or Overland batches to Dawarich"
 ---
 
 [Dawarich](https://github.com/Freika/dawarich) is a self-hosted location history service.

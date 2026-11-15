@@ -1,5 +1,6 @@
 ---
 title: "Translations"
+description: "Adding or fixing a language"
 ---
 
 A translation can be partial: a line you leave out shows in English.

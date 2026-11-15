@@ -1,5 +1,6 @@
 ---
 title: "Contributing"
+description: "Reporting issues and pull requests"
 ---
 
 ## Reporting Issues

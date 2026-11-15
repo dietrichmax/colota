@@ -1,5 +1,6 @@
 ---
 title: "Deep Link Setup"
+description: "Setup links and QR codes, the link generator and its parameters"
 ---
 
 Configure Colota instantly using a `colota://setup` URL. Generate a link or QR code with your server settings and share it with users - no manual typing required.

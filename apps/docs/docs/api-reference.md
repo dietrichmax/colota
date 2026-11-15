@@ -1,5 +1,6 @@
 ---
 title: "API Reference"
+description: "Requests, batches, responses, errors and retries"
 ---
 
 Reference for the HTTP requests Colota sends to your server.

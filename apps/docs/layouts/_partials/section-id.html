@@ -1,0 +1,8 @@
+{{- /* The header section a page belongs to: docs, integrations, install, support, releases or home. */ -}}
+{{- $id := "" }}
+{{- if .IsHome }}{{ $id = "home" }}
+{{- else if hasPrefix .RelPermalink "/docs/integrations/" }}{{ $id = "integrations" }}
+{{- else if eq .Section "docs" }}{{ $id = "docs" }}
+{{- else }}{{ $id = strings.Trim .RelPermalink "/" }}
+{{- end }}
+{{- return $id -}}

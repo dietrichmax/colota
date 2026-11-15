@@ -1,5 +1,6 @@
 ---
 title: "Alternatives"
+description: "Other Android trackers and when to use each"
 ---
 
 Colota is one of several Android apps that can record and forward GPS location data. The apps below are a few common ones, not a complete list.

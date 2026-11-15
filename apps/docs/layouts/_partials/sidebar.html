@@ -1,6 +1,7 @@
 {{- $current := .RelPermalink }}
+{{- $groups := index (partialCached "docs-order.html" .) (partial "sidebar-name.html" .) }}
 <nav class="side" aria-label="Docs">
-  {{- range partialCached "docs-order.html" . }}
+  {{- range $groups }}
     <div class="side-group">
       <p class="side-label">{{ .label }}</p>
       {{- range .pages }}

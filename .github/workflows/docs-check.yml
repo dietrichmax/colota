@@ -8,6 +8,7 @@ on:
     paths:
       - 'apps/docs/**'
       - 'packages/shared/**'
+      - 'apps/mobile/src/i18n/locales/en.json'
       - '.nvmrc'
       - '.github/workflows/docs-check.yml'
   workflow_dispatch:

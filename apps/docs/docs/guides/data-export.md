@@ -1,5 +1,6 @@
 ---
 title: "Data Export"
+description: "Formats, manual export and scheduled auto-export"
 ---
 
 Export your location history in multiple formats.

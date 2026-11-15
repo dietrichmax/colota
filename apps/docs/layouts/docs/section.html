@@ -1,15 +1,16 @@
 {{ define "main" }}
+  {{- $order := partialCached "docs-order.html" . }}
+  {{- $integrations := slice }}
+  {{- range $order.integrations }}{{ $integrations = $integrations | append .pages }}{{ end }}
+  {{- $groups := $order.docs | append (dict "label" "Integrations" "id" "integrations" "pages" $integrations) }}
   <main id="main" class="narrow hub">
     <h1>{{ .Title }}</h1>
     {{- with .Description }}<p class="lede">{{ . }}</p>{{ end }}
-    {{- range partialCached "docs-order.html" . }}
+    {{- range $groups }}
       <h2 class="section-title" id="{{ .id }}">{{ .label }}</h2>
-      <div class="card rows">
-        {{- range $n, $p := .pages }}
-          {{- if $n }}<div class="divider"></div>{{ end }}
-          <a class="row" href="{{ $p.RelPermalink }}"><span class="row-text"><span class="row-label">{{ $p.Title }}</span>{{ with $p.Description }}<span class="row-sub">{{ . }}</span>{{ end }}</span>{{ partial "icon.html" (dict "name" "chevron-right" "class" "row-trail") }}</a>
-        {{- end }}
-      </div>
+      {{- $rows := slice }}
+      {{- range .pages }}{{ $rows = $rows | append (dict "label" .Title "sub" .Description "href" .RelPermalink "external" false) }}{{ end }}
+      {{ partial "rows.html" (dict "rows" $rows) }}
     {{- end }}
   </main>
 {{ end }}

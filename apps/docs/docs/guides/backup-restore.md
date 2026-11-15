@@ -1,5 +1,6 @@
 ---
 title: "Backup & restore"
+description: "Encrypted backups, restoring and what a backup holds"
 ---
 
 Bundle your locations, settings and credentials into a single password-encrypted file you can store anywhere - cloud drive, USB stick, another device.

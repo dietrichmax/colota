@@ -1,5 +1,6 @@
 ---
 title: "Authentication"
+description: "Basic auth, bearer token and custom headers"
 ---
 
 Colota supports multiple authentication methods, configurable in **Settings → Connection → Authentication**. The method is a choice of three rows, each saying what it sends, and only the chosen method's fields are shown.

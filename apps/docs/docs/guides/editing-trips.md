@@ -1,5 +1,6 @@
 ---
 title: "Editing Trips"
+description: "Merging and splitting trips"
 ---
 
 Colota groups location history into trips automatically. A new trip starts after **15 minutes or more without a fix**. Where that guess is wrong, merge and split correct it. Neither changes your location data.

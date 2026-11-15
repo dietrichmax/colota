@@ -1,5 +1,6 @@
 ---
 title: "OwnTracks"
+description: "Setup and the OwnTracks HTTP format"
 ---
 
 [OwnTracks](https://owntracks.org/) is an open-source location tracking platform.

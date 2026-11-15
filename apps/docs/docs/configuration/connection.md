@@ -1,5 +1,6 @@
 ---
 title: "Connection"
+description: "Endpoint, offline mode and retry behavior"
 aliases:
   - /docs/configuration/server-settings/
 ---

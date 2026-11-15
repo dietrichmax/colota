@@ -1,5 +1,6 @@
 ---
 title: "Choosing a Backend"
+description: "Which template to pick for each server"
 ---
 
 Colota sends location data to a server you control. Pick your backend below, then select its template in **Settings → Connection → Request format**. [Request format](/docs/configuration/request-format#backend-templates) lists what each template sets.

@@ -1,5 +1,6 @@
 ---
 title: "PhoneTrack (Nextcloud)"
+description: "Nextcloud PhoneTrack through its OwnTracks URL"
 ---
 
 [PhoneTrack](https://apps.nextcloud.com/apps/phonetrack) is a Nextcloud app for tracking mobile devices.

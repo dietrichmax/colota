@@ -1,5 +1,6 @@
 ---
 title: "Tracking profiles"
+description: "Conditions, priority and the values a profile replaces"
 ---
 
 A tracking profile is a rule: while a condition holds, such as charging, Android Auto or a speed, Colota records and syncs with that profile's interval, movement threshold, accuracy filter and sync interval instead of the Tracking & sync values.

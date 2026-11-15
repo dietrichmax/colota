@@ -1,5 +1,6 @@
 ---
 title: "Data management"
+description: "What is stored, the sync queue and deleting locations"
 ---
 
 Manage your location database from the Data management screen.

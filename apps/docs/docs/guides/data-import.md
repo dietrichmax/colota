@@ -1,5 +1,6 @@
 ---
 title: "Data Import"
+description: "Formats, preview and additive imports"
 ---
 
 Merge location history from external files into your Colota database. Data Import is **additive**: existing locations are preserved and duplicates are skipped. Use this to recover from a Colota export, migrate from Google Timeline, or pull historical data from another tracker

@@ -1,5 +1,6 @@
 ---
 title: "GeoPulse"
+description: "Setup, payload and geofence compatibility"
 ---
 
 [GeoPulse](https://github.com/tess1o/geopulse) is a self-hosted location tracking and visualization platform.

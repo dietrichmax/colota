@@ -1,5 +1,6 @@
 ---
 title: "Quick Start"
+description: "Permissions, battery settings and the first recording"
 ---
 
 Minimal setup to start tracking:

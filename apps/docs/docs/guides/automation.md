@@ -1,5 +1,6 @@
 ---
 title: "Automation"
+description: "App shortcuts and broadcast intents for automation apps"
 aliases:
   - /docs/guides/app-shortcuts/
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Geofencing"
+description: "Pause zones, GPS pause options, sharing and zone reports"
 ---
 
 Create zones where location recording stops automatically. These "pause zones" stop saving locations at places you visit often. Each zone can also be configured to stop GPS entirely when on WiFi or when the device is motionless.

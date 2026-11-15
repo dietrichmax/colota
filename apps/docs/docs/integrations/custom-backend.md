@@ -1,5 +1,6 @@
 ---
 title: "Custom Backend"
+description: "Minimum requirements, default payload and a minimal server"
 ---
 
 Colota works with any backend that accepts HTTP requests (POST with JSON body or GET with query parameters).

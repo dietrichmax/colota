@@ -1,5 +1,6 @@
 ---
 title: "Home Assistant"
+description: "The Colota integration, its entities and payload"
 ---
 
 [Home Assistant](https://www.home-assistant.io/) is an open-source home automation platform.
