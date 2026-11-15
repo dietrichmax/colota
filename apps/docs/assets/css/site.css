@@ -364,7 +364,7 @@ button { font: inherit; color: inherit; }
 .gen-qr svg { display: block; width: 100%; height: auto; }
 .gen-warning { margin-top: var(--space-md); padding: var(--space-md) var(--space-lg); border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-warning) 10%, var(--color-card)); font-size: var(--fs-body); line-height: 1.5; }
 
-/* Landing page: the headline and actions beside the demo ride, drawn like Location history draws a day */
+/* Landing page: the headline and actions beside the Dashboard and Location history */
 .hero { max-width: 1200px; margin: 0 auto; padding: var(--space-xxl) var(--gutter); display: grid; gap: var(--space-xxl); align-items: center; }
 .hero-title { margin: 0; font-size: var(--fs-hero); line-height: 1.12; font-weight: 700; letter-spacing: -0.025em; text-wrap: balance; }
 .hero-title em { font-style: normal; color: var(--color-primary-dark); }
@@ -385,23 +385,15 @@ button { font: inherit; color: inherit; }
 .hero-facts { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); margin: var(--space-xl) 0 0; padding: 0; list-style: none; font-size: var(--fs-description); line-height: 1.5; color: var(--color-text-secondary); }
 .hero-facts li { display: flex; align-items: center; gap: var(--space-sm); }
 .hero-facts li::before { content: ""; width: var(--space-xs); height: var(--space-xs); border-radius: var(--radius-pill); background: var(--color-primary); }
-.ride { margin: 0; }
-.ride-card { padding: var(--space-lg); background: var(--color-card); border-radius: var(--radius-lg); }
-.ride-card > svg { display: block; width: 100%; height: auto; max-height: 420px; }
-.ride-grid { stroke: var(--color-divider); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.ride-trip { fill: none; stroke: var(--trip); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.ride-start { fill: var(--trip); }
-.ride-end { fill: var(--color-card); stroke: var(--trip); stroke-width: 3px; vector-effect: non-scaling-stroke; }
-.t1 { --trip: var(--trip-1); } .t2 { --trip: var(--trip-2); } .t3 { --trip: var(--trip-3); }
-.t4 { --trip: var(--trip-4); } .t5 { --trip: var(--trip-5); } .t6 { --trip: var(--trip-6); }
-.ride-dock { position: relative; margin-top: calc(var(--space-xxl) * -1); padding: var(--space-md) var(--space-lg); background: var(--color-surface-raised); border-radius: var(--radius-lg); box-shadow: var(--shadow-floating); }
-.ride-summary { display: flex; align-items: center; gap: var(--space-md); font-size: var(--fs-body); line-height: 1.4; font-weight: 500; }
-.ride-summary .i { color: var(--color-text-secondary); }
-.ride-summary small { display: block; font-size: var(--fs-caption); font-weight: 400; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
-.ride-chips { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); }
-.ride-chip { display: inline-flex; align-items: center; gap: var(--space-xs); min-height: var(--size-chip); padding: 0 var(--space-sm); border-radius: var(--radius-sm); background: var(--color-well); font-size: var(--fs-caption); font-weight: 500; font-variant-numeric: tabular-nums; }
-.ride-chip i { width: var(--space-sm); height: var(--space-sm); border-radius: var(--radius-pill); background: var(--trip); }
-.ride figcaption { margin-top: var(--space-sm); text-align: center; font-size: var(--fs-caption); line-height: 1.5; color: var(--color-text-secondary); }
+.hero-shots { position: relative; display: flex; justify-content: center; gap: var(--space-lg); }
+.hero-shots figure { margin: 0; width: min(240px, 46%); text-align: center; }
+.hero-shots figure + figure { margin-top: calc(var(--space-xxl) + var(--space-md)); }
+.hero-shots img { display: block; width: 100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-floating); }
+.hero-shots figcaption { margin-top: var(--space-sm); font-size: var(--fs-caption); line-height: 1.5; color: var(--color-text-secondary); }
+@media (max-width: 759px) {
+  .hero-shots figure { width: 240px; }
+  .hero-shots figure + figure { display: none; }
+}
 .features { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) var(--space-xxl); display: grid; gap: var(--space-lg); }
 .feature { padding: var(--space-xl); background: var(--color-card); border-radius: var(--radius-md); }
 .feature .i { color: var(--color-primary); }

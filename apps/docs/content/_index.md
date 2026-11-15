@@ -33,6 +33,9 @@ integrations:
   - [Reitti, reitti]
   - [Traccar, traccar]
   - [Custom Backend, custom-backend]
+heroShots:
+  - "Dashboard|Dashboard"
+  - "LocationHistory|Location history"
 screenshots:
   [
     "Dashboard|Dashboard",
