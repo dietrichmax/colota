@@ -4,7 +4,8 @@
   "scripts": {
     "inputs": "node scripts/generate-releases.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/tokens.mjs",
     "start": "npm run inputs && scripts/install-hugo.sh && .bin/hugo server",
-    "build": "npm run inputs && scripts/install-hugo.sh && .bin/hugo --gc --minify --cleanDestinationDir && node scripts/check-site.mjs",
+    "build": "npm run inputs && scripts/install-hugo.sh && scripts/install-pagefind.sh && .bin/hugo --gc --minify --cleanDestinationDir && .bin/pagefind --site public --quiet && node scripts/check-site.mjs",
+    "preview": "npm run build && .bin/pagefind --site public --quiet --serve",
     "icons": "node scripts/icons.mjs",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/*.test.mjs"
   }

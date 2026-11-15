@@ -1,5 +1,6 @@
 ---
 title: "Privacy Policy"
+search: false
 ---
 
 **Last updated: August 19, 2026**

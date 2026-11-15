@@ -11,8 +11,11 @@
     {{- partial "footer.html" . }}
     {{- partial "tabbar.html" . }}
     {{- if .Store.Get "gallery" }}{{ partial "lightbox.html" . }}{{ end }}
+    {{- partial "search.html" . }}
     {{- $js := resources.Get "js/site.js" | js.Build (dict "minify" hugo.IsProduction) | fingerprint }}
     <script src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}" defer></script>
+    {{- $search := resources.Get "js/search.js" | js.Build (dict "minify" hugo.IsProduction "format" "esm") | fingerprint }}
+    <script type="module" src="{{ $search.RelPermalink }}" integrity="{{ $search.Data.Integrity }}"></script>
     {{- if .Store.Get "generator" }}
       {{- $gen := resources.Get "js/deep-link-generator.js" | js.Build (dict "minify" hugo.IsProduction "format" "esm") | fingerprint }}
       <script type="module" src="{{ $gen.RelPermalink }}" integrity="{{ $gen.Data.Integrity }}"></script>

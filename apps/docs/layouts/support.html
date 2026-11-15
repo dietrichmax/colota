@@ -1,5 +1,5 @@
 {{ define "main" }}
-  <main id="main" class="narrow hub">
+  <main id="main" class="narrow hub" data-pagefind-body>
     <h1>{{ .Title }}</h1>
     {{- with .Description }}<p class="lede">{{ . }}</p>{{ end }}
     {{- range .Params.groups }}

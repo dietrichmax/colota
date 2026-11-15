@@ -39,6 +39,7 @@ const NAMES = [
   "qr-code",
   "route",
   "scroll-text",
+  "search",
   "server",
   "shield-alert",
   "shield-check",

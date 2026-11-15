@@ -18,8 +18,8 @@
           </details>
         {{- end }}
       </div>
-      <article class="prose">
-        <p class="eyebrow">{{ $group.label }}</p>
+      <article class="prose" data-pagefind-body>
+        <p class="eyebrow" data-pagefind-ignore data-pagefind-meta="group">{{ $group.label }}</p>
         <h1>{{ .Title }}</h1>
         {{- with .Description }}<p class="lede">{{ . }}</p>{{ end }}
         {{ .Content }}

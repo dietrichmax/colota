@@ -1,6 +1,6 @@
 {{ define "main" }}
   <main id="main" class="narrow">
-    <article class="prose">
+    <article class="prose"{{ if ne .Params.search false }} data-pagefind-body{{ end }}>
       <h1>{{ .Title }}</h1>
       {{ .Content }}
     </article>
