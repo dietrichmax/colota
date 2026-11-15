@@ -10,6 +10,7 @@ export { radius } from "./radius"
 export type { RadiusName } from "./radius"
 export { space } from "./space"
 export { size } from "./size"
+export { TRIP_COLORS } from "./tripColors"
 export {
   REPO_URL,
   ISSUES_URL,
