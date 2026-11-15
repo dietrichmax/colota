@@ -1,9 +1,6 @@
 ---
-sidebar_position: 1
-slug: /introduction
+title: "Introduction"
 ---
-
-# Introduction
 
 Colota is a self-hosted GPS tracking app for Android. It sends your location to your own server over HTTP(S), works offline, supports geofencing, and has no analytics or telemetry.
 
@@ -30,16 +27,14 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## Screenshots
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, { src: "/img/screenshots/Settings.png", label: "Settings" }, { src: "/img/screenshots/ApiFieldMapping.png", label: "Request format" }, { src: "/img/screenshots/Authentication.png", label: "Authentication" }, { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence editor" }, { src: "/img/screenshots/OfflineMaps.png", label: "Offline maps" }, { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking profiles" }, { src: "/img/screenshots/ProfileEditor.png", label: "Profile editor" }, { src: "/img/screenshots/LocationHistory.png", label: "Location history" }, { src: "/img/screenshots/TripDetails.png", label: "Trip detail" }, { src: "/img/screenshots/Trips.png", label: "Trips" }, { src: "/img/screenshots/ExportData.png", label: "Export & import" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-export" }, { src: "/img/screenshots/DataManagement.png", label: "Data management" }, { src: "/img/screenshots/DarkMode.png", label: "Dark mode" }, ]} />
+{{< screenshots "Dashboard|Dashboard" "Settings|Settings" "ApiFieldMapping|Request format" "Authentication|Authentication" "Geofences|Geofences" "GeofenceEditor|Geofence editor" "OfflineMaps|Offline maps" "TrackingProfiles|Tracking profiles" "ProfileEditor|Profile editor" "LocationHistory|Location history" "TripDetails|Trip detail" "Trips|Trips" "ExportData|Export & import" "AutoExport|Auto-export" "DataManagement|Data management" "DarkMode|Dark mode" >}}
 
 ## Architecture
 
 Colota is a monorepo with a React Native UI layer and native Kotlin modules for background tracking:
 
 - **apps/mobile** - React Native + Kotlin Android app
-- **apps/docs** - This documentation site (Docusaurus)
+- **apps/docs** - This documentation site (Hugo)
 - **packages/shared** - Shared theme colors, typography, corner radii, spacing, sizes, the `colota://setup` schema and the project's links
 
 The native layer handles the foreground service, database, HTTP sync, geofencing, and credential storage. See the [Architecture](/docs/development/architecture) page for details.

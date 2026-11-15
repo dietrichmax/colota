@@ -1,10 +1,6 @@
 ---
-sidebar_position: 7
+title: "Deep Link Setup"
 ---
-
-import DeepLinkGenerator from '@site/src/components/DeepLinkGenerator'
-
-# Deep Link Setup
 
 Configure Colota instantly using a `colota://setup` URL. Generate a link or QR code with your server settings and share it with users - no manual typing required.
 
@@ -12,15 +8,13 @@ Configure Colota instantly using a `colota://setup` URL. Generate a link or QR c
 
 Fill in the settings you want to configure. Only the fields you set will be included - everything else keeps its current value on the device. All processing happens in your browser - no data is sent to any server.
 
-<DeepLinkGenerator />
+{{< deep-link-generator >}}
 
 ## Sharing From the App
 
 You can also generate a setup link straight from an existing installation, without the browser generator. Open **Settings → Share setup**, tick which categories to include - Tracking, Sync, API, Geofences, Tracking profiles and Credentials - and tap **Share** to send the `colota://setup` link through any app.
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ShareSetup.png", label: "Share setup" }, ]} />
+{{< screenshots "ShareSetup|Share setup" >}}
 
 Credentials are off by default. Enabling them puts your username, password, bearer token or custom headers into the link in plain text, so only share it over a trusted channel.
 
@@ -28,7 +22,7 @@ Geofences and tracking profiles can also be shared on their own from the [Geofen
 
 ## How It Works
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/SetupImport.png", label: "Import configuration" }, ]} />
+{{< screenshots "SetupImport|Import configuration" >}}
 
 1. User taps the link or scans a QR code
 2. Colota opens and shows a confirmation screen listing all settings that will be applied. The server address is shown in full with its host on a separate line. A link that replaces a configured server names the server it replaces.

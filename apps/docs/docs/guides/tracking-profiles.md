@@ -1,14 +1,10 @@
 ---
-sidebar_position: 2
+title: "Tracking profiles"
 ---
-
-# Tracking profiles
-
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 A tracking profile is a rule: while a condition holds, such as charging, Android Auto or a speed, Colota records and syncs with that profile's interval, movement threshold, accuracy filter and sync interval instead of the Tracking & sync values.
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking profiles" }, ]} />
+{{< screenshots "TrackingProfiles|Tracking profiles" >}}
 
 ## Use Cases
 
@@ -29,7 +25,7 @@ A tracking profile is a rule: while a condition holds, such as charging, Android
 
 The editor's first line reads the rule back as you build it, for example "When charging, track every 5 s, any movement and sync each fix." Tap a profile in the list to edit it; Delete is at the bottom of the editor.
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ProfileEditor.png", label: "Profile editor" }, ]} />
+{{< screenshots "ProfileEditor|Profile editor" >}}
 
 ## The list
 
@@ -56,33 +52,27 @@ The Bluetooth device condition is for cars without Android Auto: pick the car's 
 
 Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) that has to hold across 60 seconds of fixes, so unlike speed-below it does not flap on GPS noise near zero. The window is measured over the fixes themselves, so a stretch with no fixes at all is not counted as stillness and the profile waits for the stream instead of switching on.
 
-:::caution[Wi-Fi condition caveats]
+> [!CAUTION] Wi-Fi condition caveats
+>
+> Reading a network name counts as location access, so a **Wi-Fi network** profile makes the location indicator flash briefly when the app checks the network after a change. It is not continuous: the name is read once per network change, not held for the session.
+>
+> **Wi-Fi** means the phone is connected to a Wi-Fi network, whether or not a VPN owns the traffic; Ethernet does not match.
+>
+> SSID matching is case-insensitive. The name is read when the network changes and when Location comes back on. Without location permission, or with Location turned off at that moment, Android hides the name and the **Wi-Fi network** condition does not match.
 
-Reading a network name counts as location access, so a **Wi-Fi network** profile makes the location indicator flash briefly when the app checks the network after a change. It is not continuous: the name is read once per network change, not held for the session.
+> [!TIP] Stationary profile
+>
+> Colota starts the motion detector when the device goes still. It watches accelerometer variance and the hardware significant motion sensor together, so moving again usually ends the profile within seconds rather than at the next fix. That is why the editor hides the deactivation delay here.
+>
+> The sensor is not a guarantee. It can miss a slow, gentle start, and not every device has the hardware sensor that can wake a sleeping phone. If it does not notice you starting to move, the profile ends only once GPS reports movement, which at a long interval means waiting for the next fix.
+>
+> Stationary profiles always use a **0m** distance filter and ignore the setting. Fixes taken in one spot sit a few meters apart, so anything larger would drop the points the profile is there to record.
 
-**Wi-Fi** means the phone is connected to a Wi-Fi network, whether or not a VPN owns the traffic; Ethernet does not match.
-
-SSID matching is case-insensitive. The name is read when the network changes and when Location comes back on. Without location permission, or with Location turned off at that moment, Android hides the name and the **Wi-Fi network** condition does not match.
-
-:::
-
-:::tip[Stationary profile]
-
-Colota starts the motion detector when the device goes still. It watches accelerometer variance and the hardware significant motion sensor together, so moving again usually ends the profile within seconds rather than at the next fix. That is why the editor hides the deactivation delay here.
-
-The sensor is not a guarantee. It can miss a slow, gentle start, and not every device has the hardware sensor that can wake a sleeping phone. If it does not notice you starting to move, the profile ends only once GPS reports movement, which at a long interval means waiting for the next fix.
-
-Stationary profiles always use a **0m** distance filter and ignore the setting. Fixes taken in one spot sit a few meters apart, so anything larger would drop the points the profile is there to record.
-
-:::
-
-:::caution[Accuracy filtering affects stationary detection]
-
-The stationary condition needs GPS speed below 0.3 m/s across 60 seconds of fixes, and the accuracy filter can stop that working from either direction. Too loose (40m or more) and noisy fixes report speeds above the threshold, restarting the count. Too tight and the fixes are dropped before the speed check ever sees them, which leaves the condition with nothing to measure. Either way the profile does not activate. Around 15m keeps both out of the way.
-
-Your distance filter does not have that effect: whenever a speed or stationary profile is enabled the app asks Android for every fix, and the filter only decides what gets saved.
-
-:::
+> [!CAUTION] Accuracy filtering affects stationary detection
+>
+> The stationary condition needs GPS speed below 0.3 m/s across 60 seconds of fixes, and the accuracy filter can stop that working from either direction. Too loose (40m or more) and noisy fixes report speeds above the threshold, restarting the count. Too tight and the fixes are dropped before the speed check ever sees them, which leaves the condition with nothing to measure. Either way the profile does not activate. Around 15m keeps both out of the way.
+>
+> Your distance filter does not have that effect: whenever a speed or stationary profile is enabled the app asks Android for every fix, and the filter only decides what gets saved.
 
 ## Profile Settings
 
@@ -106,11 +96,9 @@ When creating a new profile, the tracking interval, movement threshold and sync 
 
 When multiple conditions match at the same time, the profile with the highest priority wins; equal priorities go to the older profile. The list shows profiles in that order, so it is the order they are checked in.
 
-:::tip[Combining Profiles]
-
-If you use both a Speed Below and a Stationary profile, give Stationary the higher priority. Otherwise the speed profile keeps GPS running at its interval and the stationary heartbeat never kicks in.
-
-:::
+> [!TIP] Combining Profiles
+>
+> If you use both a Speed Below and a Stationary profile, give Stationary the higher priority. Otherwise the speed profile keeps GPS running at its interval and the stationary heartbeat never kicks in.
 
 ## Example Configurations
 

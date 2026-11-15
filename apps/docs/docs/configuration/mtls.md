@@ -1,8 +1,6 @@
 ---
-sidebar_position: 6
+title: "Client certificate (mutual TLS)"
 ---
-
-# Client certificate (mutual TLS)
 
 Authenticate to your server with a client certificate at the TLS handshake, in addition to (or instead of) HTTP-level auth like Bearer or Basic. Useful when your reverse proxy enforces mTLS (e.g. nginx `ssl_verify_client`, Traefik, Cloudflare Access). If your server just needs a Bearer token or Basic Auth, you don't need this.
 
@@ -12,9 +10,7 @@ Configure in **Settings -> Connection -> Client certificate**. The screen opens 
 
 Two ways to provide a client certificate.
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/MtlsSettings.png", label: "Client certificate" }, ]} />
+{{< screenshots "MtlsSettings|Client certificate" >}}
 
 ### Option A: pick from device certificates (recommended)
 

@@ -1,8 +1,6 @@
 ---
-sidebar_position: 1
+title: "Geofencing"
 ---
-
-# Geofencing
 
 Create zones where location recording stops automatically. These "pause zones" stop saving locations at places you visit often. Each zone can also be configured to stop GPS entirely when on WiFi or when the device is motionless.
 
@@ -21,9 +19,7 @@ Create zones where location recording stops automatically. These "pause zones" s
 
 Tap any zone in the list, or its circle on the map, to reopen the editor. Every field can be changed there, **Location** included. The zone you are paused in reads **Paused here** in the list.
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence editor" }, ]} />
+{{< screenshots "Geofences|Geofences" "GeofenceEditor|Geofence editor" >}}
 
 ## GPS Pause Options
 
@@ -55,11 +51,9 @@ The point is always saved on the device, including in offline mode and when the 
 
 When both **WiFi** and **motionless** pause are enabled, GPS only resumes when **both** conditions clear - WiFi must be disconnected **and** motion must be detected. Either condition alone is not enough to resume.
 
-:::tip
-
-Changes made in the editor take effect immediately, even when you are already inside the zone.
-
-:::
+> [!TIP]
+>
+> Changes made in the editor take effect immediately, even when you are already inside the zone.
 
 ## Sharing Zones
 

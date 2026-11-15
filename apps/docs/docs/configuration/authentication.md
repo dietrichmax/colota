@@ -1,14 +1,10 @@
 ---
-sidebar_position: 5
+title: "Authentication"
 ---
-
-# Authentication
-
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 Colota supports multiple authentication methods, configurable in **Settings → Connection → Authentication**. The method is a choice of three rows, each saying what it sends, and only the chosen method's fields are shown.
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Authentication.png", label: "Authentication" }, ]} />
+{{< screenshots "Authentication|Authentication" >}}
 
 ## Methods
 

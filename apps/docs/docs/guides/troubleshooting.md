@@ -1,8 +1,6 @@
 ---
-sidebar_position: 4
+title: "Troubleshooting"
 ---
-
-# Troubleshooting
 
 ## App doesn't track in background
 
@@ -74,9 +72,7 @@ If **Test connection** reads **Not reachable**, the sentence under it points at 
 
 **Settings > Logging** records a log file and hands it over as one file.
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Logging.png", label: "Logging" }, ]} />
+{{< screenshots "Logging|Logging" >}}
 
 ### Recording a log
 

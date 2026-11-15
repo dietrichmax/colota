@@ -1,0 +1,47 @@
+# The docs sidebar, in order. Each page is its path under docs/ without .md; a page left out gets no nav entry
+# and the build fails on it. Groups follow the app's areas, not the folders.
+- label: Getting started
+  pages: [introduction, getting-started/installation, getting-started/quick-start]
+- label: Tracking
+  pages:
+    - configuration/tracking-sync
+    - guides/tracking-profiles
+    - guides/geofencing
+    - guides/automation
+    - guides/battery-optimization
+- label: Connection
+  pages: [configuration/connection, configuration/request-format, configuration/authentication, configuration/mtls]
+- label: Integrations
+  pages:
+    - integrations/overview
+    - integrations/dawarich
+    - integrations/geopulse
+    - integrations/home-assistant
+    - integrations/overland
+    - integrations/owntracks
+    - integrations/phonetrack
+    - integrations/reitti
+    - integrations/traccar
+    - integrations/custom-backend
+- label: History and data
+  pages:
+    - guides/location-history
+    - guides/editing-trips
+    - guides/data-export
+    - guides/data-import
+    - guides/data-management
+    - guides/backup-restore
+    - guides/deep-link-setup
+- label: Display
+  pages: [configuration/appearance, guides/offline-maps, guides/tile-server]
+- label: Help
+  pages: [guides/troubleshooting, faq]
+- label: Reference
+  pages: [api-reference, development/permissions, security, alternatives]
+- label: Development
+  pages:
+    - development/architecture
+    - development/local-setup
+    - getting-started/build-from-source
+    - development/translations
+    - contributing

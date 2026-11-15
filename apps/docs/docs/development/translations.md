@@ -1,8 +1,6 @@
 ---
-sidebar_position: 4
+title: "Translations"
 ---
-
-# Translations
 
 A translation can be partial: a line you leave out shows in English.
 

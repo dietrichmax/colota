@@ -1,8 +1,6 @@
 ---
-sidebar_position: 12
+title: "Security"
 ---
-
-# Security
 
 An overview of how Colota handles your data at rest, in transit and on-device.
 

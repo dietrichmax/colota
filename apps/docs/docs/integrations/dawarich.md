@@ -1,8 +1,6 @@
 ---
-sidebar_position: 2
+title: "Dawarich"
 ---
-
-# Dawarich
 
 [Dawarich](https://github.com/Freika/dawarich) is a self-hosted location history service.
 

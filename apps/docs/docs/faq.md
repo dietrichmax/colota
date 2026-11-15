@@ -1,8 +1,6 @@
 ---
-sidebar_position: 7
+title: "FAQ"
 ---
-
-# FAQ
 
 ### Do I need a server?
 

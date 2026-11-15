@@ -1,14 +1,12 @@
 ---
-sidebar_position: 1
+title: "Connection"
+aliases:
+  - /docs/configuration/server-settings/
 ---
-
-# Connection
 
 Found under **Settings → Connection**. The Server card opens with a line that says what sync is doing now (Synced, Not synced yet, Sync failing with the server's own sentence, No network, No server, Offline mode), then the settings that produced it. The Server details card below it opens [Request format](./request-format), [Authentication](./authentication) and [Client certificate](./mtls), each row showing its stored value. How often Colota syncs, and over which networks, is set in [Tracking & sync](./tracking-sync).
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ConnectionSettings.png", label: "Connection" }, ]} />
+{{< screenshots "ConnectionSettings|Connection" >}}
 
 | Setting         | Description                  | Default         | Range  |
 | --------------- | ---------------------------- | --------------- | ------ |

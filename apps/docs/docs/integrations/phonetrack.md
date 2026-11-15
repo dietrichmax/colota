@@ -1,8 +1,6 @@
 ---
-sidebar_position: 5
+title: "PhoneTrack (Nextcloud)"
 ---
-
-# PhoneTrack (Nextcloud)
 
 [PhoneTrack](https://apps.nextcloud.com/apps/phonetrack) is a Nextcloud app for tracking mobile devices.
 
@@ -19,11 +17,9 @@ sidebar_position: 5
    - Select the **OwnTracks** template
    - Paste the URL as your endpoint
 
-:::tip
-
-Which PhoneTrack URL to use? PhoneTrack offers several logging URLs (OwnTracks, GPS Logger, OpenGTS, etc.). Use the **OwnTracks** URL since Colota sends location data as a JSON POST body, which matches the OwnTracks protocol. The other URLs (like GPS Logger) expect query parameters and may not work correctly.
-
-:::
+> [!TIP]
+>
+> Which PhoneTrack URL to use? PhoneTrack offers several logging URLs (OwnTracks, GPS Logger, OpenGTS, etc.). Use the **OwnTracks** URL since Colota sends location data as a JSON POST body, which matches the OwnTracks protocol. The other URLs (like GPS Logger) expect query parameters and may not work correctly.
 
 ## Payload Format
 

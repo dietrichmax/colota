@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    {{- partial "head.html" . }}
+  </head>
+  <body class="{{ block "bodyClass" . }}page{{ end }}">
+    {{- partial "icons.html" . }}
+    <a class="skip" href="#main">Skip to content</a>
+    {{- partial "header.html" . }}
+    {{- block "main" . }}{{ end }}
+    {{- partial "footer.html" . }}
+    {{- partial "tabbar.html" . }}
+    {{- if .Store.Get "gallery" }}{{ partial "lightbox.html" . }}{{ end }}
+    {{- $js := resources.Get "js/site.js" | js.Build (dict "minify" hugo.IsProduction) | fingerprint }}
+    <script src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}" defer></script>
+    {{- if .Store.Get "generator" }}
+      {{- $gen := resources.Get "js/deep-link-generator.js" | js.Build (dict "minify" hugo.IsProduction "format" "esm") | fingerprint }}
+      <script type="module" src="{{ $gen.RelPermalink }}" integrity="{{ $gen.Data.Integrity }}"></script>
+    {{- end }}
+  </body>
+</html>

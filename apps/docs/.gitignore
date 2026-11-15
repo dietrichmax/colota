@@ -1,20 +1,14 @@
-# Dependencies
-/node_modules
+# Pinned Hugo binary, installed by scripts/install-hugo.sh
+/.bin
 
-# Production
-/build
+# Hugo output and cache
+/public
+/resources
+.hugo_build.lock
+/assets/jsconfig.json
 
-# Generated files
-.docusaurus
-.cache-loader
+# Generated from packages/shared by scripts/tokens.mjs
+/assets/css/tokens.css
+/data/links.json
 
-# Misc
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*

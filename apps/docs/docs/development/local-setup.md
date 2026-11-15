@@ -1,8 +1,6 @@
 ---
-sidebar_position: 2
+title: "Local Development Setup"
 ---
-
-# Local Development Setup
 
 ## Prerequisites
 
@@ -91,7 +89,7 @@ cd apps/docs
 npm start
 ```
 
-This starts a local development server at `http://localhost:3000` with hot reload.
+This downloads the pinned Hugo into `apps/docs/.bin` on first run and starts a local server at `http://localhost:1313` that reloads on every change. The site needs no npm packages.
 
 To build for production:
 
@@ -131,8 +129,11 @@ colota/
 │   │   └── App.tsx                  # Entry point with navigation
 │   └── docs/
 │       ├── docs/                    # Markdown documentation
-│       ├── src/                     # Custom Docusaurus components
-│       └── docusaurus.config.ts     # Site configuration
+│       ├── content/                 # Landing page, releases, privacy policy
+│       ├── layouts/                 # Hugo templates
+│       ├── assets/                  # CSS, scripts and the icon sprite
+│       ├── data/sidebar.yaml        # Docs sidebar order
+│       └── hugo.toml                # Site configuration
 ├── packages/
 │   └── shared/
 │       └── src/
@@ -235,5 +236,5 @@ It walks the screens in `screenshots/capture.yaml` and renders the store images 
 ### Adding Documentation
 
 1. Create a Markdown file in `apps/docs/docs/`
-2. Add the page to `apps/docs/sidebars.ts`
+2. Add the page to `apps/docs/data/sidebar.yaml`
 3. Preview with `npm start` in `apps/docs/`

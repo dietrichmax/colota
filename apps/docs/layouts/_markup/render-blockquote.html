@@ -1,0 +1,13 @@
+{{- if eq .Type "alert" }}
+  {{- $icons := dict "tip" "lightbulb" "note" "info" "info" "info" "important" "info" "warning" "triangle-alert" "caution" "triangle-alert" "danger" "octagon-alert" }}
+  {{- $kind := cond (in (slice "warning" "caution") .AlertType) "warning" (cond (in (slice "note" "info" "important") .AlertType) "note" .AlertType) }}
+  <div class="callout callout-{{ $kind }}" role="note">
+    {{ partial "icon.html" (dict "name" (index $icons .AlertType | default "info")) }}
+    <div class="callout-body">
+      <p class="callout-title">{{ or .AlertTitle (title .AlertType) }}</p>
+      {{ .Text }}
+    </div>
+  </div>
+{{- else }}
+  <blockquote>{{ .Text }}</blockquote>
+{{- end }}

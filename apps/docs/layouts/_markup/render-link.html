@@ -1,0 +1,22 @@
+{{- /* Resolves page links to their permalink and fails the build on one that leads nowhere. */ -}}
+{{- $dest := .Destination }}
+{{- $u := urls.Parse $dest }}
+{{- $href := $dest }}
+{{- $external := false }}
+{{- if $u.Scheme }}
+  {{- $external = in (slice "http" "https") $u.Scheme }}
+{{- else if and $u.Path (not (hasPrefix $dest "#")) }}
+  {{- $path := $u.Path }}
+  {{- if and (hasPrefix $path "/") (fileExists (printf "static%s" $path)) }}
+    {{- $href = $dest }}
+  {{- else }}
+    {{- $target := cond (hasPrefix $path "/") $path (path.Join "/" .Page.File.Dir $path) }}
+    {{- $target = $target | strings.TrimSuffix ".md" | strings.TrimSuffix "/" }}
+    {{- with site.GetPage (cond (eq $target "") "/" $target) }}
+      {{- $href = printf "%s%s" .RelPermalink (cond (ne $u.Fragment "") (printf "#%s" $u.Fragment) "") }}
+    {{- else }}
+      {{- errorf "%s: the link %q leads to no page or file" .Page.File.Path $dest }}
+    {{- end }}
+  {{- end }}
+{{- end -}}
+<a href="{{ $href | safeURL }}"{{ with .Title }} title="{{ . }}"{{ end }}{{ if $external }} target="_blank" rel="noopener noreferrer"{{ end }}>{{ .Text }}</a>

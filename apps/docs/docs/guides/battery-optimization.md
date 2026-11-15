@@ -1,8 +1,6 @@
 ---
-sidebar_position: 3
+title: "Battery Optimization"
 ---
-
-# Battery Optimization
 
 Settings and tips to reduce battery usage without losing GPS fixes.
 

@@ -1,8 +1,6 @@
 ---
-sidebar_position: 4
+title: "Editing Trips"
 ---
-
-# Editing Trips
 
 Colota groups location history into trips automatically. A new trip starts after **15 minutes or more without a fix**. Where that guess is wrong, merge and split correct it. Neither changes your location data.
 
@@ -13,9 +11,7 @@ Two cases the gap threshold gets wrong:
 
 ## Merging Trips
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/MergeTrips.png", label: "Two trips selected" }, ]} />
+{{< screenshots "MergeTrips|Two trips selected" >}}
 
 1. Go to **Location History → Trips**
 2. Long-press a trip to enter selection mode
@@ -30,7 +26,7 @@ No points are moved or deleted. Trips are renumbered afterwards, so a day with f
 
 Split from the map on **Trip Detail**; the Location History map shows a point's details but does not split.
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/SplitTrip.png", label: "Point selected on Trip detail" }, ]} />
+{{< screenshots "SplitTrip|Point selected on Trip detail" >}}
 
 1. Tap the point where the new trip should start
 2. Tap the split icon in the card that opens over the map

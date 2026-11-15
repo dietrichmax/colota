@@ -1,16 +1,12 @@
 ---
-sidebar_position: 3
+title: "Data Import"
 ---
-
-# Data Import
 
 Merge location history from external files into your Colota database. Data Import is **additive**: existing locations are preserved and duplicates are skipped. Use this to recover from a Colota export, migrate from Google Timeline, or pull historical data from another tracker
 
-:::warning[Back up before a large import]
-
-Imports can't be selectively undone. Points can only be removed one at a time, by trip, by age or all at once, so unpicking a large import means clearing a window that also holds genuine points. Take a [Backup](backup-restore.md) first if you're unsure.
-
-:::
+> [!WARNING] Back up before a large import
+>
+> Imports can't be selectively undone. Points can only be removed one at a time, by trip, by age or all at once, so unpicking a large import means clearing a window that also holds genuine points. Take a [Backup](backup-restore.md) first if you're unsure.
 
 ## Supported Formats
 
@@ -39,9 +35,7 @@ The exported file is saved to your phone's `Downloads` folder.
 
 ## How to Import
 
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Import.png", label: "Import preview" }, ]} />
+{{< screenshots "Import|Import preview" >}}
 
 1. Go to **Settings → Export & import**
 2. Tap **Import a file** and pick the file you want to import. A CSV needs a header with latitude, longitude and a time column
@@ -86,11 +80,9 @@ If you've configured an optional sync backend in **Settings → Connection**, th
 
 The switch **only appears when a sync endpoint is configured and offline mode is off**. If it's missing, configure sync in **Settings → Connection** first.
 
-:::warning[Queueing fans the points out to your backend - irreversible there]
-
-Once queued, the rows are uploaded as soon as the next sync runs. Removing them from the backend afterwards isn't something Colota can do for you. If you're importing a multi-year archive (100k+ points), expect the queue to fire that many upload requests against your backend; make sure it can handle the load.
-
-:::
+> [!WARNING] Queueing fans the points out to your backend - irreversible there
+>
+> Once queued, the rows are uploaded as soon as the next sync runs. Removing them from the backend afterwards isn't something Colota can do for you. If you're importing a multi-year archive (100k+ points), expect the queue to fire that many upload requests against your backend; make sure it can handle the load.
 
 ## After Import
 

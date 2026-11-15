@@ -1,8 +1,6 @@
 ---
-sidebar_position: 3
+title: "Home Assistant"
 ---
-
-# Home Assistant
 
 [Home Assistant](https://www.home-assistant.io/) is an open-source home automation platform.
 

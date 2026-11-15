@@ -1,8 +1,6 @@
 ---
-sidebar_position: 3
+title: "Build from Source"
 ---
-
-# Build from Source
 
 ## Requirements
 
