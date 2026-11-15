@@ -29,6 +29,7 @@ groups:
           icon: shield-alert,
           sub: "Privately, through GitHub"
         }
+      - { label: "Write an email", link: CONTACT_EMAIL_URL, icon: mail, sub: "colota@mxd.codes" }
   - label: "Support development"
     rows:
       - { labelKey: settings.thanks, link: SUPPORT_URL, icon: heart }

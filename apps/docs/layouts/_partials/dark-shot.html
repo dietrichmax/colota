@@ -1,0 +1,7 @@
+{{- /* (dict "name" "Name" "where" "position for errors"): NameDark, the dark capture of static/img/screenshots/Name.png, or "" when Name is a dark capture itself; the build fails when it is missing. */ -}}
+{{- $dark := "" }}
+{{- if not (strings.HasSuffix .name "Dark") }}
+  {{- $dark = printf "%sDark" .name }}
+  {{- if not (fileExists (printf "static/img/screenshots/%s.png" $dark)) }}{{ errorf "%s: no dark screenshot %s" .where $dark }}{{ end }}
+{{- end }}
+{{- return $dark }}

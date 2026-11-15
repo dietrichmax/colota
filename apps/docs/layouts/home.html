@@ -3,46 +3,48 @@
   <main id="main">
     <section class="hero">
       <div class="hero-text">
-        {{- $words := split .Params.headline " " }}
-        <h1 class="hero-title">{{ delimit (first (sub (len $words) 1) $words) " " }} <em>{{ index $words (sub (len $words) 1) }}</em></h1>
+        <h1 class="hero-title">{{ .Params.headline }}</h1>
         <p class="hero-sub">{{ .Params.sub }}</p>
         <div class="hero-actions">
           <a class="btn btn-pill" href="/install/">{{ partial "icon.html" (dict "name" "download") }}Install</a>
-          <a class="btn btn-secondary" href="/docs/">Read the docs</a>
+          <a class="btn btn-plain" href="/docs/">Read the docs</a>
         </div>
         <ul class="hero-facts">
           {{- range .Params.facts }}<li>{{ . }}</li>{{ end }}
         </ul>
+        <p class="works-with">Works with
+          {{- range $n, $i := .Params.integrations }}
+            {{- $p := site.GetPage (printf "/docs/integrations/%s" (index $i 1)) }}
+            {{- if not $p }}{{ errorf "content/_index.md: no integration page %s" (index $i 1) }}{{ end }}
+            {{- if $n }}&nbsp;·{{ end }} <a href="{{ $p.RelPermalink }}">{{ index $i 0 }}</a>
+          {{- end }}
+        </p>
       </div>
       <div class="hero-shots">
         {{- range .Params.heroShots }}
           {{- $parts := split . "|" }}
-          {{- $file := printf "static/img/screenshots/%s.png" (index $parts 0) }}
-          {{- if not (fileExists $file) }}{{ errorf "content/_index.md: no screenshot %s" $file }}{{ end }}
-          {{- $img := imageConfig $file }}
+          {{- $label := index $parts 1 }}
+          {{- $light := index $parts 0 }}
+          {{- if not (fileExists (printf "static/img/screenshots/%s.png" $light)) }}{{ errorf "content/_index.md: no screenshot %s" $light }}{{ end }}
+          {{- $dark := partial "dark-shot.html" (dict "name" $light "where" "content/_index.md") }}
+          {{- $img := imageConfig (printf "static/img/screenshots/%s.png" $light) }}
           <figure>
-            <img src="/img/screenshots/{{ index $parts 0 }}.png" alt="Colota {{ index $parts 1 }}" width="{{ $img.Width }}" height="{{ $img.Height }}" />
-            <figcaption>{{ index $parts 1 }}</figcaption>
+            <picture>
+              {{- with $dark }}<source srcset="/img/screenshots/{{ . }}.png" media="(prefers-color-scheme: dark)" data-dark-source />{{ end }}
+              <img src="/img/screenshots/{{ $light }}.png" alt="Colota {{ $label }}" width="{{ $img.Width }}" height="{{ $img.Height }}" />
+            </picture>
+            <figcaption>{{ $label }}</figcaption>
           </figure>
         {{- end }}
       </div>
     </section>
-    <section class="features" aria-label="Features">
-      {{- range .Params.features }}
-        <div class="feature">
-          {{ partial "icon.html" (dict "name" .icon "class" "lg") }}
-          <h3>{{ .title }}</h3>
-          <p>{{ .text }}</p>
-        </div>
-      {{- end }}
-    </section>
-    <section class="works-with" aria-label="Works with">
-      <p class="works-label">Works with</p>
-      <div class="works-list">
-        {{- range .Params.integrations }}
-          {{- $p := site.GetPage (printf "/docs/integrations/%s" (index . 1)) }}
-          {{- if not $p }}{{ errorf "content/_index.md: no integration page %s" (index . 1) }}{{ end }}
-          <a href="{{ $p.RelPermalink }}">{{ index . 0 }}</a>
+    <section class="features" aria-labelledby="features-title">
+      <h2 class="section-title" id="features-title">What Colota does</h2>
+      <div class="features-cols">
+        {{- $half := div (add (len .Params.features) 1) 2 }}
+        {{- range slice (first $half .Params.features) (after $half .Params.features) }}
+          {{- $rows := slice }}{{ range . }}{{ $rows = $rows | append (partial "row.html" .) }}{{ end }}
+          {{ partial "rows.html" (dict "rows" $rows) }}
         {{- end }}
       </div>
     </section>

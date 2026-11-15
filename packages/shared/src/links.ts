@@ -11,6 +11,7 @@ export const SECURITY_REPORT_URL = `${REPO_URL}/security/advisories/new`
 export const PRIVACY_POLICY_URL = "https://colota.app/privacy-policy"
 export const RELEASES_URL = "https://colota.app/releases"
 export const SUPPORT_URL = "https://mxd.codes/support"
+export const CONTACT_EMAIL_URL = "mailto:colota@mxd.codes"
 export const PLAY_STORE_WEB_URL = "https://play.google.com/store/apps/details?id=com.Colota"
 export const FDROID_URL = "https://f-droid.org/packages/com.Colota/"
 export const IZZYONDROID_URL = "https://apt.izzysoft.de/packages/com.Colota/"

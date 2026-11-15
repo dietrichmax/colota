@@ -1,16 +1,19 @@
-{{- /* (dict "page" .Page "items" (slice "Name|Label") "where" "position for errors"): static/img/screenshots/Name.png, failing the build on a missing file. */ -}}
+{{- /* (dict "page" .Page "items" (slice "Name|Label") "where" "position for errors"): static/img/screenshots/Name.png, and NameDark.png in dark mode (dark-shot.html); the build fails on a missing file. */ -}}
 {{- .page.Store.Set "gallery" true }}
 <div class="gallery" data-gallery>
   {{- range .items }}
     {{- $parts := split . "|" }}
-    {{- $src := printf "/img/screenshots/%s.png" (index $parts 0) }}
+    {{- $name := index $parts 0 }}
     {{- $label := index $parts 1 }}
-    {{- $file := printf "static%s" $src }}
-    {{- if not (fileExists $file) }}{{ errorf "%s: no screenshot %s" $.where $src }}{{ end }}
-    {{- $img := imageConfig $file }}
+    {{- if not (fileExists (printf "static/img/screenshots/%s.png" $name)) }}{{ errorf "%s: no screenshot %s" $.where $name }}{{ end }}
+    {{- $dark := partial "dark-shot.html" (dict "name" $name "where" $.where) }}
+    {{- $img := imageConfig (printf "static/img/screenshots/%s.png" $name) }}
     <figure>
-      <button class="gallery-item" type="button" data-src="{{ $src }}" data-label="{{ $label }}" aria-label="Open {{ $label }}">
-        <img src="{{ $src }}" alt="{{ $label }}" width="{{ $img.Width }}" height="{{ $img.Height }}" loading="lazy" />
+      <button class="gallery-item" type="button" data-src="/img/screenshots/{{ $name }}.png"{{ with $dark }} data-src-dark="/img/screenshots/{{ . }}.png"{{ end }} data-label="{{ $label }}" aria-label="Open {{ $label }}">
+        <picture>
+          {{- with $dark }}<source srcset="/img/screenshots/{{ . }}.png" media="(prefers-color-scheme: dark)" data-dark-source />{{ end }}
+          <img src="/img/screenshots/{{ $name }}.png" alt="{{ $label }}" width="{{ $img.Width }}" height="{{ $img.Height }}" loading="lazy" />
+        </picture>
       </button>
       <figcaption>{{ $label }}</figcaption>
     </figure>

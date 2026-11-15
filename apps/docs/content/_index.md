@@ -5,24 +5,38 @@ headline: "Self-hosted GPS tracking for Android"
 sub: "Colota records where you go and sends it to a server you run. Without a server, every point stays on the phone."
 facts: ["Free and open source (AGPL-3.0)", "No analytics or telemetry", "A build without Google services"]
 features:
-  - title: "Self-hosted and private"
+  - label: "Self-hosted and private"
     icon: "shield-check"
-    text: "No cloud, no analytics, no telemetry. Send data to your own server or any HTTPS endpoint. AGPL-3.0."
-  - title: "Bring your history"
-    icon: "upload"
-    text: "Import from Google Maps Timeline, GPX, KML, GeoJSON or CSV. Move years of data off Google without losing it."
-  - title: "Works offline"
+    sub: "Your own server or none. No analytics, no telemetry."
+    page: "/docs/integrations/overview"
+  - label: "Bring your history"
+    icon: "download"
+    sub: "Import Google Timeline, GPX, KML, GeoJSON or CSV."
+    page: "/docs/guides/data-import"
+  - label: "Works offline"
     icon: "wifi-off"
-    text: "Locations queue locally and sync when connectivity returns. Download map areas for trips out of coverage."
-  - title: "On-device history"
+    sub: "Points wait for a connection; map areas download ahead."
+    page: "/docs/guides/offline-maps"
+  - label: "On-device history"
     icon: "route"
-    text: "Browse every trip on the phone itself, even without a backend configured. Elevation profiles, per-trip stats and a calendar with activity dots."
-  - title: "Tracking profiles"
+    sub: "Trips, stats and a calendar on the phone, no server needed."
+    page: "/docs/guides/location-history"
+  - label: "Tracking profiles"
     icon: "waypoints"
-    text: "Multiple GPS configs that auto-switch on charging, Android Auto, Wi-Fi, a Bluetooth device, speed or stationary detection. One profile for hiking, another for the commute."
-  - title: "Sync, backup and export"
-    icon: "server"
-    text: "Instant, batched, Wi-Fi-only or offline-first sync. Encrypted backups for moving to a new phone. Export as CSV, GeoJSON, GPX or KML."
+    sub: "Other settings while charging, driving, on Wi-Fi or by speed."
+    page: "/docs/guides/tracking-profiles"
+  - label: "Sync"
+    icon: "cloud-upload"
+    sub: "Instant or batched, on any network or only on Wi-Fi or a VPN."
+    page: "/docs/configuration/tracking-sync"
+  - label: "Encrypted backups"
+    icon: "archive"
+    sub: "Locations, settings and credentials in one password-protected file."
+    page: "/docs/guides/backup-restore"
+  - label: "Export"
+    icon: "upload"
+    sub: "CSV, GeoJSON, GPX or KML, by hand or on a schedule."
+    page: "/docs/guides/data-export"
 integrations:
   - [Dawarich, dawarich]
   - [GeoPulse, geopulse]
@@ -37,11 +51,9 @@ heroShots:
   - "Dashboard|Dashboard"
   - "LocationHistory|Location history"
 screenshots:
-  [
-    "Dashboard|Dashboard",
-    "Geofences|Geofences",
-    "LocationHistory|Location History",
-    "ProfileEditor|Profile Editor",
-    "DarkMode|Dark Mode"
-  ]
+  - "Geofences|Geofences"
+  - "Trips|Trips"
+  - "TripDetails|Trip detail"
+  - "ProfileEditor|Profile editor"
+  - "Settings|Settings"
 ---

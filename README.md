@@ -39,7 +39,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
     <td><img src="apps/docs/static/img/screenshots/Dashboard.png" alt="Dashboard" width="200"/></td>
     <td><img src="apps/docs/static/img/screenshots/LocationHistory.png" alt="Location History" width="200"/></td>
     <td><img src="apps/docs/static/img/screenshots/TrackingProfiles.png" alt="Tracking Profiles" width="200"/></td>
-    <td><img src="apps/docs/static/img/screenshots/DarkMode.png" alt="Dark Mode" width="200"/></td>
+    <td><img src="apps/docs/static/img/screenshots/DashboardDark.png" alt="Dark Mode" width="200"/></td>
   </tr>
   <tr>
     <td align="center">Dashboard</td>
