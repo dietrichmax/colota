@@ -90,7 +90,7 @@ cd apps/docs
 npm start
 ```
 
-This downloads the pinned Hugo into `apps/docs/.bin` on first run and starts a local server at `http://localhost:1313` that reloads on every change. The site needs no npm packages.
+This downloads the pinned Hugo into `apps/docs/.bin` on first run and starts a local server at `http://localhost:1313` that reloads on every change. The site needs no npm packages. Search needs the built index, so preview it with `npm run preview` (`http://localhost:1414`).
 
 To build for production:
 

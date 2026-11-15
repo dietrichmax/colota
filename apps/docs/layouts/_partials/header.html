@@ -1,12 +1,14 @@
 {{- $here := partial "section-id.html" . }}
 <header class="hdr">
   <a class="brand" href="/"><img src="/img/app-icon.png" alt="" width="28" height="28" />Colota</a>
+  <button class="search-field" type="button" data-search-open aria-label="Search the docs">{{ partial "icon.html" (dict "name" "search" "class" "sm") }}<span>Search docs</span><kbd>/</kbd></button>
   <nav class="hdr-nav" aria-label="Main">
     {{- range slice (dict "id" "docs" "href" "/docs/" "label" "Docs") (dict "id" "integrations" "href" "/docs/integrations/overview/" "label" "Integrations") (dict "id" "install" "href" "/install/" "label" "Install") (dict "id" "support" "href" "/support/" "label" "Support") (dict "id" "releases" "href" "/releases/" "label" "Releases") }}
       <a href="{{ .href }}"{{ if eq .id $here }} class="on" aria-current="page"{{ end }}>{{ .label }}</a>
     {{- end }}
   </nav>
   <div class="hdr-tools">
+    <button class="icon-btn search-btn" type="button" data-search-open aria-label="Search the docs">{{ partial "icon.html" (dict "name" "search") }}</button>
     <a class="hdr-github" href="{{ hugo.Data.links.REPO_URL }}">GitHub{{ partial "icon.html" (dict "name" "external-link" "class" "sm") }}</a>
     <button class="icon-btn" type="button" data-theme-toggle aria-label="Switch between light and dark theme">
       {{- partial "icon.html" (dict "name" "sun" "class" "theme-sun") }}{{ partial "icon.html" (dict "name" "moon" "class" "theme-moon") -}}

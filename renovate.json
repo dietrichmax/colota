@@ -9,6 +9,14 @@
       "matchStrings": ["VERSION=\"(?<currentValue>v[^\"]+)\"\\nSHA256=\"(?<currentDigest>[a-f0-9]{64})\""],
       "datasourceTemplate": "github-release-attachments",
       "depNameTemplate": "gohugoio/hugo"
+    },
+    {
+      "customType": "regex",
+      "description": "The Pagefind that indexes the docs site, pinned in apps/docs/scripts/install-pagefind.sh by release tag and the sha256 of its x86_64 linux archive. The digest is read from the archive's .sha256 file in the release.",
+      "managerFilePatterns": ["/^apps/docs/scripts/install-pagefind\\.sh$/"],
+      "matchStrings": ["VERSION=\"(?<currentValue>v[^\"]+)\"\\nSHA256=\"(?<currentDigest>[a-f0-9]{64})\""],
+      "datasourceTemplate": "github-release-attachments",
+      "depNameTemplate": "CloudCannon/pagefind"
     }
   ],
   "packageRules": [

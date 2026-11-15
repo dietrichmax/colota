@@ -1,0 +1,8 @@
+<dialog class="search" data-search aria-label="Search the docs">
+  <div class="search-bar">
+    {{ partial "icon.html" (dict "name" "search") }}
+    <input class="search-input" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false" data-search-input />
+    <button class="icon-btn" type="button" data-search-close aria-label="Close search">{{ partial "icon.html" (dict "name" "x") }}</button>
+  </div>
+  <div class="search-results" data-search-results aria-live="polite"></div>
+</dialog>
