@@ -1,5 +1,6 @@
 ---
 title: "Map Tile Server"
+description: "The default tile server, custom servers and self-hosting"
 ---
 
 By default, Colota loads maps from [maps.mxd.codes](https://maps.mxd.codes) - a self-hosted tile server I run for this app. You can swap it out for your own if needed.

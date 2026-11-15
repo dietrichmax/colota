@@ -1,0 +1,11 @@
+{{ define "main" }}
+  <main id="main" class="narrow hub">
+    <h1>{{ .Title }}</h1>
+    {{- with .Description }}<p class="lede">{{ . }}</p>{{ end }}
+    {{- range .Params.groups }}
+      <h2 class="section-title" id="{{ anchorize .label }}">{{ .label }}</h2>
+      {{- $rows := slice }}{{ range .rows }}{{ $rows = $rows | append (partial "row.html" .) }}{{ end }}
+      {{ partial "rows.html" (dict "rows" $rows) }}
+    {{- end }}
+  </main>
+{{ end }}

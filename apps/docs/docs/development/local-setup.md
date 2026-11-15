@@ -1,5 +1,6 @@
 ---
 title: "Local Development Setup"
+description: "Prerequisites, running the app and docs, tests and conventions"
 ---
 
 ## Prerequisites
@@ -235,6 +236,6 @@ It walks the screens in `screenshots/capture.yaml` and renders the store images 
 
 ### Adding Documentation
 
-1. Create a Markdown file in `apps/docs/docs/`
+1. Create a Markdown file in `apps/docs/docs/` with a `title` and a `description` in its front matter
 2. Add the page to `apps/docs/data/sidebar.yaml`
 3. Preview with `npm start` in `apps/docs/`

@@ -7,6 +7,7 @@ export const REPO_URL = "https://github.com/dietrichmax/colota"
 export const ISSUES_URL = `${REPO_URL}/issues`
 export const DISCUSSIONS_URL = `${REPO_URL}/discussions`
 export const GITHUB_RELEASES_URL = `${REPO_URL}/releases`
+export const SECURITY_REPORT_URL = `${REPO_URL}/security/advisories/new`
 export const PRIVACY_POLICY_URL = "https://colota.app/privacy-policy"
 export const RELEASES_URL = "https://colota.app/releases"
 export const SUPPORT_URL = "https://mxd.codes/support"

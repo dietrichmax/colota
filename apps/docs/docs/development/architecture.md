@@ -1,5 +1,6 @@
 ---
 title: "Architecture"
+description: "App stack, native modules, React Native layer and shared package"
 ---
 
 Colota is a monorepo with three workspace packages:

@@ -7,6 +7,7 @@ on:
     paths:
       - 'apps/docs/**'
       - 'packages/shared/**'
+      - 'apps/mobile/src/i18n/locales/en.json'
       - 'fastlane/metadata/android/en-US/changelogs/**'
   workflow_dispatch:
 

@@ -45,5 +45,8 @@ enableRobotsTXT = false
     source = "data"
     target = "data"
   [[module.mounts]]
+    source = "../mobile/src/i18n/locales/en.json"
+    target = "data/app/en.json"
+  [[module.mounts]]
     source = "static"
     target = "static"

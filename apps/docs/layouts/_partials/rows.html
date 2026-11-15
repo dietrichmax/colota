@@ -1,0 +1,11 @@
+{{- /* (dict "rows" rows-from-row.html "card" bool, default true): ListItems, in their own Card unless card is false. */ -}}
+{{- $inner := "" }}
+{{- range $n, $r := .rows }}
+  {{- $item := "" }}
+  {{- if $n }}{{ $item = printf `<div class="divider%s"></div>` (cond (ne $r.icon nil) " inset" "") }}{{ end }}
+  {{- $icon := "" }}{{ with $r.icon }}{{ $icon = partial "icon.html" (dict "name" . "class" "row-icon") }}{{ end }}
+  {{- $sub := "" }}{{ with $r.sub }}{{ $sub = printf `<span class="row-sub">%s</span>` (. | htmlEscape) }}{{ end }}
+  {{- $trail := partial "icon.html" (dict "name" (cond $r.external "external-link" "chevron-right") "class" "row-trail") }}
+  {{- $inner = printf `%s%s<a class="row" href="%s">%s<span class="row-text"><span class="row-label">%s</span>%s</span>%s</a>` $inner $item ($r.href | htmlEscape) $icon ($r.label | htmlEscape) $sub $trail }}
+{{- end }}
+{{- if eq .card false }}{{ $inner | safeHTML }}{{ else }}<div class="card rows">{{ $inner | safeHTML }}</div>{{ end -}}

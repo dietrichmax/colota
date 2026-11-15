@@ -1,5 +1,6 @@
 ---
 title: "Troubleshooting"
+description: "Background tracking, sync, accuracy, logs and adb"
 ---
 
 ## App doesn't track in background

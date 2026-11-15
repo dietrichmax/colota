@@ -258,6 +258,19 @@ button { font: inherit; color: inherit; }
 .row-sub { display: block; font-size: var(--fs-description); line-height: 1.4; color: var(--color-text-secondary); }
 .row-trail { color: var(--color-text-light); }
 .divider { height: 1px; margin-left: var(--space-lg); background: var(--color-divider); }
+.divider.inset { margin-left: calc(var(--space-lg) * 2 + var(--icon-md)); }
+.divider.full { margin-left: 0; }
+.row-icon { color: var(--color-text-secondary); }
+
+/* Install: one card per build, its channels as rows */
+.install h1 { margin: var(--space-xl) 0 var(--space-sm); font-size: var(--fs-screen-title); line-height: 1.29; font-weight: 700; }
+.builds { display: grid; gap: var(--space-lg); margin-bottom: var(--space-xl); align-items: start; }
+@media (min-width: 760px) { .builds { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.build-head { padding: var(--space-lg); }
+.build-head h2 { margin: 0; display: flex; align-items: center; gap: var(--space-sm); font-size: var(--fs-heading); line-height: 1.44; font-weight: 600; }
+.build-tag { padding: var(--space-xxs) var(--space-xs); border-radius: var(--radius-xs); background: var(--color-well); font: var(--fs-caption) / 1.3 var(--mono); color: var(--color-text-secondary); }
+.build-head p { margin: var(--space-xs) 0 0; font-size: var(--fs-body); line-height: 1.5; color: var(--color-text-secondary); }
+.install .prose { padding-top: 0; }
 
 /* Screenshot gallery and lightbox */
 .gallery { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-lg); margin: 0 0 var(--space-lg); padding: var(--space-lg); background: var(--color-card); border-radius: var(--radius-md); }

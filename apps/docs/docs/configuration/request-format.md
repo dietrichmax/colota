@@ -1,5 +1,6 @@
 ---
 title: "Request format"
+description: "Backend templates, HTTP method, field names and custom fields"
 aliases:
   - /docs/configuration/field-mapping/
   - /docs/integrations/api-templates/

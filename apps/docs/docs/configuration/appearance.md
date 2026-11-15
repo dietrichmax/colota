@@ -1,5 +1,6 @@
 ---
 title: "Appearance"
+description: "Theme, wallpaper colors, units, time format, language and map tiles"
 ---
 
 Found under **Settings → Appearance**. A choice applies as soon as you tap it. The map style URLs are saved when you leave the field.

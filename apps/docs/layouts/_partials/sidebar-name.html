@@ -1,0 +1,2 @@
+{{- /* Which sidebar a docs page belongs to. */ -}}
+{{- return cond (hasPrefix .RelPermalink "/docs/integrations/") "integrations" "docs" -}}

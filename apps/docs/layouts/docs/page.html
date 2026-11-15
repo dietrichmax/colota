@@ -1,6 +1,7 @@
 {{ define "bodyClass" }}page page-docs{{ end }}
 {{ define "main" }}
-  {{- $groups := partialCached "docs-order.html" . }}
+  {{- $sidebar := partial "sidebar-name.html" . }}
+  {{- $groups := index (partialCached "docs-order.html" .) $sidebar }}
   {{- $flat := slice }}{{ $group := dict }}
   {{- range $groups }}{{ $g := . }}{{ range .pages }}{{ $flat = $flat | append . }}{{ if eq .RelPermalink $.RelPermalink }}{{ $group = $g }}{{ end }}{{ end }}{{ end }}
   {{- $i := 0 }}{{ range $n, $p := $flat }}{{ if eq $p.RelPermalink $.RelPermalink }}{{ $i = $n }}{{ end }}{{ end }}
@@ -9,7 +10,7 @@
     {{ partial "sidebar.html" . }}
     <main id="main" class="doc">
       <div class="pagebar">
-        <a class="pagebar-back" href="/docs/#{{ $group.id }}">{{ partial "icon.html" (dict "name" "chevron-left") }}{{ $group.label }}</a>
+        <a class="pagebar-back" href="/docs/#{{ cond (eq $sidebar "integrations") "integrations" $group.id }}">{{ partial "icon.html" (dict "name" "chevron-left") }}{{ cond (eq $sidebar "integrations") "Integrations" $group.label }}</a>
         {{- if $hasToc }}
           <details class="pagebar-toc">
             <summary>On this page{{ partial "icon.html" (dict "name" "chevron-down" "class" "sm") }}</summary>

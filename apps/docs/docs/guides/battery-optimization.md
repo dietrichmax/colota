@@ -1,5 +1,6 @@
 ---
 title: "Battery Optimization"
+description: "Built-in savings, tips and Android battery settings"
 ---
 
 Settings and tips to reduce battery usage without losing GPS fixes.

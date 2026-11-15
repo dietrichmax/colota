@@ -1,5 +1,6 @@
 ---
 title: "Tracking & sync"
+description: "Presets, interval, sync interval, sync condition and accuracy filters"
 aliases:
   - /docs/configuration/gps-settings/
   - /docs/configuration/tracking-settings/

@@ -1,0 +1,23 @@
+{{ define "main" }}
+  <main id="main" class="narrow install">
+    <h1>{{ .Title }}</h1>
+    {{- with .Description }}<p class="lede">{{ . }}</p>{{ end }}
+    <div class="builds">
+      {{- range .Params.builds }}
+        <section class="card build" aria-labelledby="build-{{ .tag }}">
+          <div class="build-head">
+            <h2 id="build-{{ .tag }}">{{ .name }} <span class="build-tag">{{ .tag }}</span></h2>
+            <p>{{ .text }}</p>
+          </div>
+          <div class="divider full"></div>
+          {{- $rows := slice }}{{ range .channels }}{{ $rows = $rows | append (partial "row.html" .) }}{{ end }}
+          {{ partial "rows.html" (dict "rows" $rows "card" false) }}
+        </section>
+      {{- end }}
+    </div>
+    <article class="prose">{{ .Content }}</article>
+    <h2 class="section-title" id="after-installing">After installing</h2>
+    {{- $rows := slice }}{{ range .Params.after }}{{ $rows = $rows | append (partial "row.html" .) }}{{ end }}
+    {{ partial "rows.html" (dict "rows" $rows) }}
+  </main>
+{{ end }}

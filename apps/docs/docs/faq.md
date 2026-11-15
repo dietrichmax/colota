@@ -1,5 +1,6 @@
 ---
 title: "FAQ"
+description: "Servers, builds, accuracy, battery, backups and updates"
 ---
 
 ### Do I need a server?

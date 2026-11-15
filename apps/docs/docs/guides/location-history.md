@@ -1,5 +1,6 @@
 ---
 title: "Location history"
+description: "Days, trips, points, exports and the summary"
 ---
 
 The **History** tab shows one day of recordings at a time: the track on a map, the day's trips and every point. It reads the database on the phone, so it works without a server.

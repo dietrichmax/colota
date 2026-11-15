@@ -1,5 +1,6 @@
 ---
 title: "Traccar"
+description: "OsmAnd GET or Traccar JSON, device identifier and field mapping"
 ---
 
 [Traccar](https://www.traccar.org/) is an open source GPS tracking platform. Colota supports two Traccar protocols:

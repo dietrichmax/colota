@@ -1,5 +1,6 @@
 ---
 title: "Offline maps"
+description: "Downloading areas, zoom levels, tile limit and storage"
 ---
 
 Download map areas to your device so the map works without an internet connection. Useful when tracking in areas with poor cell coverage - remote trails, backcountry routes, etc.

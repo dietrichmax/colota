@@ -1,5 +1,6 @@
 ---
 title: "Reitti"
+description: "Setup and payload format"
 ---
 
 [Reitti](https://github.com/dedicatedcode/reitti) is a self-hosted location tracking service.

@@ -1,5 +1,6 @@
 ---
 title: "Build from Source"
+description: "Both builds with Gradle"
 ---
 
 ## Requirements

@@ -1,9 +1,10 @@
-{{- $section := .Section }}
+{{- $here := partial "section-id.html" . }}
 <header class="hdr">
   <a class="brand" href="/"><img src="/img/app-icon.png" alt="" width="28" height="28" />Colota</a>
   <nav class="hdr-nav" aria-label="Main">
-    <a href="/docs/"{{ if eq $section "docs" }} class="on" aria-current="page"{{ end }}>Docs</a>
-    <a href="/releases/"{{ if eq .RelPermalink "/releases/" }} class="on" aria-current="page"{{ end }}>Releases</a>
+    {{- range slice (dict "id" "docs" "href" "/docs/" "label" "Docs") (dict "id" "integrations" "href" "/docs/integrations/overview/" "label" "Integrations") (dict "id" "install" "href" "/install/" "label" "Install") (dict "id" "support" "href" "/support/" "label" "Support") (dict "id" "releases" "href" "/releases/" "label" "Releases") }}
+      <a href="{{ .href }}"{{ if eq .id $here }} class="on" aria-current="page"{{ end }}>{{ .label }}</a>
+    {{- end }}
   </nav>
   <div class="hdr-tools">
     <a class="hdr-github" href="{{ hugo.Data.links.REPO_URL }}">GitHub{{ partial "icon.html" (dict "name" "external-link" "class" "sm") }}</a>

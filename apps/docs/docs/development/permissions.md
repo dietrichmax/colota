@@ -1,5 +1,6 @@
 ---
 title: "Android Permissions"
+description: "Every Android permission and why Colota asks for it"
 ---
 
 These are the permissions Colota uses and why. None are related to analytics, advertising, or data collection.

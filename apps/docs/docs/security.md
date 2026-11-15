@@ -1,5 +1,6 @@
 ---
 title: "Security"
+description: "Data in transit and at rest, backups and what Colota never does"
 ---
 
 An overview of how Colota handles your data at rest, in transit and on-device.

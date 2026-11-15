@@ -1,6 +1,7 @@
-{{- $here := cond .IsHome "home" (cond (eq .Section "docs") "docs" (cond (eq .RelPermalink "/releases/") "releases" "")) }}
+{{- $here := partial "section-id.html" . }}
+{{- if eq $here "integrations" }}{{ $here = "docs" }}{{ end }}
 <nav class="tabbar" aria-label="Main">
-  {{- range slice (dict "id" "home" "href" "/" "label" "Home" "icon" "house") (dict "id" "docs" "href" "/docs/" "label" "Docs" "icon" "book-open") (dict "id" "releases" "href" "/releases/" "label" "Releases" "icon" "sparkles") }}
+  {{- range slice (dict "id" "home" "href" "/" "label" "Home" "icon" "house") (dict "id" "docs" "href" "/docs/" "label" "Docs" "icon" "book-open") (dict "id" "install" "href" "/install/" "label" "Install" "icon" "download") (dict "id" "support" "href" "/support/" "label" "Support" "icon" "life-buoy") }}
     <a class="tab{{ if eq .id $here }} on{{ end }}" href="{{ .href }}"{{ if eq .id $here }} aria-current="page"{{ end }}>
       {{- partial "icon.html" (dict "name" .icon "class" "lg") }}<span>{{ .label }}</span>
     </a>
