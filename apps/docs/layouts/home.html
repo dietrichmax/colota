@@ -1,27 +1,20 @@
 {{ define "bodyClass" }}page page-home{{ end }}
 {{ define "main" }}
-  {{- $links := hugo.Data.links }}
   <main id="main">
     <section class="hero">
       <div class="hero-text">
-        <h1 class="hero-name">Colota</h1>
-        <p class="hero-tagline">{{ .Params.tagline }}</p>
-        <p class="hero-subline">{{ .Params.subline }}</p>
+        {{- $words := split .Params.headline " " }}
+        <h1 class="hero-title">{{ delimit (first (sub (len $words) 1) $words) " " }} <em>{{ index $words (sub (len $words) 1) }}</em></h1>
+        <p class="hero-sub">{{ .Params.sub }}</p>
         <div class="hero-actions">
-          <a class="btn btn-pill" href="{{ $links.FDROID_URL }}">{{ partial "icon.html" (dict "name" "download") }}Get it on F-Droid</a>
-          <a class="btn btn-secondary" href="/docs/introduction/">Get started</a>
+          <a class="btn btn-pill" href="/install/">{{ partial "icon.html" (dict "name" "download") }}Install</a>
+          <a class="btn btn-secondary" href="/docs/">Read the docs</a>
         </div>
-        <p class="hero-more">Also available on <a href="{{ $links.IZZYONDROID_URL }}">IzzyOnDroid</a> and <a href="{{ $links.PLAY_STORE_WEB_URL }}">Google Play</a></p>
+        <ul class="hero-facts">
+          {{- range .Params.facts }}<li>{{ . }}</li>{{ end }}
+        </ul>
       </div>
-      <div class="hero-shots">
-        {{- range .Params.heroShots }}
-          {{- $parts := split . "|" }}
-          {{- $file := printf "static/img/screenshots/%s.png" (index $parts 0) }}
-          {{- if not (fileExists $file) }}{{ errorf "content/_index.md: no screenshot %s" $file }}{{ end }}
-          {{- $img := imageConfig $file }}
-          <img src="/img/screenshots/{{ index $parts 0 }}.png" alt="{{ index $parts 1 }}" width="{{ $img.Width }}" height="{{ $img.Height }}" />
-        {{- end }}
-      </div>
+      {{ partial "ride.html" . }}
     </section>
     <section class="features" aria-label="Features">
       {{- range .Params.features }}

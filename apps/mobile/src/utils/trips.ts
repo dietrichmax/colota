@@ -3,12 +3,13 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import { TRIP_COLORS } from "@colota/shared"
 import { computeTotalDistance, haversine } from "./geo"
 import { BOUNDARY_ACTION_MERGE, BOUNDARY_ACTION_SPLIT } from "../types/global"
 import type { Trip, LocationCoords, BoundaryAction, TripBoundaryOverride } from "../types/global"
 import type { TranslationKey } from "../i18n/options"
 
-export const TRIP_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"]
+export { TRIP_COLORS }
 
 export function getTripColor(index: number): string {
   return TRIP_COLORS[(index - 1) % TRIP_COLORS.length]

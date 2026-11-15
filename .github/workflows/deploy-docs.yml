@@ -8,6 +8,7 @@ on:
       - 'apps/docs/**'
       - 'packages/shared/**'
       - 'apps/mobile/src/i18n/locales/en.json'
+      - 'screenshots/demo-track.gpx'
       - 'fastlane/metadata/android/en-US/changelogs/**'
   workflow_dispatch:
 

@@ -1,0 +1,25 @@
+{{- /* The demo ride from data/ride.json (scripts/ride.mjs), drawn the way Location history draws a day. */ -}}
+{{- $r := hugo.Data.ride }}
+{{- $pad := 40 }}
+{{- /* Room under the track for the dock, which overlaps the drawing like a dock over a map. */ -}}
+{{- $under := 220 }}
+<figure class="ride">
+  <div class="ride-card">
+    <svg viewBox="{{ sub 0 $pad }} {{ sub 0 $pad }} {{ add $r.width (mul $pad 2) }} {{ add $r.height (add $pad $under) }}" role="img" aria-label="One day in Location history: {{ len $r.trips }} trips over {{ $r.km }} km">
+      {{- range $x := seq 0 125 (int $r.width) }}<line class="ride-grid" x1="{{ $x }}" y1="{{ sub 0 $pad }}" x2="{{ $x }}" y2="{{ add $r.height $under }}" />{{ end }}
+      {{- range $y := seq 0 125 (int (add $r.height $under)) }}<line class="ride-grid" x1="{{ sub 0 $pad }}" y1="{{ $y }}" x2="{{ add $r.width $pad }}" y2="{{ $y }}" />{{ end }}
+      {{- range $r.trips }}<path class="ride-trip t{{ .color }}" d="{{ .d }}" />{{ end }}
+      {{- range $r.trips }}
+        <circle class="ride-start t{{ .color }}" cx="{{ index .start 0 }}" cy="{{ index .start 1 }}" r="16" />
+        <circle class="ride-end t{{ .color }}" cx="{{ index .end 0 }}" cy="{{ index .end 1 }}" r="15" />
+      {{- end }}
+    </svg>
+    <div class="ride-dock">
+      <div class="ride-summary">{{ partial "icon.html" (dict "name" "route") }}<span>{{ len $r.trips }} trips<small>{{ $r.from }} - {{ $r.to }} · {{ $r.km }} km</small></span></div>
+      <div class="ride-chips">
+        {{- range $r.trips }}<span class="ride-chip t{{ .color }}"><i></i>{{ .time }}</span>{{ end }}
+      </div>
+    </div>
+  </div>
+  <figcaption>One day in Location history: {{ $r.points }} points, split into trips at every 15-minute stop</figcaption>
+</figure>

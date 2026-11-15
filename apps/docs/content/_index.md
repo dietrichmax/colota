@@ -1,8 +1,9 @@
 ---
 title: "Self-hosted GPS Tracking for Android"
 description: "Colota is a self-hosted GPS tracking app for Android. Send your location to your own server, work offline, and keep your data private."
-tagline: "Self-hosted GPS tracking for Android."
-subline: "Your data, your server, your rules."
+headline: "Self-hosted GPS tracking for Android"
+sub: "Colota records where you go and sends it to a server you run. Without a server, every point stays on the phone."
+facts: ["Free and open source (AGPL-3.0)", "No analytics or telemetry", "A build without Google services"]
 features:
   - title: "Self-hosted and private"
     icon: "shield-check"
@@ -32,9 +33,6 @@ integrations:
   - [Reitti, reitti]
   - [Traccar, traccar]
   - [Custom Backend, custom-backend]
-heroShots:
-  - "Dashboard|Colota Dashboard"
-  - "LocationHistory|Colota Location history"
 screenshots:
   [
     "Dashboard|Dashboard",
