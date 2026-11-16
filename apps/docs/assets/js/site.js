@@ -100,6 +100,15 @@ function initCopy() {
       pre.before(wrap)
       wrap.append(pre)
     }
+    const tools = document.createElement("div")
+    tools.className = "code-tools"
+    const lang = pre.querySelector("code[data-lang]")?.dataset.lang
+    if (lang) {
+      const label = document.createElement("span")
+      label.className = "code-lang"
+      label.textContent = lang
+      tools.append(label)
+    }
     const button = document.createElement("button")
     button.type = "button"
     button.className = "copy"
@@ -113,7 +122,8 @@ function initCopy() {
       }
       setTimeout(() => (button.textContent = "Copy"), 1500)
     })
-    wrap.append(button)
+    tools.append(button)
+    wrap.append(tools)
   }
 }
 
