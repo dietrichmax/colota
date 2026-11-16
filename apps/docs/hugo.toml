@@ -2,11 +2,17 @@ baseURL = "https://colota.app/"
 title = "Colota"
 locale = "en"
 disableKinds = ["taxonomy", "term", "rss"]
-enableRobotsTXT = false
+enableRobotsTXT = true
 
 [params]
-  description = "Colota is a self-hosted GPS tracking app for Android. Send your location to your own server, work offline, and keep your data private."
+  description = "Colota is a self-hosted GPS tracking app for Android. Send your location to your own server, work offline and keep your data private."
   editBase = "/tree/main/apps/docs/"
+
+  [params.author]
+    name = "Max Dietrich"
+    url = "https://mxd.codes"
+    id = "https://mxd.codes/#person"
+    sameAs = ["https://github.com/dietrichmax"]
 
 [outputs]
   home = ["html"]

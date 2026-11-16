@@ -11,6 +11,8 @@ const OUT = resolve(
   process.argv[2] ?? join(ROOT, "fastlane", "metadata", "android", "en-US", "images", "phoneScreenshots")
 )
 const slides = JSON.parse(readFileSync(join(ROOT, "screenshots", "store.json"), "utf8"))
+const DOCS = join(ROOT, "apps", "docs")
+const CARD_OUT = process.argv[2] ? join(OUT, "social-card.png") : join(DOCS, "static", "img", "social-card.png")
 
 const W = 1080
 const H = 1920
@@ -19,13 +21,14 @@ const SCREEN_W = 600
 const BEZEL = 14
 const SCREEN_RADIUS = 48
 const TEXT_W = 920
+const CARD = { width: 1200, height: 630, pad: 80, textW: 560, iconSize: 112, screenW: 320, screenTop: 72, bezel: 10, radius: 30 }
 
 const escape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
-async function renderText(text, font, fontfile, color, letterSpacing) {
+async function renderText(text, font, fontfile, color, letterSpacing, { width = TEXT_W, align = "centre" } = {}) {
   const markup = `<span foreground="${color}" letter_spacing="${letterSpacing}">${escape(text)}</span>`
   const { data, info } = await sharp({
-    text: { text: markup, font, fontfile: join(FONTS, fontfile), width: TEXT_W, align: "centre", rgba: true, dpi: 72 }
+    text: { text: markup, font, fontfile: join(FONTS, fontfile), width, align, rgba: true, dpi: 72 }
   })
     .png()
     .toBuffer({ resolveWithObject: true })
@@ -101,3 +104,62 @@ mkdirSync(OUT, { recursive: true })
 for (const [index, slide] of slides.entries()) {
   await renderSlide(slide, index)
 }
+
+async function renderSocialCard() {
+  const headline = readFileSync(join(DOCS, "content", "_index.md"), "utf8").match(/^headline:\s*"(.+)"$/m)?.[1]
+  if (!headline) throw new Error("apps/docs/content/_index.md has no headline")
+  const { width: cardW, height: cardH, pad, textW, iconSize, screenW, screenTop, bezel, radius } = CARD
+  const file = join(SRC, "Dashboard.png")
+  const { width, height } = await sharp(file).metadata()
+  const screenH = Math.round((screenW * height) / width)
+  const mask = `<svg xmlns="http://www.w3.org/2000/svg" width="${screenW}" height="${screenH}"><rect width="${screenW}" height="${screenH}" rx="${radius}" fill="#FFFFFF"/></svg>`
+  const rounded = await sharp(file)
+    .resize(screenW, screenH)
+    .composite([{ input: Buffer.from(mask), blend: "dest-in" }])
+    .png()
+    .toBuffer()
+  const screen = await sharp(rounded)
+    .extract({ left: 0, top: 0, width: screenW, height: cardH - screenTop - bezel })
+    .toBuffer()
+  const deviceX = cardW - pad - screenW - 2 * bezel
+  const deviceW = screenW + 2 * bezel
+  const deviceH = screenH + 2 * bezel
+  const background = `<svg xmlns="http://www.w3.org/2000/svg" width="${cardW}" height="${cardH}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${lightColors.primaryDark}"/>
+      <stop offset="1" stop-color="${lightColors.primary}"/>
+    </linearGradient>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="24"/></filter>
+  </defs>
+  <rect width="${cardW}" height="${cardH}" fill="url(#bg)"/>
+  <rect x="${deviceX}" y="${screenTop + 28}" width="${deviceW}" height="${deviceH}" rx="${radius + bezel}" fill="#000000" fill-opacity="0.45" filter="url(#blur)"/>
+  <rect x="${deviceX}" y="${screenTop}" width="${deviceW}" height="${deviceH}" rx="${radius + bezel}" fill="#0D0D0D" stroke="#3A3A3A" stroke-width="3"/>
+</svg>`
+
+  const iconMask = `<svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}"><rect width="${iconSize}" height="${iconSize}" rx="${iconSize / 4}" fill="#FFFFFF"/></svg>`
+  const icon = await sharp(join(DOCS, "static", "img", "app-icon.png"))
+    .resize(iconSize, iconSize)
+    .composite([{ input: Buffer.from(iconMask), blend: "dest-in" }])
+    .png()
+    .toBuffer()
+  const left = { width: textW, align: "left" }
+  const title = await renderText(headline, "Inter Bold 64", "Inter-Bold.ttf", "#FFFFFF", -1024, left)
+  const sub = await renderText(slides[0].subline, "Inter Medium 32", "Inter-Medium.ttf", lightColors.primaryContainer, 0, left)
+  const gap = 36
+  const subGap = 32
+  const top = Math.round((cardH - (iconSize + gap + title.height + subGap + sub.height)) / 2)
+
+  await sharp(Buffer.from(background))
+    .composite([
+      { input: icon, left: pad, top },
+      { input: title.data, left: pad, top: top + iconSize + gap },
+      { input: sub.data, left: pad, top: top + iconSize + gap + title.height + subGap },
+      { input: screen, left: deviceX + bezel, top: screenTop + bezel }
+    ])
+    .png()
+    .toFile(CARD_OUT)
+  console.log(`Dashboard.png -> ${CARD_OUT}`)
+}
+
+await renderSocialCard()

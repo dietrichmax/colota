@@ -3,7 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-// Checks the built site in public/: every internal link reaches a file and every #anchor an id on its page.
+// Checks the built site in public/: every internal link reaches a file and every #anchor an id on its page,
+// every JSON-LD block parses and every og:image is a file the site serves.
 // Then checks assets/css/site.css: colours and spacing come from tokens.css, never a literal; 0 and the 1px hairline are legal.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
@@ -49,6 +50,18 @@ for (const file of walk(publicDir)) {
     const anchor = decodeURIComponent(url.hash.slice(1))
     if (anchor && dest.endsWith(".html") && !idsOf(dest).has(anchor))
       problems.push(`${page}: ${href} names no id on its page`)
+  }
+  for (const [, json] of html.matchAll(/<script type="?application\/ld\+json"?>([\s\S]*?)<\/script>/g)) {
+    try {
+      JSON.parse(json)
+    } catch (error) {
+      problems.push(`${page}: its JSON-LD does not parse (${error.message})`)
+    }
+  }
+  for (const [, image] of html.matchAll(/property="?og:image"? content="?([^"\s>]+)"?/g)) {
+    const url = new URL(image)
+    if (url.origin !== "https://colota.app" || !target(url.pathname))
+      problems.push(`${page}: og:image ${image} is not a file of the site`)
   }
 }
 

@@ -1,14 +1,26 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 {{- $title := cond .IsHome (printf "%s | %s" site.Title .Title) (printf "%s | %s" .Title site.Title) }}
+{{- $description := or .Description .Summary site.Params.description | plainify | truncate 160 }}
+{{- $card := imageConfig "static/img/social-card.png" }}
 <title>{{ $title }}</title>
-<meta name="description" content="{{ or .Description .Summary site.Params.description | plainify | truncate 160 }}" />
+<meta name="description" content="{{ $description }}" />
+<meta name="author" content="{{ site.Params.author.name }}" />
 <link rel="canonical" href="{{ .Permalink }}" />
 <link rel="icon" href="/img/favicon.png" />
 <link rel="alternate" type="application/rss+xml" title="Colota Releases" href="https://colota.app/releases.xml" />
+<meta property="og:site_name" content="{{ site.Title }}" />
+<meta property="og:locale" content="en_US" />
 <meta property="og:title" content="{{ $title }}" />
-<meta property="og:type" content="website" />
+<meta property="og:description" content="{{ $description }}" />
+<meta property="og:type" content="{{ cond (and .IsPage (eq .Section "docs")) "article" "website" }}" />
 <meta property="og:url" content="{{ .Permalink }}" />
+<meta property="og:image" content="{{ "img/social-card.png" | absURL }}" />
+<meta property="og:image:width" content="{{ $card.Width }}" />
+<meta property="og:image:height" content="{{ $card.Height }}" />
+<meta property="og:image:alt" content="The Colota icon and headline beside the app's Dashboard screen" />
+<meta name="twitter:card" content="summary_large_image" />
+{{- partial "schema.html" . }}
 <script>
   try {
     var theme = localStorage.getItem("theme")
