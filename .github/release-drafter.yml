@@ -58,6 +58,8 @@ no-changes-template: '- No changes'
 category-template: '### $TITLE'
 
 template: |
+
+
   ## Which APK should I download?
 
   Pick the build that matches your device:
