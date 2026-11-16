@@ -313,6 +313,13 @@ a.row:hover { background: color-mix(in srgb, var(--color-text) 4%, var(--color-c
 .gallery-item img { display: block; border-radius: var(--radius-sm); }
 .gallery-item picture { display: block; }
 .gallery figcaption { margin-top: var(--space-sm); font-size: var(--fs-description); line-height: 1.4; color: var(--color-text-secondary); }
+.dark-only { display: none; }
+:root[data-theme="dark"] .light-only { display: none; }
+:root[data-theme="dark"] .dark-only { display: inline; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .light-only { display: none; }
+  :root:not([data-theme="light"]) .dark-only { display: inline; }
+}
 .lightbox { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: var(--space-xxl) var(--space-lg); border: 0; background: var(--color-overlay); color: var(--on-scrim); backdrop-filter: blur(2px); }
 .lightbox[open] { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-md); }
 .lightbox img { max-height: calc(100% - var(--space-xxl) * 2); width: auto; border-radius: var(--radius-md); }

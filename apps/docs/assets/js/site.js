@@ -39,9 +39,10 @@ function initLightbox() {
   const show = (i) => {
     index = (i + items.length) % items.length
     const item = items[index]
+    const text = (isDark() && item.dataset.labelDark) || item.dataset.label
     img.src = (isDark() && item.dataset.srcDark) || item.dataset.src
-    img.alt = item.dataset.label
-    label.textContent = item.dataset.label
+    img.alt = text
+    label.textContent = text
     count.textContent = items.length > 1 ? `${index + 1} / ${items.length}` : ""
     dialog.classList.toggle("single", items.length < 2)
   }

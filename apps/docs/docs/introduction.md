@@ -28,7 +28,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## Screenshots
 
-{{< screenshots "Dashboard|Dashboard" "Settings|Settings" "ApiFieldMapping|Request format" "Authentication|Authentication" "Geofences|Geofences" "GeofenceEditor|Geofence editor" "OfflineMaps|Offline maps" "TrackingProfiles|Tracking profiles" "ProfileEditor|Profile editor" "LocationHistory|Location history" "TripDetails|Trip detail" "Trips|Trips" "ExportData|Export & import" "AutoExport|Auto-export" "DataManagement|Data management" "DashboardDark|Dark mode" >}}
+{{< screenshots "Dashboard|Dashboard" "Settings|Settings" "ApiFieldMapping|Request format" "Authentication|Authentication" "Geofences|Geofences" "GeofenceEditor|Geofence editor" "OfflineMaps|Offline maps" "TrackingProfiles|Tracking profiles" "ProfileEditor|Profile editor" "LocationHistory|Location history" "TripDetails|Trip detail" "Trips|Trips" "ExportData|Export & import" "AutoExport|Auto-export" "DataManagement|Data management" "DashboardDark|Dark mode|Light mode" >}}
 
 ## Architecture
 

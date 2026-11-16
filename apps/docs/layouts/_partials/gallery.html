@@ -1,21 +1,28 @@
-{{- /* (dict "page" .Page "items" (slice "Name|Label") "where" "position for errors"): static/img/screenshots/Name.png, and NameDark.png in dark mode (dark-shot.html); the build fails on a missing file. */ -}}
+{{- /* (dict "page" .Page "items" (slice "Name|Label" "NameDark|Label|Dark label") "where" "position for errors"): static/img/screenshots/Name.png, and in dark mode the other theme's capture (dark-shot.html), under the dark label when one is given; the build fails on a missing file. */ -}}
 {{- .page.Store.Set "gallery" true }}
 <div class="gallery" data-gallery>
   {{- range .items }}
     {{- $parts := split . "|" }}
     {{- $name := index $parts 0 }}
     {{- $label := index $parts 1 }}
+    {{- $darkLabel := $label }}
+    {{- if gt (len $parts) 2 }}{{ $darkLabel = index $parts 2 }}{{ end }}
+    {{- $id := printf "shot-%s" $name }}
     {{- if not (fileExists (printf "static/img/screenshots/%s.png" $name)) }}{{ errorf "%s: no screenshot %s" $.where $name }}{{ end }}
     {{- $dark := partial "dark-shot.html" (dict "name" $name "where" $.where) }}
     {{- $img := imageConfig (printf "static/img/screenshots/%s.png" $name) }}
     <figure>
-      <button class="gallery-item" type="button" data-src="/img/screenshots/{{ $name }}.png"{{ with $dark }} data-src-dark="/img/screenshots/{{ . }}.png"{{ end }} data-label="{{ $label }}" aria-label="Open {{ $label }}">
+      <button class="gallery-item" type="button" data-src="/img/screenshots/{{ $name }}.png"{{ with $dark }} data-src-dark="/img/screenshots/{{ . }}.png"{{ end }} data-label="{{ $label }}"{{ if ne $darkLabel $label }} data-label-dark="{{ $darkLabel }}" aria-labelledby="{{ $id }}"{{ else }} aria-label="Open {{ $label }}"{{ end }}>
         <picture>
           {{- with $dark }}<source srcset="/img/screenshots/{{ . }}.png" media="(prefers-color-scheme: dark)" data-dark-source />{{ end }}
           <img src="/img/screenshots/{{ $name }}.png" alt="{{ $label }}" width="{{ $img.Width }}" height="{{ $img.Height }}" loading="lazy" />
         </picture>
       </button>
+      {{- if ne $darkLabel $label }}
+      <figcaption id="{{ $id }}"><span class="light-only">{{ $label }}</span> <span class="dark-only">{{ $darkLabel }}</span></figcaption>
+      {{- else }}
       <figcaption>{{ $label }}</figcaption>
+      {{- end }}
     </figure>
   {{- end }}
 </div>
