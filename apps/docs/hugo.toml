@@ -3,6 +3,7 @@ title = "Colota"
 locale = "en"
 disableKinds = ["taxonomy", "term", "rss"]
 enableRobotsTXT = true
+enableGitInfo = true
 
 [params]
   description = "Colota is a self-hosted GPS tracking app for Android. Send your location to your own server, work offline and keep your data private."
