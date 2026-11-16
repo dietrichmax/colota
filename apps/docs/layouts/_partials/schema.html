@@ -1,0 +1,43 @@
+{{- /* JSON-LD: the WebSite on every page, the app on the landing page, a BreadcrumbList and a TechArticle on every docs page. The author is the Person that mxd.codes describes, linked by its @id. */ -}}
+{{- $base := site.Home.Permalink }}
+{{- $author := dict "@type" "Person" "@id" site.Params.author.id "name" site.Params.author.name "url" site.Params.author.url "sameAs" site.Params.author.sameAs }}
+{{- $website := dict "@type" "WebSite" "@id" (printf "%s#website" $base) "name" site.Title "url" $base "inLanguage" "en" "publisher" $author }}
+{{- $graph := slice $website }}
+{{- if .IsHome }}
+  {{- $shots := slice }}
+  {{- range .Params.heroShots }}{{ $shots = $shots | append (printf "img/screenshots/%s.png" (index (split . "|") 0) | absURL) }}{{ end }}
+  {{- $app := dict
+    "@type" "SoftwareApplication"
+    "@id" (printf "%s#app" $base)
+    "name" site.Title
+    "description" site.Params.description
+    "url" $base
+    "applicationCategory" "TravelApplication"
+    "operatingSystem" "Android"
+    "isAccessibleForFree" true
+    "offers" (dict "@type" "Offer" "price" "0" "priceCurrency" "EUR")
+    "license" "https://www.gnu.org/licenses/agpl-3.0.html"
+    "image" ("img/app-icon.png" | absURL)
+    "screenshot" $shots
+    "author" $author
+    "sameAs" (slice hugo.Data.links.REPO_URL hugo.Data.links.PLAY_STORE_WEB_URL hugo.Data.links.FDROID_URL hugo.Data.links.IZZYONDROID_URL)
+  }}
+  {{- $graph = $graph | append $app }}
+{{- else if and .IsPage (eq .Section "docs") }}
+  {{- $docs := site.GetPage "/docs" }}
+  {{- $crumbs := slice
+    (dict "@type" "ListItem" "position" 1 "name" $docs.Title "item" $docs.Permalink)
+    (dict "@type" "ListItem" "position" 2 "name" .Title "item" .Permalink)
+  }}
+  {{- $graph = $graph | append (dict "@type" "BreadcrumbList" "itemListElement" $crumbs) }}
+  {{- $graph = $graph | append (dict
+    "@type" "TechArticle"
+    "headline" .Title
+    "description" .Description
+    "url" .Permalink
+    "inLanguage" "en"
+    "author" $author
+    "isPartOf" (dict "@id" (printf "%s#website" $base))
+  ) }}
+{{- end }}
+<script type="application/ld+json">{{ dict "@context" "https://schema.org" "@graph" $graph | jsonify | safeJS }}</script>
