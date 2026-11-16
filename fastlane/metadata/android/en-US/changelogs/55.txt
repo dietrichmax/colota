@@ -1,8 +1,7 @@
-- Option to tell your server which geofences each point is in
-- Option to send an event to your server each time you enter or leave a geofence
-- Password managers can now fill in the backup password
-- Fixed impossible position jumps, like a phone at home showing up on another continent under GPS spoofing, being recorded
-- Tracking profiles can set their own accuracy filter, looser or stricter than the one in Tracking & sync
-- Fixed a settings change not reaching tracking when the screen was left right after making it
-- Fixed tracking staying off when Colota was closed right after a settings change
-- An active tracking profile now stays in force when a setting changes or a shortcut or automation starts tracking
+- Option to send your server the geofences each point is in
+- Option to send your server an event when you enter or leave a geofence
+- Tracking profiles can set their own accuracy filter
+- Password managers can fill in the backup password
+- An active profile now stays in force when a setting changes or a shortcut or automation starts tracking
+- Fixed impossible position jumps being recorded
+- Fixed a settings change not reaching tracking when the screen was left or Colota closed right after it
