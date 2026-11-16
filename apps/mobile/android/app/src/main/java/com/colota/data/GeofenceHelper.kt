@@ -96,7 +96,6 @@ class GeofenceHelper(private val context: Context) {
                     ))
                 }
             }
-            AppLogger.d(TAG, "Loaded ${fences.size} active pause zone(s)")
             fences
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to load geofences from DB", e)
