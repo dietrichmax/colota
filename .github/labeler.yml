@@ -63,3 +63,13 @@ shared:
   - changed-files:
       - any-glob-to-any-file:
           - 'packages/shared/**'
+
+# ============================
+# Forwarder (Docker image, released by forwarder-v* tags)
+# ============================
+forwarder:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/forwarder/**'
+          - '.github/workflows/forwarder-*.yml'
+          - '.github/forwarder-codeql-config.yml'

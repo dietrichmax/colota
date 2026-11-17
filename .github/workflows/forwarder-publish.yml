@@ -1,0 +1,71 @@
+name: Forwarder Publish
+
+on:
+  push:
+    branches: [main]
+    # Path filters are not evaluated for tag pushes, so every forwarder tag builds.
+    tags: ["forwarder-v*"]
+    paths:
+      - "apps/forwarder/src/**"
+      - "apps/forwarder/package*.json"
+      - "apps/forwarder/tsconfig.json"
+      - "apps/forwarder/webpack.config.js"
+      - "apps/forwarder/Dockerfile"
+      - "apps/forwarder/.dockerignore"
+      - ".github/workflows/forwarder-publish.yml"
+
+jobs:
+  check:
+    uses: ./.github/workflows/forwarder-ci.yml
+
+  push_to_registry:
+    name: Push image to Docker Hub
+    runs-on: ubuntu-latest
+    needs: check
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push (main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: apps/forwarder
+          file: apps/forwarder/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/colota-forwarder:${{ github.sha }}
+            ${{ secrets.DOCKER_HUB_USERNAME }}/colota-forwarder:latest
+
+      - name: Image tag from git tag
+        if: startsWith(github.ref, 'refs/tags/forwarder-v')
+        id: version
+        run: echo "tag=${GITHUB_REF_NAME#forwarder-}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push (forwarder tag)
+        if: startsWith(github.ref, 'refs/tags/forwarder-v')
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: apps/forwarder
+          file: apps/forwarder/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/colota-forwarder:${{ steps.version.outputs.tag }}

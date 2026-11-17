@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#0D9488"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="white"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Content centered horizontally (content spans 304px, shift +8 to center in 512) -->
+  <g transform="translate(8, 0)">
+    <!-- Pin body (white location marker) -->
+    <path d="M170,108C129,108 96,141 96,180C96,236 170,320 170,320C170,320 244,236 244,180C244,141 211,108 170,108Z" fill="white"/>
+    <!-- Pin hole (teal circle) -->
+    <circle cx="170" cy="180" r="26" fill="#0D9488"/>
+
+    <!-- Three forwarding arrows fanning right -->
+    <!-- Top -->
+    <line x1="280" y1="180" x2="390" y2="108" stroke="white" stroke-width="10" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <!-- Middle -->
+    <line x1="280" y1="180" x2="400" y2="180" stroke="white" stroke-width="10" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <!-- Bottom -->
+    <line x1="280" y1="180" x2="390" y2="252" stroke="white" stroke-width="10" stroke-linecap="round" marker-end="url(#arrow)"/>
+  </g>
+</svg>
