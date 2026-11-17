@@ -6,6 +6,20 @@ export function hasFiniteNumbers(obj: Record<string, unknown>, keys: string[]): 
   return keys.every((k) => isFiniteNumber(obj[k]))
 }
 
+export function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((s) => typeof s === "string")
+}
+
+/** OwnTracks requires event and wtst on a transition, and Colota sends a geofence event as one. */
+export function isValidTransition(body: Record<string, unknown>): boolean {
+  return (
+    (body.event === "enter" || body.event === "leave") &&
+    isFiniteNumber(body.wtst) &&
+    (body.desc === undefined || typeof body.desc === "string") &&
+    (body.t === undefined || typeof body.t === "string")
+  )
+}
+
 /** Device ids reach outbound headers, so keep them short and printable. */
 export function isValidTid(value: unknown): value is string {
   if (typeof value !== "string" || value.length === 0 || value.length > 64) return false

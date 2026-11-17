@@ -14,9 +14,9 @@ Receives location updates from the [Colota](https://colota.app) app or any OwnTr
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| `POST` | `/locations` | yes | Colota native payload — fans out to all matching targets |
+| `POST` | `/locations` | yes | Colota native payload — fans out to all matching targets, including [geofence events](#geofence-events) |
 | `POST` | `/owntracks` | yes | OwnTracks HTTP payload — only `_type: "location"` is forwarded, others drop |
-| `POST` | `/overland` | yes | Colota batch payload (Overland format) - forwarded whole to `overland` targets, split to single points for the rest |
+| `POST` | `/overland` | yes | Colota batch payload (Overland format) - forwarded whole to `overland` targets, split to single points for the rest. [Geofence events](#geofence-events) go to `overland` targets only |
 | `GET` | `/health` | no | Health check for Docker / orchestrators — returns `{ status, uptime, targets }`, plus per-target delivery counts when the API key is sent |
 
 ## Setup
@@ -254,6 +254,19 @@ volumes:
 ```
 
 The file must be readable by the image's non-root user.
+
+### Geofence events
+
+Colota 1.22 can send an event each time the phone enters or leaves a geofence (**Send enter and leave events**) and the geofences each point is in (**Send current geofences**, the `inregions` list). The forwarder sends each event where the app would if it posted to that target directly:
+
+| Target type | Event posted to `/locations` | Events posted to `/overland` |
+| --- | --- | --- |
+| `owntracks` | Sent as an OwnTracks transition (`_type: "transition"` with `event`, `desc`, `t`, `wtst`) | Not sent |
+| `traccar` | Not sent | Not sent |
+| `geopulse` / `colota` / `raw` | Passed through unchanged | Not sent |
+| `overland` | Passed through unchanged, like a point | Forwarded in the batch's `transitions` array |
+
+An Overland event carries no `wtst`, which OwnTracks requires, so `owntracks` targets only get events from `/locations`. They get `inregions` on points from either endpoint, and so do `geopulse`, `colota` and `raw` targets: `/locations` passes it through with the body, and `/overland` copies it from each Feature.
 
 ### Batch handling
 

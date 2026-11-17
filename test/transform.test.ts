@@ -50,6 +50,15 @@ test("overlandFeatureToColota parses a valid Feature", () => {
   assert.equal(r.tst, Math.floor(Date.parse("2026-05-29T10:00:00Z") / 1000))
 })
 
+test("overlandFeatureToColota reads inregions from the Feature properties", () => {
+  // Colota puts inregions inside each Feature, so converting for an owntracks target used to drop it
+  const f = {
+    geometry: { coordinates: [2, 1] },
+    properties: { timestamp: "2026-11-15T10:00:00Z", inregions: ["Home"] }
+  }
+  assert.deepEqual(overlandFeatureToColota(f, undefined).inregions, ["Home"])
+})
+
 test("overlandFeatureToColota throws on missing coordinates", () => {
   assert.throws(() =>
     overlandFeatureToColota(
@@ -79,6 +88,39 @@ test("transformPayload owntracks emits _type, cog and default tid", () => {
   assert.equal(out._type, "location")
   assert.equal(out.cog, 45)
   assert.equal(out.tid, "CL")
+})
+
+test("transformPayload owntracks sends a Colota geofence event as an OwnTracks transition", () => {
+  const p: ColotaPayload = {
+    lat: 1,
+    lon: 2,
+    acc: 5,
+    batt: 90,
+    bs: 2,
+    tst: 100,
+    _type: "transition",
+    event: "enter",
+    desc: "Home",
+    t: "c",
+    wtst: 50
+  }
+  const out = transformPayload(p, { url: "http://x", type: "owntracks" })
+  // as a location, Home Assistant never saw the enter and the target stored the point twice
+  assert.equal(out._type, "transition")
+  assert.equal(out.event, "enter")
+  assert.equal(out.desc, "Home")
+  assert.equal(out.t, "c")
+  assert.equal(out.wtst, 50)
+  assert.equal(out.lat, 1)
+})
+
+test("transformPayload owntracks keeps inregions, the geofences Colota says the point is in", () => {
+  const t: Target = { url: "http://x", type: "owntracks" }
+  const p: ColotaPayload = { lat: 1, lon: 2, acc: 5, batt: 90, bs: 2, tst: 100 }
+  assert.deepEqual(transformPayload({ ...p, inregions: ["Home", "Work"] }, t).inregions, ["Home", "Work"])
+  // /locations casts the body unchecked, and OwnTracks defines inregions as a list of region names
+  assert.equal("inregions" in transformPayload({ ...p, inregions: [1] as unknown as string[] }, t), false)
+  assert.equal("event" in transformPayload(p, t), false) // a plain location carries no transition keys
 })
 
 test("transformPayload traccar GET (OsmAnd) uses id + epoch timestamp", () => {
