@@ -18,6 +18,7 @@ const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 const mockNavigate = jest.fn()
 const mockShowAlert = jest.fn()
 let mockCurrentEndpoint = ""
+let mockCurrentApi: Record<string, unknown> = {}
 let mockUnitSystem = "metric"
 
 jest.mock("../../services/NativeLocationService", () => ({
@@ -42,7 +43,7 @@ jest.mock("../../services/modalService", () => ({
 
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
-    settings: { ...require("../../types/global").DEFAULT_SETTINGS, endpoint: mockCurrentEndpoint },
+    settings: { ...require("../../types/global").DEFAULT_SETTINGS, endpoint: mockCurrentEndpoint, ...mockCurrentApi },
     setSettings: mockSetSettings,
     restartTracking: mockRestartTracking
   })
@@ -130,6 +131,7 @@ function renderScreen(configParam?: string) {
 beforeEach(async () => {
   jest.clearAllMocks()
   mockCurrentEndpoint = ""
+  mockCurrentApi = {}
   mockUnitSystem = "metric"
   await loadDisplayPreferences()
 })
@@ -309,6 +311,44 @@ describe("SetupImportScreen", () => {
       expect(mockSetSettings).toHaveBeenCalledWith(
         expect.objectContaining({ endpoint: "https://test.com", interval: 15, hasCompletedSetup: true })
       )
+    })
+
+    it("replaces the current request with the named template's, so OwnTracks gets cog, _type and tid", async () => {
+      mockCurrentApi = { apiTemplate: "custom", customFields: [{ key: "device", value: "phone" }], httpMethod: "GET" }
+      const { getByText } = renderScreen(encode({ apiTemplate: "owntracks" }))
+
+      fireEvent.press(getByText("Apply configuration"))
+
+      await waitFor(() => {
+        expect(mockSetSettings).toHaveBeenCalledWith(
+          expect.objectContaining({
+            apiTemplate: "owntracks",
+            fieldMap: expect.objectContaining({ bear: "cog" }),
+            customFields: [
+              { key: "_type", value: "location" },
+              { key: "tid", value: "AA" }
+            ],
+            httpMethod: "POST"
+          })
+        )
+      })
+    })
+
+    it("keeps the device's own tracker id when the link names the template already in use", async () => {
+      const ownFields = [
+        { key: "_type", value: "location" },
+        { key: "tid", value: "MD" }
+      ]
+      mockCurrentApi = { apiTemplate: "owntracks", customFields: ownFields }
+      const { getByText } = renderScreen(
+        encode({ endpoint: "https://new-server.example/pub", apiTemplate: "owntracks" })
+      )
+
+      fireEvent.press(getByText("Apply configuration"))
+
+      await waitFor(() => {
+        expect(mockSetSettings).toHaveBeenCalledWith(expect.objectContaining({ customFields: ownFields }))
+      })
     })
 
     it("applies auth config when provided", async () => {

@@ -20,6 +20,7 @@ import {
   type AuthConfig,
   type FieldMap,
   type CustomField,
+  type ApiTemplate,
   type ApiTemplateName,
   type HttpMethod,
   type DawarichMode,
@@ -92,7 +93,7 @@ export function setupEndpointHost(endpoint: string): string | null {
   return authority
 }
 
-export function validateConfig(raw: unknown): ValidationResult {
+export function validateConfig(raw: unknown, currentTemplate?: ApiTemplateName): ValidationResult {
   if (!raw || typeof raw !== "object") {
     return {
       valid: false,
@@ -231,19 +232,21 @@ export function validateConfig(raw: unknown): ValidationResult {
 
   // --- API settings ---
 
+  let template: ApiTemplate | null = null
   if (
     "apiTemplate" in obj &&
     typeof obj.apiTemplate === "string" &&
     API_TEMPLATE_NAMES.includes(obj.apiTemplate as ApiTemplateName)
   ) {
     settings.apiTemplate = obj.apiTemplate as ApiTemplateName
+    const named =
+      obj.apiTemplate === "custom" ? null : API_TEMPLATES[obj.apiTemplate as Exclude<ApiTemplateName, "custom">]
+    // Like Request format, only a switch brings the template's fields and method; re-picking it keeps the user's edits.
+    if (obj.apiTemplate !== currentTemplate) template = named
     entries.push({
       field: "apiTemplate",
       label: t("setup.field.apiTemplate"),
-      value:
-        obj.apiTemplate === "custom"
-          ? t("common.custom")
-          : API_TEMPLATES[obj.apiTemplate as Exclude<ApiTemplateName, "custom">].label,
+      value: named ? named.label : t("common.custom"),
       category: "api"
     })
   }
@@ -255,6 +258,14 @@ export function validateConfig(raw: unknown): ValidationResult {
   ) {
     settings.httpMethod = obj.httpMethod as HttpMethod
     entries.push({ field: "httpMethod", label: t("setup.field.httpMethod"), value: obj.httpMethod, category: "api" })
+  } else if (template) {
+    settings.httpMethod = template.httpMethod ?? "POST"
+    entries.push({
+      field: "httpMethod",
+      label: t("setup.field.httpMethod"),
+      value: settings.httpMethod,
+      category: "api"
+    })
   }
 
   if (
@@ -269,6 +280,8 @@ export function validateConfig(raw: unknown): ValidationResult {
       value: t(`requestFormat.dawarich.${obj.dawarichMode as DawarichMode}`),
       category: "api"
     })
+  } else if (settings.apiTemplate && settings.apiTemplate !== currentTemplate && settings.apiTemplate !== "dawarich") {
+    settings.dawarichMode = "single"
   }
 
   if (
@@ -306,40 +319,44 @@ export function validateConfig(raw: unknown): ValidationResult {
     })
   }
 
+  const validFieldMap: Partial<FieldMap> = { ...template?.fieldMap }
   if ("fieldMap" in obj && typeof obj.fieldMap === "object" && obj.fieldMap !== null) {
-    const fm = obj.fieldMap as Record<string, unknown>
-    const validFieldMap: Partial<FieldMap> = {}
-    let hasValid = false
-    for (const [key, val] of Object.entries(fm)) {
-      if (typeof val === "string") {
-        ;(validFieldMap as any)[key] = val
-        hasValid = true
-      }
-    }
-    if (hasValid) {
-      settings.fieldMap = validFieldMap as FieldMap
-      entries.push({
-        field: "fieldMapping",
-        label: t("setup.field.fieldMapping"),
-        value: t("setup.fields", { count: Object.keys(validFieldMap).length, n: Object.keys(validFieldMap).length }),
-        category: "api"
-      })
+    for (const [key, val] of Object.entries(obj.fieldMap as Record<string, unknown>)) {
+      if (typeof val === "string") (validFieldMap as any)[key] = val
     }
   }
+  if (Object.keys(validFieldMap).length > 0) {
+    settings.fieldMap = validFieldMap as FieldMap
+    entries.push({
+      field: "fieldMapping",
+      label: t("setup.field.fieldMapping"),
+      value: t("setup.fields", { count: Object.keys(validFieldMap).length, n: Object.keys(validFieldMap).length }),
+      category: "api"
+    })
+  }
 
-  if ("customFields" in obj && Array.isArray(obj.customFields)) {
-    const validFields: CustomField[] = obj.customFields.filter(
-      (f: any) => f && typeof f.key === "string" && typeof f.value === "string" && f.key.length > 0
-    )
-    if (validFields.length > 0) {
-      settings.customFields = validFields
-      entries.push({
-        field: "customFields",
-        label: t("setup.field.customFields"),
-        value: t("setup.fields", { count: validFields.length, n: validFields.length }),
-        category: "api"
-      })
-    }
+  const linkFields: CustomField[] = Array.isArray(obj.customFields)
+    ? obj.customFields.filter(
+        (f: any) => f && typeof f.key === "string" && typeof f.value === "string" && f.key.length > 0
+      )
+    : []
+  const templateFields: CustomField[] = !template
+    ? []
+    : template.name === "dawarich" && settings.dawarichMode === "batch"
+      ? [{ key: "device_id", value: "colota" }]
+      : template.customFields
+  const validFields = [
+    ...templateFields.map((f) => linkFields.find((l) => l.key === f.key) ?? { ...f }),
+    ...linkFields.filter((l) => !templateFields.some((f) => f.key === l.key))
+  ]
+  if (validFields.length > 0) {
+    settings.customFields = validFields
+    entries.push({
+      field: "customFields",
+      label: t("setup.field.customFields"),
+      value: t("setup.fields", { count: validFields.length, n: validFields.length }),
+      category: "api"
+    })
   }
 
   // --- Auth settings ---
