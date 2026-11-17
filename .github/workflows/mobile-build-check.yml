@@ -9,7 +9,7 @@ on:
       - 'packages/shared/**'
       - 'package-lock.json'
       - '.nvmrc'
-      - '.github/workflows/build-check.yml'
+      - '.github/workflows/mobile-build-check.yml'
       - '.github/actions/setup-build/**'
   pull_request:
     branches: [main]
@@ -19,7 +19,7 @@ on:
       - 'packages/shared/**'
       - 'package-lock.json'
       - '.nvmrc'
-      - '.github/workflows/build-check.yml'
+      - '.github/workflows/mobile-build-check.yml'
       - '.github/actions/setup-build/**'
 
 concurrency:

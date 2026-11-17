@@ -2,7 +2,8 @@
   "name": "colota",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/mobile",
+    "apps/docs",
     "packages/*"
   ],
   "scripts": {

@@ -1,0 +1,8 @@
+{
+  "proseWrap": "never",
+  "endOfLine": "lf",
+  "semi": false,
+  "printWidth": 120,
+  "tabWidth": 2,
+  "trailingComma": "none"
+}
