@@ -1,0 +1,18 @@
+{
+  "tid": "pixel",
+  "lat": 48.1372,
+  "lon": 11.5761,
+  "acc": 8,
+  "alt": 520,
+  "vel": 1.4,
+  "batt": 82,
+  "bs": 1,
+  "tst": 1763200000,
+  "bear": 90.5,
+  "inregions": ["Home"],
+  "_type": "transition",
+  "event": "enter",
+  "desc": "Home",
+  "t": "c",
+  "wtst": 1760000000
+}

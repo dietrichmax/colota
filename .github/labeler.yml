@@ -36,6 +36,7 @@ tests:
           - '**/*.test.ts'
           - '**/*.test.tsx'
           - '**/*Test.kt'
+          - 'fixtures/**'
 
 # ============================
 # Documentation (Hugo site + repo markdown)

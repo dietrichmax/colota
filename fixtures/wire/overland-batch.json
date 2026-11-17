@@ -1,0 +1,22 @@
+{
+  "locations": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [11.5761, 48.1372]
+      },
+      "properties": {
+        "timestamp": "2025-11-15T09:46:40Z",
+        "horizontal_accuracy": 8,
+        "altitude": 520,
+        "speed": 1.4,
+        "course": 90.5,
+        "battery_level": 0.82,
+        "battery_state": "unplugged",
+        "inregions": ["Home"]
+      }
+    }
+  ],
+  "device_id": "pixel"
+}
