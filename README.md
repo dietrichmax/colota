@@ -266,7 +266,7 @@ Colota 1.22 can send an event each time the phone enters or leaves a geofence (*
 | `geopulse` / `colota` / `raw` | Passed through unchanged | Not sent |
 | `overland` | Passed through unchanged, like a point | Forwarded in the batch's `transitions` array |
 
-An Overland event carries no `wtst`, which OwnTracks requires, so `owntracks` targets only get events from `/locations`. They get `inregions` on points from either endpoint.
+An Overland event carries no `wtst`, which OwnTracks requires, so `owntracks` targets only get events from `/locations`. They get `inregions` on points from either endpoint, and so do `geopulse`, `colota` and `raw` targets: `/locations` passes it through with the body, and `/overland` copies it from each Feature.
 
 ### Batch handling
 
