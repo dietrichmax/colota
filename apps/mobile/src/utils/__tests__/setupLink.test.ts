@@ -10,7 +10,7 @@ import {
 import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../setupLink"
 import { validateConfig, setupEndpointHost } from "../setupConfig"
 import { PROFILE_CONDITIONS } from "../../constants"
-import type { Settings, AuthConfig, Geofence, TrackingProfile } from "../../types/global"
+import { API_TEMPLATES, type Settings, type AuthConfig, type Geofence, type TrackingProfile } from "../../types/global"
 
 const settings = {
   interval: 10,
@@ -227,6 +227,92 @@ describe("setupLink", () => {
     const asReceived = encoded.replace(/\+/g, " ")
     expect(asReceived).not.toBe(encoded) // proves the payload's base64 actually contained a '+'
     expect(decodeConfig(asReceived)).toEqual(config)
+  })
+})
+
+// The docs generator writes a template's name without its fields, so the name alone has to configure the request.
+describe("a link that names a template", () => {
+  it("brings the template's field names, custom fields and method, which its server needs to accept a point", () => {
+    const result = validateConfig({ apiTemplate: "owntracks" }, "custom")
+    const imported = result.config.settings
+
+    expect(imported.fieldMap).toEqual(API_TEMPLATES.owntracks.fieldMap)
+    expect(imported.fieldMap?.bear).toBe("cog")
+    expect(imported.customFields).toEqual([
+      { key: "_type", value: "location" },
+      { key: "tid", value: "AA" }
+    ])
+    expect(imported.httpMethod).toBe("POST")
+    // The import screen is the only place the user sees what a link changes, so all three are listed there.
+    expect(result.entries.map((e) => [e.field, e.value])).toEqual([
+      ["apiTemplate", "OwnTracks"],
+      ["httpMethod", "POST"],
+      ["fieldMapping", "9 fields"],
+      ["customFields", "2 fields"]
+    ])
+  })
+
+  it("brings the template's HTTP method, because Traccar on POST sends its JSON format instead", () => {
+    expect(validateConfig({ apiTemplate: "traccar" }, "custom").config.settings.httpMethod).toBe("GET")
+  })
+
+  it("keeps the user's edits when the link names the template already in use, as re-picking it in the app does", () => {
+    const result = validateConfig({ endpoint: "https://new.example/pub", apiTemplate: "owntracks" }, "owntracks")
+
+    expect(result.config.settings).not.toHaveProperty("fieldMap")
+    expect(result.config.settings).not.toHaveProperty("customFields")
+    expect(result.config.settings).not.toHaveProperty("httpMethod")
+    expect(result.entries.map((e) => e.field)).toEqual(["endpoint", "apiTemplate"])
+  })
+
+  it("lets the link's own fields and method win key by key, so adding a tid keeps OwnTracks' _type", () => {
+    const imported = validateConfig(
+      {
+        apiTemplate: "owntracks",
+        fieldMap: { lat: "latitude" },
+        customFields: [
+          { key: "tid", value: "MD" },
+          { key: "topic", value: "owntracks/me/phone" }
+        ],
+        httpMethod: "GET"
+      },
+      "custom"
+    ).config.settings
+
+    expect(imported.fieldMap).toEqual({ ...API_TEMPLATES.owntracks.fieldMap, lat: "latitude" })
+    expect(imported.customFields).toEqual([
+      { key: "_type", value: "location" },
+      { key: "tid", value: "MD" },
+      { key: "topic", value: "owntracks/me/phone" }
+    ])
+    expect(imported.httpMethod).toBe("GET")
+  })
+
+  it("gives Dawarich in batch mode the Overland device id, as flipping the mode in the app does", () => {
+    const imported = validateConfig({ apiTemplate: "dawarich", dawarichMode: "batch" }, "custom").config.settings
+
+    expect(imported.customFields).toEqual([{ key: "device_id", value: "colota" }])
+  })
+
+  it("resets the Dawarich mode on leaving Dawarich, so picking it again later does not come back in batch", () => {
+    expect(validateConfig({ apiTemplate: "owntracks" }, "dawarich").config.settings.dawarichMode).toBe("single")
+    expect(validateConfig({ apiTemplate: "custom" }, "dawarich").config.settings.dawarichMode).toBe("single")
+    expect(validateConfig({ apiTemplate: "dawarich" }, "owntracks").config.settings).not.toHaveProperty("dawarichMode")
+  })
+
+  it("keeps the current fields for Custom, which has none of its own", () => {
+    const imported = validateConfig({ apiTemplate: "custom" }, "owntracks").config.settings
+
+    expect(imported).not.toHaveProperty("fieldMap")
+    expect(imported).not.toHaveProperty("customFields")
+    expect(imported).not.toHaveProperty("httpMethod")
+  })
+
+  it("hands out copies, so editing the imported settings cannot change the template", () => {
+    const imported = validateConfig({ apiTemplate: "owntracks" }, "custom").config.settings
+
+    expect(imported.fieldMap).not.toBe(API_TEMPLATES.owntracks.fieldMap)
+    expect(imported.customFields?.[0]).not.toBe(API_TEMPLATES.owntracks.customFields[0])
   })
 })
 

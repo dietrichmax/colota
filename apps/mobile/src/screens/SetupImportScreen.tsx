@@ -57,7 +57,7 @@ export function SetupImportScreen({ route, navigation }: any) {
         } as ValidationResult
       }
 
-      return validateConfig(decodeConfig(configParam))
+      return validateConfig(decodeConfig(configParam), currentSettings.apiTemplate)
     } catch (e) {
       logger.error("[SetupImport] Failed to parse config:", e)
       return {
@@ -67,7 +67,7 @@ export function SetupImportScreen({ route, navigation }: any) {
         error: translate("setup.err.malformed")
       } as ValidationResult
     }
-  }, [route.params?.config])
+  }, [route.params?.config, currentSettings.apiTemplate])
 
   const trackingEntries = result.entries.filter((e) => e.category === "tracking")
   const apiEntries = result.entries.filter((e) => e.category === "api")

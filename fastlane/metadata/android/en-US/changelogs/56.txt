@@ -1,0 +1,1 @@
+- Fixed a setup link that switches the server template keeping the old field names, custom fields and HTTP method

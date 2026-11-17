@@ -7,7 +7,7 @@ Configure Colota instantly using a `colota://setup` URL. Generate a link or QR c
 
 ## Link Generator
 
-Fill in the settings you want to configure. Only the fields you set will be included - everything else keeps its current value on the device. All processing happens in your browser - no data is sent to any server.
+Fill in the settings you want to configure. Only the fields you set will be included - everything else keeps its current value on the device, except that a new API template also brings its field names, custom fields and HTTP method. All processing happens in your browser - no data is sent to any server.
 
 {{< deep-link-generator >}}
 
@@ -37,7 +37,7 @@ Geofences and tracking profiles can also be shared on their own from the [Geofen
 colota://setup?config=BASE64_ENCODED_JSON
 ```
 
-The `config` parameter is a base64-encoded JSON object. Only include the settings you want to change - everything else keeps its current value.
+The `config` parameter is a base64-encoded JSON object. Only include the settings you want to change - everything else keeps its current value. A new `apiTemplate` also sets that template's field names, custom fields and HTTP method.
 
 ## Parameter Reference
 
@@ -53,7 +53,7 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `isOfflineMode` | boolean | Store locally only, never sync |
 | `syncCondition` | string | `any`, `wifi_any`, `wifi_ssid`, or `vpn` |
 | `syncSsid` | string | Wi-Fi SSID to sync on (only used with `wifi_ssid`) |
-| `apiTemplate` | string | `custom`, `dawarich`, `geopulse`, `overland`, `owntracks`, `phonetrack`, `reitti`, or `traccar` |
+| `apiTemplate` | string | `custom`, `dawarich`, `geopulse`, `overland`, `owntracks`, `phonetrack`, `reitti`, or `traccar`. Switching to a template other than `custom` also sets its field names, custom fields and HTTP method, as picking it in the app does. Naming the template already in use keeps them. The link's `fieldMap` and `customFields` replace the template's entries of the same name, and `httpMethod` replaces its method. |
 | `httpMethod` | string | `POST` or `GET` |
 | `dawarichMode` | string | `single` (OwnTracks endpoint) or `batch` (Overland endpoint). Only applies to `apiTemplate: dawarich`. |
 | `overlandBatchSize` | number | Points per batch POST for Overland format (1-500, default 50). Used by `apiTemplate: overland` and `dawarich` + `batch`. |
