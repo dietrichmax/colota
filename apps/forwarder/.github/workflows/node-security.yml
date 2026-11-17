@@ -1,0 +1,42 @@
+name: Node Security Check
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check Node.js in published images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Compare image Node.js with security releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          curl -fsSL https://nodejs.org/dist/index.json -o index.json
+          failed=0
+          for tag in latest "$release"; do
+            image="mxdcodes/colota-forwarder:${tag}"
+            version=$(docker run --rm -q "$image" --version)
+            missing=$(jq -r --arg v "$version" --arg major "${version%%.*}." '
+              [.[] | select(.version | startswith($major))]
+              | (map(.version) | index($v)) as $i
+              | if $i == null then "unknown" else [.[:$i][] | select(.security) | .version] | join(" ") end
+            ' index.json)
+            if [ "$missing" = "unknown" ]; then
+              echo "::error::$image runs Node.js $version, which is not in the release index"
+              failed=1
+            elif [ -n "$missing" ]; then
+              echo "::error::$image runs Node.js $version, missing security release(s): $missing"
+              failed=1
+            else
+              echo "$image runs Node.js $version, no newer security release"
+            fi
+          done
+          exit "$failed"
