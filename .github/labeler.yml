@@ -71,5 +71,6 @@ forwarder:
   - changed-files:
       - any-glob-to-any-file:
           - 'apps/forwarder/**'
+          - 'apps/docs/docs/integrations/forwarder*.md'
           - '.github/workflows/forwarder-*.yml'
           - '.github/forwarder-codeql-config.yml'

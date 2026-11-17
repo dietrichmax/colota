@@ -50,7 +50,7 @@
       "enabled": false
     },
     {
-      "description": "The forwarder's own image, pinned in apps/forwarder/compose.yml and its README, is bumped by hand after a forwarder-v tag.",
+      "description": "The forwarder's own image, pinned in apps/forwarder/compose.yml, is bumped by hand after a forwarder-v tag.",
       "matchPackageNames": ["mxdcodes/colota-forwarder"],
       "enabled": false
     }
