@@ -1,6 +1,6 @@
 ---
-name: Feature Request
-about: Suggest a new feature or enhancement
+name: "App: Feature Request"
+about: Suggest a new feature or enhancement for the Colota app
 title: ""
 labels: enhancement
 assignees: ""

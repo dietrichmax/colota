@@ -4,9 +4,7 @@
 
 # colota-forwarder
 
-> **This repository has moved.** colota-forwarder now lives in [`apps/forwarder`](https://github.com/dietrichmax/colota/tree/main/apps/forwarder) of the Colota repository, and this one is archived. The Docker image stays `mxdcodes/colota-forwarder` with the same tags; new versions are built from `forwarder-vX.Y.Z` tags there. Please open issues and pull requests in the [Colota repository](https://github.com/dietrichmax/colota/issues).
-
-[![Shield: Docker Pulls](https://img.shields.io/docker/pulls/mxdcodes/colota-forwarder?label=Docker%20Pull)](https://hub.docker.com/r/mxdcodes/colota-forwarder) ![Shield: Docker Image Size](https://img.shields.io/docker/image-size/mxdcodes/colota-forwarder/latest?label=Image%20Size) [![Build](https://github.com/dietrichmax/colota-forwarder/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/dietrichmax/colota-forwarder/actions/workflows/docker-publish.yml)
+[![Shield: Docker Pulls](https://img.shields.io/docker/pulls/mxdcodes/colota-forwarder?label=Docker%20Pull)](https://hub.docker.com/r/mxdcodes/colota-forwarder) ![Shield: Docker Image Size](https://img.shields.io/docker/image-size/mxdcodes/colota-forwarder/latest?label=Image%20Size) [![Build](https://github.com/dietrichmax/colota/actions/workflows/forwarder-publish.yml/badge.svg)](https://github.com/dietrichmax/colota/actions/workflows/forwarder-publish.yml)
 
 Receives location updates from the [Colota](https://colota.app) app or any OwnTracks HTTP client (Android/iOS) and forwards them to multiple services at once — Home Assistant, Dawarich, GeoPulse, Traccar, Reitti, OwnTracks Recorder or any HTTP endpoint. The forwarder responds to the client immediately and fans the update out to all targets in the background, converting the format for each service as needed.
 

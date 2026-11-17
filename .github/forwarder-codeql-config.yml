@@ -1,4 +1,6 @@
+paths:
+  - apps/forwarder
 paths-ignore:
   - "**/node_modules/**"
   - "**/*.test.ts"
-  - "test/**"
+  - apps/forwarder/test/**

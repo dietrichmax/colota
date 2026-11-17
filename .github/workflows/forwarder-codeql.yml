@@ -1,10 +1,18 @@
-name: CodeQL
+name: Forwarder CodeQL
 
 on:
   push:
     branches: [main]
+    paths:
+      - "apps/forwarder/**"
+      - ".github/workflows/forwarder-codeql.yml"
+      - ".github/forwarder-codeql-config.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "apps/forwarder/**"
+      - ".github/workflows/forwarder-codeql.yml"
+      - ".github/forwarder-codeql-config.yml"
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
@@ -27,9 +35,9 @@ jobs:
         with:
           languages: javascript-typescript
           queries: security-and-quality
-          config-file: ./.github/codeql-config.yml
+          config-file: ./.github/forwarder-codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         with:
-          category: "/language:javascript-typescript"
+          category: "/language:javascript-typescript/forwarder"

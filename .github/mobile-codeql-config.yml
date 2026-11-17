@@ -4,6 +4,7 @@ paths-ignore:
   - '**/*.test.ts'
   - '**/*.test.tsx'
   - '**/src/test/**'
+  - 'apps/forwarder/**'
 
 query-filters:
   - exclude:

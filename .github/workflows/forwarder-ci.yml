@@ -1,9 +1,16 @@
-name: CI
+name: Forwarder CI
 
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "apps/forwarder/**"
+      - ".github/workflows/forwarder-ci.yml"
   workflow_call:
+
+defaults:
+  run:
+    working-directory: apps/forwarder
 
 jobs:
   check:
@@ -19,8 +26,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version-file: .nvmrc
+          node-version-file: apps/forwarder/.nvmrc
           cache: npm
+          cache-dependency-path: apps/forwarder/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -56,8 +64,8 @@ jobs:
       - name: Build image for smoke test
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
-          context: .
-          file: ./Dockerfile
+          context: apps/forwarder
+          file: apps/forwarder/Dockerfile
           load: true
           provenance: false
           tags: colota-forwarder:smoke

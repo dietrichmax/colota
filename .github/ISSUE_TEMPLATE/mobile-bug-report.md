@@ -1,6 +1,6 @@
 ---
-name: Bug Report
-about: Report a bug or unexpected behavior
+name: "App: Bug Report"
+about: Report a bug or unexpected behavior in the Colota app
 title: ""
 labels: bug
 assignees: ""
