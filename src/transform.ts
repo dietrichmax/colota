@@ -1,5 +1,5 @@
 import type { Target } from "./targets"
-import { isValidTid } from "./utils"
+import { isStringArray, isValidTid } from "./utils"
 
 export interface ColotaPayload {
   lat: number
@@ -12,6 +12,14 @@ export interface ColotaPayload {
   vel?: number // m/s
   bear?: number
   tid?: string // device/tracker identifier from app custom fields
+  inregions?: string[] // names of the geofences the point is in (Colota 1.22+)
+  // A Colota geofence event is the point's payload plus OwnTracks transition keys. /locations bodies
+  // are cast unchecked, so _type can also be "location" from the app's OwnTracks template.
+  _type?: string
+  event?: "enter" | "leave"
+  desc?: string
+  t?: string
+  wtst?: number
 }
 
 export function owntracksToColota(body: Record<string, unknown>): ColotaPayload {
@@ -75,15 +83,19 @@ export function overlandFeatureToColota(feature: unknown, deviceId: string | und
     ...(typeof props.altitude === "number" && { alt: props.altitude }),
     ...(typeof props.speed === "number" && { vel: props.speed }),
     ...(typeof props.course === "number" && { bear: props.course }),
+    ...(isStringArray(props.inregions) && { inregions: props.inregions }),
     ...(deviceId && { tid: deviceId })
   }
 }
 
 export function transformPayload(payload: ColotaPayload, target: Target): Record<string, unknown> {
   switch (target.type) {
-    case "owntracks":
+    case "owntracks": {
+      const isTransition = payload._type === "transition"
       return {
-        _type: "location",
+        // Home Assistant's OwnTracks integration takes enter and leave only from a transition.
+        // Sent as a location, the event was lost and the target stored the point twice.
+        _type: isTransition ? "transition" : "location",
         tid: payload.tid ?? target.tid ?? "CL",
         lat: payload.lat,
         lon: payload.lon,
@@ -94,8 +106,16 @@ export function transformPayload(payload: ColotaPayload, target: Target): Record
         ...(payload.alt !== undefined && { alt: payload.alt }),
         ...(payload.vel !== undefined && { vel: payload.vel }),
         // OwnTracks uses "cog" for bearing
-        ...(payload.bear !== undefined && { cog: payload.bear })
+        ...(payload.bear !== undefined && { cog: payload.bear }),
+        ...(isStringArray(payload.inregions) && { inregions: payload.inregions }),
+        ...(isTransition && {
+          event: payload.event,
+          wtst: payload.wtst,
+          ...(payload.desc !== undefined && { desc: payload.desc }),
+          ...(payload.t !== undefined && { t: payload.t })
+        })
       }
+    }
     case "traccar":
       if (target.method === "POST") {
         // Traccar JSON POST format (Traccar 5.1+)

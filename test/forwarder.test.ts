@@ -1,6 +1,6 @@
 import { test, beforeEach, afterEach, mock } from "node:test"
 import assert from "node:assert/strict"
-import { forwardBatch, forwardToAll, getDeliveryStats, type OverlandEnvelope } from "../src/forwarder"
+import { forwardBatch, forwardToAll, getDeliveryStats, targetsFor, type OverlandEnvelope } from "../src/forwarder"
 import type { Target } from "../src/targets"
 import { overlandFeatureToColota, type ColotaPayload } from "../src/transform"
 
@@ -124,6 +124,21 @@ test("passthrough targets (raw/colota/geopulse) POST the payload unchanged", asy
   assert.equal(c.method, "POST")
   assert.equal(c.headers?.["Content-Type"], "application/json")
   assert.deepEqual(c.body, { lat: 1, lon: 2, acc: 5, batt: 90, bs: 2, tst: 100, alt: 5 })
+})
+
+test("a geofence event goes to owntracks and passthrough targets, never to traccar", async () => {
+  const targets: Target[] = [
+    { url: "http://ot", type: "owntracks" },
+    { url: "http://trc-get", type: "traccar" },
+    { url: "http://trc-post", type: "traccar", method: "POST" },
+    { url: "http://col", type: "colota" }
+  ]
+  const event: ColotaPayload = { ...pt(100), _type: "transition", event: "leave", desc: "Home", t: "c", wtst: 50 }
+  await forwardToAll(targets, event)
+  // Colota sends no events in Traccar's formats; forwarded, each one became a duplicate point there
+  assert.deepEqual(calls.map((c) => c.url).sort(), ["http://col", "http://ot"])
+  assert.equal((calls.find((c) => c.url === "http://col")!.body as ColotaPayload)._type, "transition")
+  assert.equal(targetsFor(targets, event).length, 2) // the forwarded count /locations reports
 })
 
 test("forwards the Authorization header when target.auth is set", async () => {

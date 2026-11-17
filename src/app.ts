@@ -1,9 +1,9 @@
 import express, { Request, Response, NextFunction, Application } from "express"
 import crypto from "crypto"
 import { loadTargets } from "./targets"
-import { forwardToAll, forwardBatch, getDeliveryStats } from "./forwarder"
+import { forwardToAll, forwardBatch, getDeliveryStats, targetsFor } from "./forwarder"
 import { owntracksToColota, overlandFeatureToColota, type ColotaPayload } from "./transform"
-import { maskUrl, hasFiniteNumbers, sanitizeLogValue, isValidTid } from "./utils"
+import { maskUrl, hasFiniteNumbers, sanitizeLogValue, isValidTid, isValidTransition } from "./utils"
 
 export const app: Application = express()
 const API_KEY = process.env.API_KEY
@@ -129,13 +129,18 @@ app.post("/locations", authenticate, jsonParser, async (req: Request, res: Respo
     return
   }
 
+  if (body._type === "transition" && !isValidTransition(body)) {
+    res.status(400).json({ error: "Invalid transition: needs event (enter or leave) and a numeric wtst" })
+    return
+  }
+
   if (targets.length === 0) {
     res.status(200).json({ message: "No targets configured", forwarded: 0 })
     return
   }
 
   const payload = body as unknown as ColotaPayload
-  const forwarded = targets.filter((t) => !t.filter_tid || payload.tid === t.filter_tid).length
+  const forwarded = targetsFor(targets, payload).length
 
   res.status(200).json({ message: "Accepted", forwarded })
   forwardToAll(targets, payload)
@@ -147,7 +152,7 @@ app.post("/overland", authenticate, jsonParser, async (req: Request, res: Respon
     return
   }
 
-  const body = req.body as { locations?: unknown; device_id?: unknown }
+  const body = req.body as { locations?: unknown; transitions?: unknown; device_id?: unknown }
   if (!Array.isArray(body.locations)) {
     res.status(400).json({ error: "Missing or invalid 'locations' array" })
     return
@@ -192,7 +197,13 @@ app.post("/overland", authenticate, jsonParser, async (req: Request, res: Respon
   }
 
   queuedPoints += payloads.length
-  forwardBatch(targets, { locations: body.locations, device_id: deviceId }, payloads).finally(() => {
+  const envelope = {
+    locations: body.locations,
+    // Colota 1.22+ sends geofence events here, alone with an empty locations array, and deletes them on the 201
+    ...(Array.isArray(body.transitions) && { transitions: body.transitions }),
+    device_id: deviceId
+  }
+  forwardBatch(targets, envelope, payloads).finally(() => {
     queuedPoints -= payloads.length
   })
 })

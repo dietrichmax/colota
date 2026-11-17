@@ -8,6 +8,7 @@ const DEFAULT_SPLIT_DELAY_MS = Number(process.env.SPLIT_DELAY_MS) || 0
 
 export interface OverlandEnvelope {
   locations: unknown[]
+  transitions?: unknown[] // Colota's geofence events, for overland targets only
   device_id?: string
 }
 
@@ -127,9 +128,18 @@ async function splitToTarget(target: Target, payloads: ColotaPayload[]): Promise
   await Promise.all(workers)
 }
 
+/** The targets one payload goes to. /locations reports its forwarded count from this too, so the two agree. */
+export function targetsFor(targets: Target[], payload: ColotaPayload): Target[] {
+  return targets.filter(
+    (t) =>
+      (!t.filter_tid || payload.tid === t.filter_tid) &&
+      // Colota never sends a geofence event in Traccar's GET or JSON format, so neither does the forwarder
+      !(payload._type === "transition" && t.type === "traccar")
+  )
+}
+
 export async function forwardToAll(targets: Target[], payload: ColotaPayload): Promise<void> {
-  const filtered = targets.filter((t) => !t.filter_tid || payload.tid === t.filter_tid)
-  await Promise.allSettled(filtered.map((target) => sendToTarget(target, payload)))
+  await Promise.allSettled(targetsFor(targets, payload).map((target) => sendToTarget(target, payload)))
 }
 
 /** Fans an Overland batch out by target: */
