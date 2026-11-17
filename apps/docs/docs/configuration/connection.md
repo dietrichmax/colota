@@ -26,7 +26,7 @@ On **Android 17+**, connecting to another device on the local network (everythin
 
 ### Multiple Backends
 
-Colota sends to a single endpoint. To forward locations to multiple services simultaneously (e.g. Dawarich + Home Assistant), use [colota-forwarder](https://github.com/dietrichmax/colota-forwarder) - point Colota at the forwarder and configure each target in the forwarder's environment variables.
+Colota sends to a single endpoint. To forward locations to multiple services simultaneously (e.g. Dawarich + Home Assistant), use [colota-forwarder](https://github.com/dietrichmax/colota/tree/main/apps/forwarder) - point Colota at the forwarder and configure each target in the forwarder's environment variables.
 
 ### URL Variables
 
