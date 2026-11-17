@@ -69,6 +69,35 @@ The integration reads the following payload. `tid` is only sent once you add it 
 
 The `tid` field is used as the device identifier in Home Assistant. You can customize it in the custom fields settings to distinguish multiple devices.
 
+## Geofence Events
+
+With **Send enter and leave events** turned on, Colota posts an event each time the phone enters or leaves one of its geofences. The integration fires it on the event bus as `colota_geofence` and leaves the device tracker on the location points. Zones keep working as before.
+
+| Field       | Value                                      |
+| ----------- | ------------------------------------------ |
+| `device`    | Device ID, the same one the tracker uses   |
+| `event`     | `enter` or `leave`                         |
+| `geofence`  | Name of the geofence in Colota             |
+| `timestamp` | Unix time of the fix the event happened at |
+
+A geofence counts as left after two fixes in a row lie outside its radius plus their accuracy, so a trigger on this event fires less often on GPS jitter than one on zone state. It also covers geofences that are not zones in Home Assistant.
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: colota_geofence
+    event_data:
+      device: phone
+      event: leave
+      geofence: Home
+actions:
+  - action: notify.notify
+    data:
+      message: "Left Home"
+```
+
+Update the integration to 0.5.0 or later before turning the setting on. Older versions treat an event as a location update and move the tracker back one fix. **Send current geofences** (`inregions`) is ignored by the integration. See [Request format](../configuration/request-format.md#enter-and-leave-events) for both settings.
+
 ## Notes
 
 - If you use Nabu Casa, the integration will automatically generate a cloud webhook URL for external access
