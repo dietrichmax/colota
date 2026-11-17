@@ -3,7 +3,7 @@ title: "Overland"
 description: "Batched GeoJSON for Overland-compatible servers"
 ---
 
-Colota is a drop-in Android client for the [Overland](https://github.com/aaronpk/Overland-iOS) location-tracking format originally designed by Aaron Parecki for iOS. Overland is a portable JSON specification rather than a specific backend, so this template works with any server that accepts the format - including [Compass](https://github.com/aaronpk/Compass), [Dawarich](./dawarich.md)'s `/api/v1/overland/batches` endpoint, [Colota Forwarder](https://github.com/dietrichmax/colota/tree/main/apps/forwarder), or any custom service that follows the same JSON schema.
+Colota is a drop-in Android client for the [Overland](https://github.com/aaronpk/Overland-iOS) location-tracking format originally designed by Aaron Parecki for iOS. Overland is a portable JSON specification rather than a specific backend, so this template works with any server that accepts the format - including [Compass](https://github.com/aaronpk/Compass), [Dawarich](./dawarich.md)'s `/api/v1/overland/batches` endpoint, [Colota Forwarder](forwarder.md), or any custom service that follows the same JSON schema.
 
 ## Setup
 

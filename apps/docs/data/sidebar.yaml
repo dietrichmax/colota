@@ -49,3 +49,5 @@ integrations:
       - integrations/traccar
   - label: Your own
     pages: [integrations/custom-backend]
+  - label: Several backends
+    pages: [integrations/forwarder, integrations/forwarder-reference]

@@ -19,6 +19,10 @@ Colota sends location data to a server you control. Pick your backend below, the
 | [Traccar](traccar.md)                                    | Traccar                                    |
 | [Custom Backend](custom-backend.md)                      | Custom                                     |
 
+## Several Backends at Once
+
+Colota sends to one endpoint. The [Forwarder](forwarder.md) receives it and sends each location on to several backends.
+
 ## No backend needed
 
 Colota works fully offline without any server. Locations are stored on-device and can be exported as CSV, GeoJSON, GPX, or KML at any time.
