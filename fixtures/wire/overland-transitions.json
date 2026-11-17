@@ -1,0 +1,19 @@
+{
+  "locations": [],
+  "transitions": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [11.5761, 48.1372]
+      },
+      "properties": {
+        "event": "leave",
+        "geofence": "Home",
+        "timestamp": "2025-11-15T09:46:40Z",
+        "horizontal_accuracy": 8
+      }
+    }
+  ],
+  "device_id": "pixel"
+}

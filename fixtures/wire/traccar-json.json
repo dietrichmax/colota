@@ -1,0 +1,18 @@
+{
+  "location": {
+    "timestamp": "2025-11-15T09:46:40Z",
+    "coords": {
+      "latitude": 48.1372,
+      "longitude": 11.5761,
+      "accuracy": 8,
+      "altitude": 520,
+      "speed": 1.4,
+      "heading": 90.5
+    },
+    "battery": {
+      "level": 0.82,
+      "is_charging": false
+    }
+  },
+  "device_id": "pixel"
+}

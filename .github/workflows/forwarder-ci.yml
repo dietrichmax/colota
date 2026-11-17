@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "apps/forwarder/**"
+      - "fixtures/wire/**"
       - ".github/workflows/forwarder-ci.yml"
   workflow_call:
 

@@ -185,6 +185,10 @@ android {
         unitTests.all {
             // Bump heap to avoid OOM when running the full test suite.
             maxHeapSize = "4g"
+            // WireFixturesTest reads the repo's fixtures/wire; without this a fixture-only change leaves the task up to date.
+            inputs.dir(rootProject.file("../../../fixtures/wire"))
+                .withPropertyName("wireFixtures")
+                .withPathSensitivity(PathSensitivity.RELATIVE)
         }
     }
 }
