@@ -6,8 +6,8 @@
 set -euo pipefail
 
 # Renovate bumps both lines together (customManagers in renovate.json); SHA256 is the linux-amd64 archive's.
-VERSION="v0.170.0"
-SHA256="0930754ec22ad2dd1a252f8c31a5e57faccc9d15f1c3d381ddafcb96eeb8aef0"
+VERSION="v0.170.1"
+SHA256="841a5462853aefc9942e4de1e8a5d75584b6a5181941e6ad3f1d745190e03cd8"
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 bin="$here/../.bin"

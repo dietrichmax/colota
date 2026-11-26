@@ -214,7 +214,7 @@ dependencies {
     testImplementation 'io.mockk:mockk:1.14.12'
     testImplementation 'org.json:json:20251224'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
-    testImplementation 'org.robolectric:robolectric:4.18'
+    testImplementation 'org.robolectric:robolectric:4.18.1'
     testImplementation 'androidx.test:core:1.7.0'
     testImplementation 'androidx.work:work-testing:2.12.0'
 }
